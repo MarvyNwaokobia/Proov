@@ -1,0 +1,10 @@
+{
+  "type": "Agent",
+  "name": "Proov Accountability Agent",
+  "description": "Verifies fitness habit logs and generates weekly accountability circle reports for Proov users.",
+  "version": "1.0.0",
+  "endpoints": [
+    { "type": "mcp", "url": "https://proov-one.vercel.app/api/agent" }
+  ],
+  "supportedTrust": ["reputation"]
+}
