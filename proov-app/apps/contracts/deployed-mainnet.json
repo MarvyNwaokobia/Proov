@@ -1,0 +1,9 @@
+{
+  "network": "celo-mainnet",
+  "chainId": 42220,
+  "deployer": "0xc6A4b73030d8a9eb8166C2FAB2400B421026FD19",
+  "deployedAt": "2026-05-16T17:39:17.236Z",
+  "ProovCore": "0xA08Bc6EDd1A09500Dea6bc810A8fCE24a458B617",
+  "SessionManager": "0x5f121712C0dBE853b9B079BE25100e0604AA7AcF",
+  "CircleManager": "0xe61b662C0e2C0855A9d14E8fF2BF1f5065F072A7"
+}

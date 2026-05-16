@@ -28,16 +28,14 @@ const config: HardhatUserConfig = {
     },
   },
   etherscan: {
-    apiKey: {
-      celo: process.env.CELOSCAN_API_KEY || "",
-      celoSepolia: process.env.CELOSCAN_API_KEY || "",
-    },
+    // Etherscan V2 unified API — single key covers all chains
+    apiKey: process.env.CELOSCAN_API_KEY || "",
     customChains: [
       {
         network: "celo",
         chainId: 42220,
         urls: {
-          apiURL: "https://api.celoscan.io/api",
+          apiURL: "https://api.etherscan.io/v2/api?chainid=42220",
           browserURL: "https://celoscan.io",
         },
       },
@@ -45,7 +43,7 @@ const config: HardhatUserConfig = {
         network: "celoSepolia",
         chainId: 11142220,
         urls: {
-          apiURL: "https://api-sepolia.celoscan.io/api",
+          apiURL: "https://api.etherscan.io/v2/api?chainid=11142220",
           browserURL: "https://sepolia.celoscan.io",
         },
       },
