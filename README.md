@@ -1,0 +1,299 @@
+# Proov — Your discipline. Onchain. Forever.
+
+> **Prove it. Every day.**  
+> Habits. Streaks. Accountability. All onchain — permanent, verifiable, yours.
+
+Proov is a habit-tracking and personal accountability dApp built on [Celo](https://celo.org). Users create habits, run focus timers, log fitness activities with AI verification, write journal entries, and build daily streaks. Friends connect to form accountability circles. When a streak breaks, the circle is automatically notified onchain. A global leaderboard ranks every user by streak.
+
+**No pets. No NFTs. No DeFi. Just habits, streaks, accountability, and AI verification — all onchain.**
+
+---
+
+## Live Demo
+
+> _Deploy link added after mainnet launch_
+
+---
+
+## Smart Contracts (Celo Mainnet / Sepolia)
+
+| Contract | Address |
+|----------|---------|
+| ProovCore | `TBD` |
+| SessionManager | `TBD` |
+| CircleManager | `TBD` |
+
+> Verified on [Celoscan](https://celoscan.io)
+
+---
+
+## Features
+
+### Habit Tracking
+- Create habits across 6 categories: Focus, Fitness, Reading, Hydration, Sleep, Custom
+- Set a target duration (optional) and daily/weekly frequency
+- Every completion recorded permanently onchain — no edits, no deletes
+- Deactivate habits you no longer track
+
+### Streak System
+- Consecutive daily completions build your streak — miss a day and it resets
+- Longest-streak tracked separately so your best run is never lost
+- Milestones at 7, 21, 30, 50, 100, 200 days emit onchain events
+- Streak state derived from `block.timestamp / 86400` — fully verifiable
+
+### Focus Timer
+- 25-minute minimum session enforced at the contract level
+- Start/end session stored onchain via `SessionManager`
+- Timer reconstructs elapsed time from `startTimestamp` on every page load — survives tab switches, refreshes, and app restarts
+- Sessions under 25 min are recorded but earn no streak credit
+
+### AI Verification (Fitness Habits)
+- Powered by **Claude Sonnet 4.6**
+- Users describe their workout in plain text before submitting a completion
+- Claude judges the description: accepts specific effort, rejects vague claims ("did it", "yes", "completed")
+- The verification hash is stored in the transaction — the proof lives onchain
+- Sunday circle reports generated automatically every week by the same agent
+
+### Accountability Circle
+- Add up to 10 friends by wallet address
+- Send/accept/reject connection requests — all onchain
+- Circle members see each other's streaks in real-time
+- When your streak breaks, `CircleManager.notifyStreakBroken()` emits an event visible to your whole circle
+- Witness a friend's habit completion onchain
+
+### Leaderboard
+- Top 50 users globally, sorted by current streak
+- Gold/silver/bronze podium for top 3
+- Tap any user to view their public profile: streak, habits, completions, journal count
+
+### Journal
+- Log daily entries — content stored as a `keccak256` hash onchain (private, verifiable)
+- A journal entry counts as daily activity and keeps your streak alive
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Blockchain | [Celo](https://celo.org) (L2, post-March 2025 migration) |
+| Smart contracts | Solidity 0.8.28, Hardhat, OpenZeppelin |
+| Frontend | Next.js 14, TypeScript, Tailwind CSS |
+| Wallet auth | [Web3Auth](https://web3auth.io) (social login) + injected wallet (MetaMask) |
+| Onchain reads/writes | [wagmi](https://wagmi.sh) v2 + [viem](https://viem.sh) v2 |
+| AI agent | Anthropic Claude Sonnet 4.6 via `@anthropic-ai/sdk` |
+| Animations | [Framer Motion](https://www.framer.com/motion/) |
+| State | [Zustand](https://zustand-demo.pmnd.rs/) |
+| Fee abstraction | USDm (cUSD) — `feeCurrency` on every tx |
+
+---
+
+## Architecture
+
+```
+packages/
+├── apps/contracts/              ← Hardhat workspace
+│   ├── contracts/
+│   │   ├── ProovCore.sol        ← habits + streaks + journal (merged)
+│   │   ├── SessionManager.sol   ← focus timer sessions
+│   │   └── CircleManager.sol    ← accountability circles
+│   ├── scripts/
+│   │   ├── deploy.ts            ← deploys all 3, wires them together
+│   │   └── register-agent.ts   ← ERC-8004 AI agent registration
+│   └── test/                   ← 50 tests, all passing
+│
+└── apps/web/                   ← Next.js 14 frontend
+    ├── app/
+    │   ├── page.tsx             ← Onboarding / Login
+    │   ├── dashboard/           ← Dashboard + streak hero
+    │   ├── habits/              ← Habit manager
+    │   ├── timer/               ← Focus timer with live ring
+    │   ├── circle/              ← Accountability circle
+    │   ├── leaderboard/         ← Global leaderboard
+    │   ├── profile/[address]/   ← Public profile
+    │   └── api/agent/           ← Claude AI routes (verify + report)
+    ├── hooks/                  ← useHabits, useSession, useStreak, useCircle
+    ├── lib/                    ← wagmi config, ABIs, constants
+    └── components/shared/      ← TxToast (used on every write)
+```
+
+---
+
+## Smart Contract Details
+
+### ProovCore.sol
+The heart of Proov. Handles habits, streaks, journals, and the global user registry.
+
+- `createHabit(name, type, duration, frequency)` — registers user on first call
+- `selfCompleteHabit(habitId, verificationHash)` — direct user call for fitness/manual habits
+- `completeHabit(user, habitId, hash)` — called by authorized `SessionManager` after a timer session
+- `logJournalEntry(contentHash)` — logs journal; counts as daily activity for streak
+- `getLeaderboard(limit)` — returns top-N users sorted by current streak
+- Streak logic: consecutive days grow streak; any gap resets to 1 and emits `StreakBroken`
+- `receive()` reverts — no ETH/CELO accepted
+
+### SessionManager.sol
+- `startSession(habitId)` — records `block.timestamp` onchain
+- `endSession()` — computes duration; calls `ProovCore.completeHabit` if ≥ 25 min
+- `abandonSession()` — records partial session, no credit
+- `getActiveSession(user)` — frontend reads `startTimestamp` to reconstruct elapsed time
+
+### CircleManager.sol
+- Bidirectional connection model: both users must agree (request → accept)
+- Max 10 members per circle
+- `witnessHabit(user, habitId)` — circle member cosigns a habit completion onchain
+- `notifyStreakBroken(user)` — emits `StreakBrokenNotified` with full circle member list
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+```bash
+node >= 18
+pnpm >= 8
+```
+
+### 1. Clone & install
+
+```bash
+git clone https://github.com/MarvyNwaokobia/Proov.git
+cd Proov/proov-app
+pnpm install
+```
+
+### 2. Configure environment
+
+```bash
+cp .env.example apps/web/.env.local
+```
+
+Fill in `apps/web/.env.local`:
+
+```bash
+# Web3Auth — dashboard.web3auth.io
+NEXT_PUBLIC_WEB3AUTH_CLIENT_ID=your_client_id
+
+# Anthropic — console.anthropic.com
+ANTHROPIC_API_KEY=your_api_key
+
+# Contract addresses (fill after deploy)
+NEXT_PUBLIC_PROOV_CORE_ADDRESS=0x...
+NEXT_PUBLIC_SESSION_MANAGER_ADDRESS=0x...
+NEXT_PUBLIC_CIRCLE_MANAGER_ADDRESS=0x...
+
+# 11142220 = Celo Sepolia (dev) | 42220 = Celo Mainnet (prod)
+NEXT_PUBLIC_CHAIN_ID=11142220
+```
+
+Fill in `apps/contracts/.env`:
+
+```bash
+PRIVATE_KEY=your_deployer_key_no_0x
+CELOSCAN_API_KEY=from_celoscan.io
+```
+
+### 3. Run the dev server
+
+```bash
+cd apps/web
+pnpm dev
+# → http://localhost:3000
+```
+
+---
+
+## Deploying Contracts
+
+```bash
+cd apps/contracts
+
+# Testnet
+./node_modules/.bin/hardhat run scripts/deploy.ts --network celoSepolia
+
+# Verify on Celoscan
+./node_modules/.bin/hardhat verify --network celoSepolia <PROOV_CORE_ADDRESS>
+./node_modules/.bin/hardhat verify --network celoSepolia <SESSION_MANAGER_ADDRESS> <PROOV_CORE_ADDRESS>
+./node_modules/.bin/hardhat verify --network celoSepolia <CIRCLE_MANAGER_ADDRESS>
+
+# Mainnet when ready
+./node_modules/.bin/hardhat run scripts/deploy.ts --network celo
+```
+
+### Register the AI Agent (ERC-8004)
+
+```bash
+AGENT_PRIVATE_KEY=... AGENT_METADATA_URI=https://... \
+  node -r ts-node/register scripts/register-agent.ts
+```
+
+---
+
+## Running Tests
+
+```bash
+cd apps/contracts
+./node_modules/.bin/hardhat test
+```
+
+**50 tests across 3 contract suites — all passing:**
+
+```
+CircleManager   ·  15 tests
+ProovCore       ·  19 tests
+SessionManager  ·  16 tests
+─────────────────────────────
+50 passing (1s)
+```
+
+---
+
+## Celo-Specific Implementation Notes
+
+| Rule | Implementation |
+|------|---------------|
+| Fee abstraction | Every `writeContract` call includes `feeCurrency: "0x765DE816845861e75A25fCA122bb6898B8B1282a"` (USDm) via `withCeloFee()` helper |
+| EVM version | `evmVersion: "cancun"` in `hardhat.config.ts` — required since Celo's L2 migration (March 2025) |
+| Solidity version | `0.8.28` — per celopedia-skills spec |
+| No ETH accepted | `receive() external payable { revert(); }` on all 3 contracts |
+| Reentrancy | `nonReentrant` modifier on every state-changing function |
+
+---
+
+## AI Agent
+
+The Proov agent is registered onchain via [ERC-8004](https://github.com/celo-org/CIPs/blob/main/CIPs/cip-0064.md) and performs two tasks:
+
+1. **Fitness verification** (`POST /api/agent/verify`) — Claude judges user workout descriptions before they can submit a completion. Vague claims are rejected.
+
+2. **Sunday circle report** (`POST /api/agent/report`, Vercel cron `0 8 * * 0`) — Weekly summary for each accountability circle: who showed up, who needs encouragement, one practical tip for next week.
+
+---
+
+## Screens
+
+| # | Route | Description |
+|---|-------|-------------|
+| 1 | `/` | Onboarding — dual login (Email/Social via Web3Auth, or Connect Wallet) |
+| 2 | `/dashboard` | Home — streak hero, today's habits, active session banner, quick nav |
+| 3 | `/habits` | Habit manager — create, browse, deactivate; starter habits for new users |
+| 4 | `/timer` | Focus timer — SVG ring, contract-reconstructed elapsed time, 25min enforcement |
+| 5 | `/circle` | Accountability circle — requests, member streaks, habit witnessing |
+| 6 | `/leaderboard` | Global leaderboard — podium + ranked list; tap for public profile |
+
+---
+
+## KarmaGAP Submission
+
+- **Track:** AI Agents
+- **Contracts:** Deployed and verified on Celo Mainnet (Celoscan)
+- **Agent:** Registered via ERC-8004
+- **Onchain activity:** 20+ real transactions on mainnet
+- **Farcaster:** linked for reward payout
+
+---
+
+## License
+
+MIT
