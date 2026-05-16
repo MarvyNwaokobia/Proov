@@ -81,7 +81,7 @@ Proov is a habit-tracking and personal accountability dApp built on [Celo](https
 | Frontend | Next.js 14, TypeScript, Tailwind CSS |
 | Wallet auth | [Web3Auth](https://web3auth.io) (social login) + injected wallet (MetaMask) |
 | Onchain reads/writes | [wagmi](https://wagmi.sh) v2 + [viem](https://viem.sh) v2 |
-| AI agent | Anthropic Claude Sonnet 4.6 via `@anthropic-ai/sdk` |
+| AI agent | Google Gemini 2.5 Flash Lite via `@google/generative-ai` |
 | Animations | [Framer Motion](https://www.framer.com/motion/) |
 | State | [Zustand](https://zustand-demo.pmnd.rs/) |
 | Fee abstraction | USDm (cUSD) — `feeCurrency` on every tx |
@@ -175,8 +175,8 @@ Fill in `apps/web/.env.local`:
 # Web3Auth — dashboard.web3auth.io
 NEXT_PUBLIC_WEB3AUTH_CLIENT_ID=your_client_id
 
-# Anthropic — console.anthropic.com
-ANTHROPIC_API_KEY=your_api_key
+# Google Gemini — aistudio.google.com (free tier: 1,000 req/day)
+GEMINI_API_KEY=your_gemini_api_key
 
 # Contract addresses (fill after deploy)
 NEXT_PUBLIC_PROOV_CORE_ADDRESS=0x...
@@ -263,11 +263,11 @@ SessionManager  ·  16 tests
 
 ## AI Agent
 
-The Proov agent is registered onchain via [ERC-8004](https://github.com/celo-org/CIPs/blob/main/CIPs/cip-0064.md) and performs two tasks:
+The Proov agent is registered onchain via [ERC-8004](https://github.com/celo-org/CIPs/blob/main/CIPs/cip-0064.md) and performs two tasks, powered by **Google Gemini 2.5 Flash Lite** (free tier — 1,000 requests/day):
 
-1. **Fitness verification** (`POST /api/agent/verify`) — Claude judges user workout descriptions before they can submit a completion. Vague claims are rejected.
+1. **Fitness verification** (`POST /api/agent/verify`) — Gemini judges user workout descriptions before they can submit a completion. Vague claims ("did it", "yes", "done") are rejected; specific, effort-filled descriptions are accepted.
 
-2. **Sunday circle report** (`POST /api/agent/report`, Vercel cron `0 8 * * 0`) — Weekly summary for each accountability circle: who showed up, who needs encouragement, one practical tip for next week.
+2. **Sunday circle report** (`POST /api/agent/report`, Vercel cron `0 8 * * 0`) — Weekly plain-text summary for each accountability circle: who showed up, who needs encouragement, one practical tip for next week.
 
 ---
 

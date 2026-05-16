@@ -1,7 +1,8 @@
 // Vercel cron: "0 8 * * 0" (Sunday 8AM UTC)
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { NextRequest, NextResponse } from "next/server";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 interface MemberData {
   address: string;
@@ -10,50 +11,51 @@ interface MemberData {
   totalHabits: number;
 }
 
-export async function POST(req: Request) {
-  const { members }: { members: MemberData[] } = await req.json();
+export async function POST(req: NextRequest) {
+  try {
+    const { members }: { members: MemberData[] } = await req.json();
 
-  if (!members || members.length === 0) {
-    return Response.json({ report: "" });
-  }
+    if (!members || members.length === 0) {
+      return NextResponse.json({ report: "" });
+    }
 
-  const summary = members
-    .map(
-      (m) =>
-        `Address ${m.address.slice(0, 6)}...: streak ${m.streak} days, ` +
-        `${m.weeklyCompletions} completions this week, ${m.totalHabits} active habits`
-    )
-    .join("\n");
+    const summary = members
+      .map(
+        (m) =>
+          `${m.address.slice(0, 6)}...: streak ${m.streak} days, ${m.weeklyCompletions} completions this week, ${m.totalHabits} active habits`
+      )
+      .join("\n");
 
-  const message = await client.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 300,
-    messages: [
-      {
-        role: "user",
-        content: `You are the Proov accountability agent writing a weekly Sunday circle report.
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+
+    const prompt = `You are the Proov accountability agent writing a weekly Sunday circle report.
 
 Circle stats this week:
 ${summary}
 
 Write a short, honest, encouraging report (max 120 words):
-- Name who showed up most consistently (by streak)
-- Name who might need encouragement (lowest completions)
-- One practical tip for next week
-- End with a motivating one-liner
+- Mention who showed up most consistently (highest streak)
+- Mention who might need encouragement (lowest completions)
+- Give one practical tip for next week
+- End with a short motivating line
 
-Tone: supportive friend, not corporate. Direct, warm, brief.
-Do not use markdown. Plain text only.`,
-      },
-    ],
-  });
+Rules:
+- Tone: supportive friend, not corporate
+- Plain text only — no markdown, no bullet points, no headers
+- Max 120 words
+- Be direct and warm`;
 
-  const report =
-    message.content[0].type === "text" ? message.content[0].text : "";
-  return Response.json({ report });
+    const result = await model.generateContent(prompt);
+    const report = result.response.text().trim();
+
+    return NextResponse.json({ report });
+  } catch (error) {
+    console.error("Report route error:", error);
+    return NextResponse.json({ report: "" });
+  }
 }
 
 // Vercel cron entry point (GET)
 export async function GET() {
-  return Response.json({ ok: true, message: "Sunday report cron is live" });
+  return NextResponse.json({ ok: true, message: "Sunday report cron is live" });
 }
