@@ -7,13 +7,13 @@ node_modules/
 dist/
 build/
 
-# Environment variables
+# Environment variables — real secrets, never commit these
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
-.env.example
+# NOTE: .env.example is intentionally NOT ignored — it's a safe template with placeholders only
 
 # Logs
 npm-debug.log*
