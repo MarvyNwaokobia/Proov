@@ -94,13 +94,14 @@ h1, h2, h3 { font-family: 'Bricolage Grotesque', sans-serif; }
 .b3 { width:350px;height:350px;bottom:100px;left:30%;    background:radial-gradient(circle,rgba(245,158,11,.08),transparent 70%); }
 
 /* ─── Layout ─────────────────────────────────────────────────────────────── */
-.wrap {
+.wrap, .page-wrap {
   max-width: 680px;
   margin: 0 auto;
   padding: 0 1.25rem;
   position: relative;
   z-index: 1;
 }
+.page-wrap { padding-bottom: 100px; }
 
 /* ─── Cards ──────────────────────────────────────────────────────────────── */
 .card {
