@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import { RippleButton } from '@/components/shared/RippleButton';
@@ -29,7 +29,7 @@ const FEATURES = [
   { emoji: '🔥', title: 'Streaks that last',  desc: "Can't be faked. Can't be bought." },
 ];
 
-const AVATAR_COLORS = ['#6366f1', '#ec4899', '#10b981', '#f59e0b'] as const;
+const AVATAR_COLORS = ['var(--accent)', 'var(--pink)', 'var(--success,#10b981)', 'var(--amber)'] as const;
 const AVATAR_LETTERS = ['A', 'T', 'S', 'J'];
 
 export default function LandingPage() {
