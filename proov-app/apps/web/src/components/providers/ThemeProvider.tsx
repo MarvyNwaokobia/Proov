@@ -42,9 +42,26 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setThemeIdState(THEMES[savedTheme] ? savedTheme : 'bloom');
     setModeState(savedMode);
     setMounted(true);
-    const handler = (e: MediaQueryListEvent) => setSystemDark(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
+
+    const mqHandler = (e: MediaQueryListEvent) => setSystemDark(e.matches);
+    mq.addEventListener('change', mqHandler);
+
+    // Pick up theme/mode changes dispatched from auth pages
+    const storageHandler = (e: StorageEvent) => {
+      if (e.key === 'proov_theme') {
+        const t = (e.newValue as ThemeId) || 'bloom';
+        if (THEMES[t]) setThemeIdState(t);
+      }
+      if (e.key === 'proov_mode') {
+        setModeState((e.newValue as ColorMode) || 'light');
+      }
+    };
+    window.addEventListener('storage', storageHandler);
+
+    return () => {
+      mq.removeEventListener('change', mqHandler);
+      window.removeEventListener('storage', storageHandler);
+    };
   }, []);
 
   useEffect(() => {
