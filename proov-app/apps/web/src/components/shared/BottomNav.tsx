@@ -10,8 +10,12 @@ const NAV = [
   { icon: '⚙️', label: 'Settings', href: '/settings'  },
 ];
 
+const PUBLIC_PATHS = ['/', '/signin', '/signup', '/onboarding', '/username-setup'];
+
 export function BottomNav() {
   const path = usePathname();
+
+  if (PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '?'))) return null;
 
   return (
     <nav style={{

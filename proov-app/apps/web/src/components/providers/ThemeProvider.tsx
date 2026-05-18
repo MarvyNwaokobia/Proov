@@ -18,12 +18,14 @@ const ThemeContext = createContext<ThemeContextValue>({
   variant: THEMES.bloom.light,
 });
 
-function applyVariant(variant: ThemeVariant) {
+function applyVariant(variant: ThemeVariant, themeId: string, isDark: boolean) {
   const root = document.documentElement;
   Object.entries(variant).forEach(([k, v]) => root.style.setProperty(k, v));
   root.style.background = variant['--bg'];
   document.body.style.background = variant['--bg'];
   document.body.style.color = variant['--text'];
+  root.setAttribute('data-theme', themeId);
+  root.setAttribute('data-mode', isDark ? 'dark' : 'light');
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -34,7 +36,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const savedTheme = (localStorage.getItem('proov_theme') as ThemeId) || 'bloom';
-    const savedMode = (localStorage.getItem('proov_mode') as ColorMode) || 'system';
+    const savedMode = (localStorage.getItem('proov_mode') as ColorMode) || 'light';
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     setSystemDark(mq.matches);
     setThemeIdState(THEMES[savedTheme] ? savedTheme : 'bloom');
@@ -47,7 +49,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!mounted) return;
-    applyVariant(resolveThemeVariant(themeId, mode, systemDark));
+    const isDark = mode === 'dark' || (mode === 'system' && systemDark);
+    applyVariant(resolveThemeVariant(themeId, mode, systemDark), themeId, isDark);
   }, [themeId, mode, systemDark, mounted]);
 
   const setThemeId = useCallback((id: ThemeId) => {

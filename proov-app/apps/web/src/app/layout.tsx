@@ -27,13 +27,15 @@ golden_light:{'--bg':'#fffbeb','--bg2':'rgba(0,0,0,.03)','--bg3':'rgba(0,0,0,.06
 golden_dark:{'--bg':'#1c1008','--bg2':'rgba(217,119,6,.06)','--bg3':'rgba(217,119,6,.1)','--border':'rgba(217,119,6,.15)','--border2':'rgba(217,119,6,.28)','--text':'#fef3c7','--text2':'rgba(254,243,199,.55)','--text3':'rgba(254,243,199,.28)','--accent':'#f59e0b','--accent2':'#d97706','--accent-bg':'rgba(245,158,11,.12)','--accent-border':'rgba(245,158,11,.3)','--accent-text':'#fcd34d','--card-bg':'rgba(217,119,6,.07)','--card-border':'rgba(217,119,6,.15)','--pink':'#f472b6','--pink-bg':'rgba(244,114,182,.08)','--pink-border':'rgba(244,114,182,.2)','--pink-text':'#f9a8d4','--amber':'#f59e0b','--input-bg':'rgba(217,119,6,.06)','--input-border':'rgba(217,119,6,.2)','--nav-bg':'rgba(28,16,8,.85)','--btn-primary-bg':'#f59e0b','--btn-primary-text':'#1c1008','--btn-primary-shadow':'rgba(245,158,11,.4)','--streak-color':'#f59e0b','--success':'#10b981','--success-bg':'rgba(16,185,129,.12)','--success-text':'#6ee7b7','--streak-hero-bg':'linear-gradient(135deg,#f59e0b 0%,#d97706 100%)'}
 };
 var t=localStorage.getItem('proov_theme')||'bloom';
-var m=localStorage.getItem('proov_mode')||'system';
+var m=localStorage.getItem('proov_mode')||'light';
 var dark=m==='dark'||(m==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);
 var key=t+(dark?'_dark':'_light');
 var vars=V[key]||V.bloom_light;
 var r=document.documentElement;
 Object.entries(vars).forEach(function(e){r.style.setProperty(e[0],e[1]);});
 r.style.background=vars['--bg'];
+r.setAttribute('data-theme',t);
+r.setAttribute('data-mode',dark?'dark':'light');
 }catch(e){}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
