@@ -22,25 +22,43 @@
   --pink-border:  rgba(236,72,153,.2);
   --pink-text:    #be185d;
   --amber:        #d97706;
-  --input-bg:     rgba(5,150,105,.05);
-  --input-border: rgba(5,150,105,.2);
+  --input-bg:          rgba(5,150,105,.05);
+  --input-border:      rgba(5,150,105,.2);
+  --nav-bg:            rgba(240,253,244,.92);
+  --btn-primary-bg:    #059669;
+  --btn-primary-text:  #ffffff;
+  --btn-primary-shadow:rgba(5,150,105,.3);
+  --streak-color:      #d97706;
+  --success:           #059669;
+  --success-bg:        rgba(5,150,105,.1);
+  --success-text:      #065f46;
+  --card-bg:           #ffffff;
+  --card-border:       rgba(16,185,129,.15);
+  --accent-text:       #065f46;
 }
 
 /* ─── Base ────────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html {
-  background: var(--bg);
+  background: var(--bg, #f0fdf4);
   transition: background .3s;
 }
 
 body {
   font-family: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
-  background: var(--bg);
-  color: var(--text);
+  background: var(--bg, #f0fdf4);
+  color: var(--text, #052e16);
   min-height: 100vh;
   transition: background .3s, color .3s;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Every page wrapper gets the theme background */
+main, #__next, [data-nextjs-scroll-focus-boundary] {
+  background: var(--bg, #f0fdf4);
+  color: var(--text, #052e16);
+  min-height: 100vh;
 }
 
 button { font-family: 'Bricolage Grotesque', inherit; cursor: pointer; }
@@ -220,9 +238,13 @@ nav {
   margin-bottom: 12px;
 }
 .habits-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 10px !important;
+  width: 100% !important;
+  overflow: visible !important;
+  overflow-x: visible !important;
+  flex-direction: unset !important;
   margin-bottom: 12px;
 }
 
@@ -331,35 +353,33 @@ nav {
 
 /* ─── Light-theme Tailwind overrides ─────────────────────────────────────── */
 /* Inner pages use text-white/* classes — flip to CSS var text on light themes */
-html[data-theme="bloom"] .text-white,
-html[data-theme="golden"] .text-white   { color: var(--text)  !important; }
-html[data-theme="bloom"] .text-white\/80,
-html[data-theme="golden"] .text-white\/80 { color: var(--text) !important; }
-html[data-theme="bloom"] .text-white\/70,
-html[data-theme="golden"] .text-white\/70 { color: var(--text2) !important; }
-html[data-theme="bloom"] .text-white\/60,
-html[data-theme="golden"] .text-white\/60 { color: var(--text2) !important; }
-html[data-theme="bloom"] .text-white\/50,
-html[data-theme="golden"] .text-white\/50 { color: var(--text2) !important; }
-html[data-theme="bloom"] .text-white\/40,
-html[data-theme="golden"] .text-white\/40 { color: var(--text2) !important; }
-html[data-theme="bloom"] .text-white\/30,
-html[data-theme="golden"] .text-white\/30 { color: var(--text3) !important; }
-html[data-theme="bloom"] .text-white\/25,
-html[data-theme="golden"] .text-white\/25 { color: var(--text3) !important; }
-html[data-theme="bloom"] .text-white\/20,
-html[data-theme="golden"] .text-white\/20 { color: var(--text3) !important; }
+html[data-mode="light"] .text-white       { color: var(--text)  !important; }
+html[data-mode="light"] .text-white\/80   { color: var(--text)  !important; }
+html[data-mode="light"] .text-white\/70   { color: var(--text2) !important; }
+html[data-mode="light"] .text-white\/60   { color: var(--text2) !important; }
+html[data-mode="light"] .text-white\/50   { color: var(--text2) !important; }
+html[data-mode="light"] .text-white\/40   { color: var(--text2) !important; }
+html[data-mode="light"] .text-white\/30   { color: var(--text3) !important; }
+html[data-mode="light"] .text-white\/25   { color: var(--text3) !important; }
+html[data-mode="light"] .text-white\/20   { color: var(--text3) !important; }
 
 /* Light glass */
-html[data-theme="bloom"] .glass,
-html[data-theme="golden"] .glass {
-  background: rgba(255,255,255,.75) !important;
+html[data-mode="light"] .glass {
+  background: rgba(255,255,255,.8) !important;
   border-color: var(--border) !important;
 }
-html[data-theme="bloom"] .glass-hover:hover,
-html[data-theme="golden"] .glass-hover:hover {
-  background: rgba(255,255,255,.92) !important;
+html[data-mode="light"] .glass-hover:hover {
+  background: rgba(255,255,255,.95) !important;
   border-color: var(--border2) !important;
+}
+
+/* Backward-compat — keep old bloom/golden selectors too */
+html[data-theme="bloom"] .text-white,
+html[data-theme="golden"] .text-white { color: var(--text) !important; }
+html[data-theme="bloom"] .glass,
+html[data-theme="golden"] .glass {
+  background: rgba(255,255,255,.8) !important;
+  border-color: var(--border) !important;
 }
 
 /* ─── Glow utilities (kept for inner pages) ──────────────────────────────── */
