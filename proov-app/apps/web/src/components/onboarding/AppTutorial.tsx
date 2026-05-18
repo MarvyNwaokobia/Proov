@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const STEPS = [
   { emoji: '🔥', title: 'Your streak',    body: 'Every habit you complete adds to your streak. Miss a day and it resets. Your circle sees everything.' },
-  { emoji: '✅', title: 'Log your habits', body: 'Tick habits done each day — or run a focus timer and it counts automatically when time is up.' },
+  { emoji: '✅', title: 'Log your habits', body: 'Tick habits done each day — or run the Grind Timer and it counts automatically when time is up.' },
   { emoji: '🤝', title: 'Add your circle', body: 'Invite people you trust. When your streak breaks, they know. That is the point.' },
   { emoji: '🏆', title: 'Earn your rank',  body: 'Show up daily and climb the leaderboard. Your rank is earned, not bought.' },
 ];

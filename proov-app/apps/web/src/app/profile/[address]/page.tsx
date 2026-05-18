@@ -35,10 +35,10 @@ export default function ProfilePage({ params }: { params: { address: string } })
   const activeHabits = habits.filter(h => h.active);
 
   const STATS = [
-    { label: "Streak",     value: currentStreak.toString(),   unit: "days",    accent: "text-amber-300",   glow: "#f59e0b" },
-    { label: "Best",       value: longestStreak.toString(),   unit: "days",    accent: "text-violet-300",  glow: "#7c3aed" },
-    { label: "Completions",value: totalCompletions.toString(),unit: "total",   accent: "text-white",       glow: "" },
-    { label: "Journal",    value: journalCount.toString(),    unit: "entries", accent: "text-emerald-300", glow: "#10b981" },
+    { label: "Streak",     value: currentStreak.toString(),   unit: "days",    color: 'var(--streak-color)', glow: "var(--amber)" },
+    { label: "Best",       value: longestStreak.toString(),   unit: "days",    color: 'var(--accent-text)',  glow: "var(--accent)" },
+    { label: "Completions",value: totalCompletions.toString(),unit: "total",   color: 'var(--text)',         glow: "" },
+    { label: "Journal",    value: journalCount.toString(),    unit: "entries", color: 'var(--success-text)', glow: "var(--success)" },
   ];
 
   if (!isConnected) return null;
@@ -68,11 +68,12 @@ export default function ProfilePage({ params }: { params: { address: string } })
         {/* Identity hero */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center gap-4">
           <motion.div
-            animate={{ boxShadow: ["0 0 20px rgba(124,58,237,0.2)", "0 0 40px rgba(124,58,237,0.4)", "0 0 20px rgba(124,58,237,0.2)"] }}
+            animate={{ boxShadow: ["0 0 20px var(--accent-bg)","0 0 40px var(--accent-bg)","0 0 20px var(--accent-bg)"] }}
             transition={{ duration: 3, repeat: Infinity }}
-            className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-500 to-indigo-700 flex items-center justify-center"
+            className="w-20 h-20 rounded-3xl flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg,var(--accent),var(--accent2))' }}
           >
-            <span className="text-white text-2xl font-black">
+            <span style={{ color:'var(--btn-primary-text)', fontSize:28, fontWeight:900 }}>
               {displayNameStr.slice(0, 2).toUpperCase()}
             </span>
           </motion.div>
@@ -80,11 +81,11 @@ export default function ProfilePage({ params }: { params: { address: string } })
           <div className="text-center">
             <p className="text-white font-bold text-lg">{displayNameStr}</p>
             {username && <p className="text-white/30 font-mono text-xs mt-0.5">{shortAddr(profileAddress)}</p>}
-            {isOwn && <p className="text-violet-400 text-xs mt-0.5">That&apos;s you</p>}
+            {isOwn && <p style={{ color:'var(--accent-text)', fontSize:11, marginTop:2 }}>That&apos;s you</p>}
             {isActiveToday && (
-              <div className="inline-flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-3 py-1 mt-2">
-                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-                <span className="text-emerald-300 text-[10px] font-medium">Active today</span>
+              <div className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 mt-2" style={{ background:'var(--success-bg)', border:'1px solid var(--success)' }}>
+                <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background:'var(--success)' }} />
+                <span style={{ color:'var(--success-text)', fontSize:10, fontWeight:500 }}>Active today</span>
               </div>
             )}
           </div>
@@ -102,7 +103,7 @@ export default function ProfilePage({ params }: { params: { address: string } })
                   style={{ background: `radial-gradient(circle, ${stat.glow}, transparent)` }} />
               )}
               <p className="text-white/30 text-[10px] uppercase tracking-widest mb-1">{stat.label}</p>
-              <p className={`text-3xl font-black ${stat.accent}`}>{stat.value}</p>
+              <p className="text-3xl font-black" style={{ color: stat.color }}>{stat.value}</p>
               <p className="text-white/20 text-xs">{stat.unit}</p>
             </motion.div>
           ))}

@@ -176,7 +176,7 @@ export default function HabitsPage() {
                 onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); }}
                 placeholder="Habit name..."
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white
-                  placeholder-white/20 text-sm focus:outline-none focus:border-violet-500 transition-colors"
+                  placeholder-white/20 text-sm focus:outline-none transition-colors"
               />
 
               {/* Category selector */}
@@ -225,7 +225,7 @@ export default function HabitsPage() {
                 </p>
                 <input type="range" min={0} max={120} step={5} value={targetMinutes}
                   onChange={(e) => setTargetMinutes(Number(e.target.value))}
-                  className="w-full accent-violet-500" />
+                  className="w-full duration-slider" />
               </div>
 
               {/* Frequency */}
@@ -274,12 +274,13 @@ export default function HabitsPage() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => prefillFromSuggestion(s)}
-                    className="flex-shrink-0 glass rounded-2xl p-3 text-left w-36 space-y-1 border border-white/5 hover:border-violet-500/30 transition-all"
+                    className="flex-shrink-0 glass rounded-2xl p-3 text-left w-36 space-y-1 transition-all"
+                    style={{ border:'1px solid var(--card-border)' }}
                   >
                     <span className="text-xl block">{s.emoji}</span>
                     <p className="text-white text-xs font-semibold leading-snug">{s.name}</p>
                     <p className="text-white/30 text-[10px] leading-relaxed">{s.description}</p>
-                    <p className="text-violet-400 text-[10px] font-medium">Customise →</p>
+                    <p className="text-[10px] font-medium" style={{ color:'var(--accent-text)' }}>Customise →</p>
                   </motion.button>
                 );
               })}

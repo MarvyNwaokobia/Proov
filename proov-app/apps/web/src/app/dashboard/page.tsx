@@ -6,8 +6,9 @@ import { useAccount, useDisconnect } from "wagmi";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useHabits, useSelfCompleteHabit } from "@/hooks/useHabits";
-import { useStreak } from "@/hooks/useStreak";
+import { useStreak, useLeaderboard } from "@/hooks/useStreak";
 import { useActiveSession } from "@/hooks/useSession";
+import { useCircle } from "@/hooks/useCircle";
 import { TxToast } from "@/components/shared/TxToast";
 import { HabitTypeLabel, HABIT_CATEGORIES, getCategoryById } from "@/lib/constants";
 import { getUsername, validateUsername, setUsername } from "@/lib/username";
@@ -18,6 +19,13 @@ import { StreakMilestoneModal } from "@/components/shared/StreakMilestoneModal";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { isMilestone } from "@/lib/shareCard";
 
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
 function shortAddr(addr: string) {
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
 }
@@ -27,7 +35,7 @@ function formatElapsed(s: number) {
 }
 
 const NAV = [
-  { href: "/timer",       icon: "⏱", label: "Timer"  },
+  { href: "/timer",       icon: "⚡", label: "Grind"  },
   { href: "/habits",      icon: "◆", label: "Habits" },
   { href: "/circle",      icon: "◉", label: "Circle" },
   { href: "/leaderboard", icon: "◈", label: "Board"  },
@@ -65,6 +73,8 @@ export default function DashboardPage() {
   const { currentStreak, longestStreak, totalCompletions, isActiveToday } = useStreak();
   const { isActive, elapsed, habitId } = useActiveSession();
   const { selfCompleteHabit, hash, isPending, isSuccess } = useSelfCompleteHabit();
+  const { circle } = useCircle();
+  const { entries: leaderboard } = useLeaderboard(20);
 
   const habitMeta = address ? getHabitMeta(address) : {};
   const activeHabits = habits.filter((h) => h.active);
@@ -142,10 +152,10 @@ export default function DashboardPage() {
               <span className="text-white text-sm font-black">P</span>
             </div>
             <div>
-              <p className="text-white font-bold text-sm leading-none">Proov</p>
-              <p className="text-white/30 text-[10px]">
-                {username ?? (address ? shortAddr(address) : "")}
+              <p style={{ color:'var(--text)', fontWeight:700, fontSize:14, lineHeight:1 }}>
+                {greeting()}, {username ?? shortAddr(address ?? '0x')} 👋
               </p>
+              <p style={{ color:'var(--text3)', fontSize:10, marginTop:2 }}>🔥 {currentStreak.toString()} day streak</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -227,7 +237,7 @@ export default function DashboardPage() {
         <div>
           <div className="flex items-center justify-between mb-3">
             <p className="text-white/60 text-xs font-semibold uppercase tracking-widest">Today</p>
-            <Link href="/habits" className="text-violet-400 text-xs hover:text-violet-300 transition-colors">
+            <Link href="/habits" className="text-xs transition-colors" style={{ color:'var(--accent-text)' }}>
               Manage →
             </Link>
           </div>
@@ -357,6 +367,65 @@ export default function DashboardPage() {
               </Link>
             </motion.div>
           ))}
+        </div>
+
+        {/* Circle activity */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <p style={{ fontSize:10, fontWeight:600, letterSpacing:'1.5px', color:'var(--text3)', textTransform:'uppercase' }}>Your circle</p>
+            <Link href="/circle" style={{ fontSize:11, color:'var(--accent-text)', textDecoration:'none' }}>Manage →</Link>
+          </div>
+          {circle.length === 0 ? (
+            <div className="glass rounded-2xl p-5 text-center">
+              <p style={{ fontSize:13, color:'var(--text3)', marginBottom:10 }}>Add friends to stay accountable</p>
+              <Link href="/circle" style={{ fontSize:13, fontWeight:600, color:'var(--accent-text)', textDecoration:'none' }}>Add your circle →</Link>
+            </div>
+          ) : (
+            <div className="glass rounded-2xl p-4 space-y-2">
+              {circle.slice(0, 3).map(addr => (
+                <div key={addr} style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <div style={{ width:28, height:28, borderRadius:'50%', background:'var(--accent-bg)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:700, color:'var(--accent-text)', flexShrink:0 }}>
+                    {addr.slice(2,4).toUpperCase()}
+                  </div>
+                  <span style={{ fontSize:12, color:'var(--text2)' }}>{addr.slice(0,6)}…{addr.slice(-4)}</span>
+                  <span style={{ marginLeft:'auto', fontSize:10, color:'var(--text3)' }}>🔥 circle</span>
+                </div>
+              ))}
+              {circle.length > 3 && <p style={{ fontSize:11, color:'var(--text3)', textAlign:'center' }}>+{circle.length - 3} more</p>}
+            </div>
+          )}
+        </div>
+
+        {/* Leaderboard snapshot */}
+        {leaderboard.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <p style={{ fontSize:10, fontWeight:600, letterSpacing:'1.5px', color:'var(--text3)', textTransform:'uppercase' }}>Leaderboard</p>
+              <Link href="/leaderboard" style={{ fontSize:11, color:'var(--accent-text)', textDecoration:'none' }}>See all →</Link>
+            </div>
+            <div className="glass rounded-2xl overflow-hidden">
+              {leaderboard.slice(0, 3).map((e, i) => {
+                const isMe = e.address.toLowerCase() === address?.toLowerCase();
+                return (
+                  <div key={e.address} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 14px', borderBottom: i < 2 ? '1px solid var(--border)' : 'none', background: isMe ? 'var(--accent-bg)' : 'transparent' }}>
+                    <span style={{ fontSize:11, minWidth:18, color: ['#f59e0b','#94a3b8','#cd7f32'][i] || 'var(--text3)', fontWeight:700 }}>{i+1}</span>
+                    <span style={{ fontSize:12, flex:1, color: isMe ? 'var(--accent-text)' : 'var(--text2)' }}>{e.address.slice(0,6)}…{e.address.slice(-4)}{isMe ? ' (you)' : ''}</span>
+                    <span style={{ fontSize:12, fontWeight:700, color:'var(--streak-color)' }}>🔥 {e.streak.toString()}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Quick actions */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+          <Link href="/timer" style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6, padding:'14px', borderRadius:14, background:'var(--btn-primary-bg)', color:'var(--btn-primary-text)', textDecoration:'none', fontWeight:600, fontSize:13, boxShadow:'0 4px 14px var(--btn-primary-shadow)' }}>
+            <span>⚡</span>Start a session
+          </Link>
+          <Link href="/habits" style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6, padding:'14px', borderRadius:14, border:'1px solid var(--border2)', color:'var(--text2)', textDecoration:'none', fontWeight:500, fontSize:13, textAlign:'center' }}>
+            <span>+</span>New habit
+          </Link>
         </div>
 
         {/* Theme toggle */}

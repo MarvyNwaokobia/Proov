@@ -37,8 +37,9 @@ function MemberRow({
       animate={{ opacity: 1, x: 0 }}
       className="glass glass-hover rounded-2xl p-4 flex items-center gap-4 group"
     >
-      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-700 flex items-center justify-center flex-shrink-0">
-        <span className="text-white text-xs font-bold">
+      <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+        style={{ background: 'linear-gradient(135deg,var(--accent),var(--accent2))' }}>
+        <span style={{ color: 'var(--btn-primary-text)', fontSize: 12, fontWeight: 700 }}>
           {name.slice(0, 2).toUpperCase()}
         </span>
       </div>
@@ -46,9 +47,9 @@ function MemberRow({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <p className="text-white text-sm font-medium">{name}</p>
-          {isSelf && <span className="text-[10px] text-violet-400 font-medium">(you)</span>}
+          {isSelf && <span className="text-[10px] font-medium" style={{ color:'var(--accent-text)' }}>(you)</span>}
           {isActiveToday && (
-            <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse flex-shrink-0" />
+            <span className="w-1.5 h-1.5 rounded-full animate-pulse flex-shrink-0" style={{ background:'var(--success)' }} />
           )}
         </div>
         <p className="text-white/30 text-xs mt-0.5">{currentStreak.toString()} day streak</p>
@@ -57,7 +58,7 @@ function MemberRow({
       <button
         onClick={() => onWitness(memberAddr, 0)}
         disabled={isWitnessing || !!isSelf}
-        className="text-white/20 hover:text-violet-300 text-xs transition-colors
+        className="text-white/20 hover:opacity-80 text-xs transition-colors
           opacity-0 group-hover:opacity-100 disabled:opacity-0"
       >
         Witness
@@ -165,7 +166,7 @@ export default function CirclePage() {
               onKeyDown={e => { if (e.key === "Enter") handleSend(); }}
               placeholder="Username or account ID..."
               className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white
-                placeholder-white/20 text-sm focus:outline-none focus:border-violet-500 transition-colors"
+                placeholder-white/20 text-sm focus:outline-none focus:outline-none transition-colors"
             />
             <motion.button
               whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
@@ -182,7 +183,7 @@ export default function CirclePage() {
           {resolvedAddr && !inputError && (
             <motion.p
               initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-              className="text-emerald-400 text-xs flex items-center gap-1"
+              className="text-xs flex items-center gap-1" style={{ color:'var(--success)' }}
             >
               <span>✓</span> {shortAddr(resolvedAddr)}
             </motion.p>
@@ -225,7 +226,8 @@ export default function CirclePage() {
                     <div className="flex gap-2">
                       <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                         onClick={() => acceptRequest(from)} disabled={isAccepting || isRejecting}
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors disabled:opacity-40">
+                        className="text-xs font-bold px-4 py-2 rounded-xl transition-colors disabled:opacity-40"
+                        style={{ background:'var(--btn-primary-bg)', color:'var(--btn-primary-text)' }}>
                         Accept
                       </motion.button>
                       <button onClick={() => rejectRequest(from)} disabled={isAccepting || isRejecting}
