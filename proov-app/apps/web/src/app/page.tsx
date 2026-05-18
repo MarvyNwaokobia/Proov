@@ -1,274 +1,160 @@
-"use client";
+'use client';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAccount } from 'wagmi';
+import { RippleButton } from '@/components/shared/RippleButton';
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAccount, useConnect } from "wagmi";
-import { motion, AnimatePresence } from "framer-motion";
-import { hasWeb3AuthClientId } from "@/lib/wagmi-config";
+const THEME_VARS: Record<string, Record<string, string>> = {
+  bloom:    {'--bg':'#f0fdf4','--bg2':'rgba(0,0,0,.03)','--bg3':'rgba(0,0,0,.06)','--border':'rgba(16,185,129,.12)','--border2':'rgba(16,185,129,.25)','--text':'#052e16','--text2':'rgba(5,46,22,.55)','--text3':'rgba(5,46,22,.3)','--accent':'#059669','--accent2':'#047857','--accent-bg':'rgba(5,150,105,.1)','--accent-border':'rgba(5,150,105,.25)','--accent-text':'#065f46','--pink':'#ec4899','--pink-bg':'rgba(236,72,153,.08)','--pink-border':'rgba(236,72,153,.2)','--pink-text':'#be185d','--amber':'#d97706','--input-bg':'rgba(5,150,105,.05)','--input-border':'rgba(5,150,105,.2)'},
+  midnight: {'--bg':'#09090f','--bg2':'rgba(255,255,255,.04)','--bg3':'rgba(255,255,255,.08)','--border':'rgba(255,255,255,.08)','--border2':'rgba(255,255,255,.15)','--text':'#ffffff','--text2':'rgba(255,255,255,.55)','--text3':'rgba(255,255,255,.25)','--accent':'#6366f1','--accent2':'#8b5cf6','--accent-bg':'rgba(99,102,241,.12)','--accent-border':'rgba(99,102,241,.25)','--accent-text':'#a5b4fc','--pink':'#ec4899','--pink-bg':'rgba(236,72,153,.08)','--pink-border':'rgba(236,72,153,.2)','--pink-text':'#f9a8d4','--amber':'#f59e0b','--input-bg':'rgba(255,255,255,.05)','--input-border':'rgba(255,255,255,.12)'},
+  sakura:   {'--bg':'#1a0812','--bg2':'rgba(255,255,255,.05)','--bg3':'rgba(255,255,255,.09)','--border':'rgba(244,63,94,.12)','--border2':'rgba(244,63,94,.25)','--text':'#fff0f5','--text2':'rgba(255,240,245,.55)','--text3':'rgba(255,240,245,.25)','--accent':'#f43f5e','--accent2':'#e11d48','--accent-bg':'rgba(244,63,94,.12)','--accent-border':'rgba(244,63,94,.3)','--accent-text':'#fda4af','--pink':'#f43f5e','--pink-bg':'rgba(244,63,94,.1)','--pink-border':'rgba(244,63,94,.25)','--pink-text':'#fda4af','--amber':'#f59e0b','--input-bg':'rgba(244,63,94,.06)','--input-border':'rgba(244,63,94,.2)'},
+  aurora:   {'--bg':'#0d0221','--bg2':'rgba(139,92,246,.06)','--bg3':'rgba(139,92,246,.1)','--border':'rgba(139,92,246,.12)','--border2':'rgba(139,92,246,.25)','--text':'#f5f3ff','--text2':'rgba(245,243,255,.55)','--text3':'rgba(245,243,255,.25)','--accent':'#7c3aed','--accent2':'#6d28d9','--accent-bg':'rgba(124,58,237,.12)','--accent-border':'rgba(124,58,237,.3)','--accent-text':'#c4b5fd','--pink':'#ec4899','--pink-bg':'rgba(236,72,153,.08)','--pink-border':'rgba(236,72,153,.2)','--pink-text':'#f9a8d4','--amber':'#f59e0b','--input-bg':'rgba(139,92,246,.06)','--input-border':'rgba(139,92,246,.2)'},
+  golden:   {'--bg':'#fffbeb','--bg2':'rgba(0,0,0,.03)','--bg3':'rgba(0,0,0,.06)','--border':'rgba(217,119,6,.12)','--border2':'rgba(217,119,6,.25)','--text':'#431407','--text2':'rgba(67,20,7,.55)','--text3':'rgba(67,20,7,.3)','--accent':'#d97706','--accent2':'#b45309','--accent-bg':'rgba(217,119,6,.1)','--accent-border':'rgba(217,119,6,.25)','--accent-text':'#92400e','--pink':'#ec4899','--pink-bg':'rgba(236,72,153,.08)','--pink-border':'rgba(236,72,153,.2)','--pink-text':'#be185d','--amber':'#d97706','--input-bg':'rgba(217,119,6,.05)','--input-border':'rgba(217,119,6,.2)'},
+  auto:     {'--bg':'#09090f','--bg2':'rgba(255,255,255,.04)','--bg3':'rgba(255,255,255,.08)','--border':'rgba(255,255,255,.08)','--border2':'rgba(255,255,255,.15)','--text':'#ffffff','--text2':'rgba(255,255,255,.55)','--text3':'rgba(255,255,255,.25)','--accent':'#6366f1','--accent2':'#8b5cf6','--accent-bg':'rgba(99,102,241,.12)','--accent-border':'rgba(99,102,241,.25)','--accent-text':'#a5b4fc','--pink':'#ec4899','--pink-bg':'rgba(236,72,153,.08)','--pink-border':'rgba(236,72,153,.2)','--pink-text':'#f9a8d4','--amber':'#f59e0b','--input-bg':'rgba(255,255,255,.05)','--input-border':'rgba(255,255,255,.12)'},
+};
 
-const FEATURES = [
-  {
-    icon: "🔥",
-    title: "Streaks that can't be faked",
-    body: "Every habit completion hits the blockchain. No screenshots. No lies.",
-  },
-  {
-    icon: "◉",
-    title: "Accountability circles",
-    body: "When your streak breaks, your circle knows — onchain, automatically.",
-  },
-  {
-    icon: "🤖",
-    title: "AI verifies your fitness",
-    body: "Claude judges your workout descriptions. Be specific or get denied.",
-  },
-  {
-    icon: "◈",
-    title: "Global leaderboard",
-    body: "Every user ranked by streak. Show up daily or fall behind.",
-  },
-];
-
-function ConnectorButton({
-  icon,
-  label,
-  sublabel,
-  onClick,
-  disabled,
-  isPending,
-  variant = "default",
-}: {
-  icon: React.ReactNode;
-  label: string;
-  sublabel: string;
-  onClick: () => void;
-  disabled?: boolean;
-  isPending?: boolean;
-  variant?: "default" | "primary";
-}) {
-  return (
-    <motion.button
-      whileHover={{ scale: disabled ? 1 : 1.02, y: disabled ? 0 : -2 }}
-      whileTap={{ scale: disabled ? 1 : 0.98 }}
-      onClick={onClick}
-      disabled={disabled || isPending}
-      className={`relative w-full flex items-center gap-4 px-5 py-4 rounded-2xl border transition-all duration-200
-        disabled:opacity-40 disabled:cursor-not-allowed text-left overflow-hidden group
-        ${variant === "primary"
-          ? "bg-violet-600 border-violet-500 hover:bg-violet-500 glow-violet-sm"
-          : "glass glass-hover"
-        }`}
-    >
-      {/* Shimmer sweep on hover */}
-      {variant === "primary" && (
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent
-          -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-      )}
-
-      <div className={`text-2xl flex-shrink-0 ${isPending ? "animate-spin" : ""}`}>
-        {isPending ? "⏳" : icon}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-white font-semibold text-sm">{isPending ? "Connecting…" : label}</p>
-        <p className="text-white/50 text-xs mt-0.5">{sublabel}</p>
-      </div>
-      <div className="text-white/30 text-sm flex-shrink-0 group-hover:text-white/60 transition-colors">
-        →
-      </div>
-    </motion.button>
-  );
+function applyTheme(t: string) {
+  const vars = THEME_VARS[t] || THEME_VARS.bloom;
+  const r = document.documentElement;
+  Object.entries(vars).forEach(([k, v]) => r.style.setProperty(k, v));
+  r.setAttribute('data-theme', t);
+  localStorage.setItem('proov_theme', t);
+  document.body.style.background = vars['--bg'];
 }
 
-export default function OnboardingPage() {
+const FEATURES = [
+  { emoji: '🧠', title: 'AI verifies you',   desc: 'Describe it. Vague gets rejected.' },
+  { emoji: '🤝', title: 'Your circle sees',  desc: 'Every streak. Every break.' },
+  { emoji: '🏆', title: 'Global rank',        desc: 'Show up or fall behind.' },
+  { emoji: '🔥', title: 'Streaks that last',  desc: "Can't be faked. Can't be bought." },
+];
+
+const AVATAR_COLORS = ['#6366f1', '#ec4899', '#10b981', '#f59e0b'] as const;
+const AVATAR_LETTERS = ['A', 'T', 'S', 'J'];
+
+export default function LandingPage() {
   const router = useRouter();
   const { isConnected } = useAccount();
-  const { connect, connectors, isPending } = useConnect();
-  const [connecting, setConnecting] = useState<"social" | "wallet" | null>(null);
-  const [showFeatures, setShowFeatures] = useState(false);
 
   useEffect(() => {
-    if (isConnected) router.push("/dashboard");
+    if (isConnected) router.replace('/dashboard');
   }, [isConnected, router]);
 
   useEffect(() => {
-    const t = setTimeout(() => setShowFeatures(true), 600);
-    return () => clearTimeout(t);
+    const saved = localStorage.getItem('proov_theme') || 'bloom';
+    applyTheme(saved);
   }, []);
 
-  useEffect(() => {
-    if (!isPending) setConnecting(null);
-  }, [isPending]);
-
-  const handleSocial = () => {
-    const c = connectors[0];
-    if (c) { setConnecting("social"); connect({ connector: c }); }
-  };
-
-  const handleWallet = () => {
-    const c = connectors[1];
-    if (c) { setConnecting("wallet"); connect({ connector: c }); }
-    else {
-      // fallback — try any connector
-      const any = connectors[0];
-      if (any) { setConnecting("wallet"); connect({ connector: any }); }
-    }
-  };
-
-  const noEnv = !hasWeb3AuthClientId;
-
   return (
-    <div className="min-h-screen bg-[#050508] flex flex-col items-center justify-center px-4 relative overflow-hidden">
-
-      {/* Aurora background blobs */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div
-          className="animate-aurora absolute w-[700px] h-[700px] rounded-full opacity-[0.07]"
-          style={{
-            background: "radial-gradient(circle, #7c3aed 0%, #4f46e5 50%, transparent 70%)",
-            top: "-200px", left: "-150px",
-          }}
-        />
-        <div
-          className="animate-aurora2 absolute w-[600px] h-[600px] rounded-full opacity-[0.06]"
-          style={{
-            background: "radial-gradient(circle, #0ea5e9 0%, #6366f1 50%, transparent 70%)",
-            bottom: "-150px", right: "-100px",
-          }}
-        />
-        <div
-          className="absolute w-[300px] h-[300px] rounded-full opacity-[0.04] animate-pulse-glow"
-          style={{
-            background: "radial-gradient(circle, #f59e0b 0%, transparent 70%)",
-            top: "40%", left: "60%",
-          }}
-        />
+    <>
+      {/* Background blobs */}
+      <div className="blobs">
+        <div className="blob b1" />
+        <div className="blob b2" />
+        <div className="blob b3" />
       </div>
 
-      {/* Dot grid overlay */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.15]"
-        style={{
-          backgroundImage: "radial-gradient(rgba(255,255,255,0.15) 1px, transparent 1px)",
-          backgroundSize: "32px 32px",
-        }}
-      />
+      {/* Gradient top bar */}
+      <div className="top-bar" />
 
-      <div className="relative z-10 w-full max-w-sm mx-auto">
+      <div className="wrap" style={{ paddingTop: 3 }}>
 
-        {/* Logo */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="flex flex-col items-center mb-10"
-        >
-          <motion.div
-            animate={{ boxShadow: ["0 0 20px rgba(124,58,237,0.3)", "0 0 40px rgba(124,58,237,0.6)", "0 0 20px rgba(124,58,237,0.3)"] }}
-            transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-            className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center mb-5"
+        {/* Nav */}
+        <nav>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div
+              className="logo-float"
+              style={{ width: 34, height: 34, borderRadius: 9, background: 'linear-gradient(135deg,var(--accent),var(--accent2))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 15, color: '#fff' }}
+            >P</div>
+            <span style={{ fontWeight: 700, fontSize: 17, color: 'var(--text)' }}>Proov</span>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn-ghost" style={{ padding: '7px 15px', fontSize: 13 }} onClick={() => router.push('/signin')}>Sign in</button>
+            <RippleButton style={{ padding: '7px 15px', fontSize: 13 }} onClick={() => router.push('/signup')}>Join free</RippleButton>
+          </div>
+        </nav>
+
+        {/* Hero */}
+        <div style={{ padding: '2.5rem 0 1.5rem', textAlign: 'center' }}>
+          <div
+            className="hero-animate-1"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', borderRadius: 20, padding: '4px 13px', fontSize: 11, color: 'var(--accent-text)', marginBottom: '1.25rem', letterSpacing: '.3px' }}
           >
-            <span className="text-white text-3xl font-black tracking-tight">P</span>
-          </motion.div>
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--accent)', display: 'inline-block' }} />
+            Proof of habit · Free to join
+          </div>
 
-          {/* Motto */}
-          <h1 className="text-5xl font-black text-white tracking-tight text-center leading-none">
-            Prove it.
+          <h1 className="hero-h hero-animate-2" style={{ textAlign: 'center' }}>
+            Do the work.<br />
+            <em>Own the proof.</em>
           </h1>
-          <h2 className="text-5xl font-black tracking-tight text-center leading-none mt-1 gradient-text">
-            Every day.
-          </h2>
-          <p className="text-white/40 text-sm text-center mt-4 max-w-xs leading-relaxed">
-            Habits. Streaks. Accountability. All onchain — permanent, verifiable, yours.
-          </p>
-        </motion.div>
 
-        {/* Login card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.15 }}
-          className="glass rounded-3xl p-5 space-y-3 mb-5"
-        >
-          <p className="text-white/40 text-xs font-medium uppercase tracking-widest px-1 mb-4">
-            Choose how to sign in
+          <p
+            className="hero-animate-3"
+            style={{ fontSize: 15, color: 'var(--text2)', margin: '0 auto 1.75rem', lineHeight: 1.7, maxWidth: 380 }}
+          >
+            No excuses. No screenshots.<br />Just streaks that can&apos;t be faked.
           </p>
 
-          {noEnv ? (
-            <div className="bg-amber-950/40 border border-amber-600/30 rounded-2xl p-4 text-left">
-              <p className="text-amber-300 font-semibold text-sm mb-2">⚠ Setup required</p>
-              <p className="text-amber-400/80 text-xs leading-relaxed mb-3">
-                Create <code className="bg-amber-900/50 px-1.5 py-0.5 rounded text-amber-300">apps/web/.env.local</code>:
-              </p>
-              <pre className="text-xs text-amber-300/80 bg-amber-950/60 rounded-xl p-3 overflow-x-auto leading-relaxed">{`NEXT_PUBLIC_WEB3AUTH_CLIENT_ID=...
-NEXT_PUBLIC_PROOV_CORE_ADDRESS=0x...
-NEXT_PUBLIC_SESSION_MANAGER_ADDRESS=0x...
-NEXT_PUBLIC_CIRCLE_MANAGER_ADDRESS=0x...`}</pre>
-            </div>
-          ) : (
-            <>
-              <ConnectorButton
-                variant="primary"
-                icon="✉"
-                label="Email or Social"
-                sublabel="Google · Twitter · Email magic link"
-                onClick={handleSocial}
-                disabled={noEnv}
-                isPending={connecting === "social" && isPending}
-              />
-
-              <div className="flex items-center gap-3 px-1">
-                <div className="flex-1 h-px bg-white/8" />
-                <span className="text-white/20 text-xs">or</span>
-                <div className="flex-1 h-px bg-white/8" />
-              </div>
-
-              <ConnectorButton
-                icon="🦊"
-                label="Connect Wallet"
-                sublabel="MetaMask · any injected wallet"
-                onClick={handleWallet}
-                disabled={noEnv}
-                isPending={connecting === "wallet" && isPending}
-              />
-            </>
-          )}
-        </motion.div>
-
-        {/* Features */}
-        <AnimatePresence>
-          {showFeatures && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.6 }}
-              className="grid grid-cols-2 gap-2"
+          <div className="hero-animate-4" style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: '1.75rem', flexWrap: 'wrap' }}>
+            <RippleButton onClick={() => router.push('/signup')}>Start today →</RippleButton>
+            <button
+              className="btn-ghost"
+              onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
             >
-              {FEATURES.map((f, i) => (
-                <motion.div
-                  key={f.title}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 + i * 0.08 }}
-                  className="glass glass-hover rounded-2xl p-3 cursor-default"
-                >
-                  <span className="text-lg block mb-1.5">{f.icon}</span>
-                  <p className="text-white/80 text-xs font-semibold leading-snug">{f.title}</p>
-                  <p className="text-white/35 text-[10px] mt-1 leading-relaxed">{f.body}</p>
-                </motion.div>
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
+              See how it works
+            </button>
+          </div>
 
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1 }}
-          className="text-center text-white/20 text-xs mt-6"
+          <div
+            className="hero-animate-5"
+            style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', fontSize: 12, color: 'var(--text3)' }}
+          >
+            <div style={{ display: 'flex' }}>
+              {AVATAR_COLORS.map((c, i) => (
+                <div key={i} style={{ width: 24, height: 24, borderRadius: '50%', background: c, border: '2px solid var(--bg)', marginLeft: i > 0 ? -5 : 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff' }}>
+                  {AVATAR_LETTERS[i]}
+                </div>
+              ))}
+            </div>
+            {/* Fix 8 — gold stars */}
+            <span style={{ color: '#f59e0b', letterSpacing: -1 }}>★★★★★</span>
+            <span>1,200+ grinding daily</span>
+          </div>
+        </div>
+
+        {/* Feature cards — Fix 2: id for scroll target */}
+        <div id="how-it-works" className="feat-grid">
+          {FEATURES.map(f => (
+            <div key={f.title} className="card" style={{ borderRadius: 14, padding: '.875rem' }}>
+              <div style={{ fontSize: 22, marginBottom: 7 }}>{f.emoji}</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>{f.title}</div>
+              <div style={{ fontSize: 11, color: 'var(--text3)', lineHeight: 1.55 }}>{f.desc}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Fix 1 — CTA section replaces circle/leaderboard/theme picker */}
+        <div
+          className="cta-section"
+          style={{ margin: '2rem 0', padding: '1.75rem', background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', borderRadius: 20, textAlign: 'center' }}
         >
-          Built on Celo · No gas needed · Powered by Claude AI
-        </motion.p>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>🔥</div>
+          <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 6, letterSpacing: '-.3px' }}>
+            Your streak starts today
+          </h3>
+          <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: '1.25rem', lineHeight: 1.6 }}>
+            Free forever. No card. Takes 30 seconds.
+          </p>
+          <RippleButton style={{ padding: '13px 32px', fontSize: 15 }} onClick={() => router.push('/signup')}>
+            Start today →
+          </RippleButton>
+        </div>
+
+        <footer style={{ textAlign: 'center', padding: '1.25rem 0', fontSize: 11, color: 'var(--text3)', borderTop: '1px solid var(--border)' }}>
+          Free to join · proov.app
+        </footer>
       </div>
-    </div>
+    </>
   );
 }

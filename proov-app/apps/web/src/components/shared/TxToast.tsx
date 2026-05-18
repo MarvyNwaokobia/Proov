@@ -32,26 +32,30 @@ export function TxToast({ hash, pendingText, successText }: TxToastProps) {
           transition={{ type: "spring", stiffness: 400, damping: 30 }}
           className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50"
         >
-          <div className={`flex items-center gap-3 px-5 py-3 rounded-2xl text-sm font-medium shadow-2xl backdrop-blur-xl border
-            ${isSuccess
-              ? "bg-emerald-950/80 border-emerald-500/30 text-emerald-200"
-              : "bg-violet-950/80 border-violet-500/30 text-violet-200"
-            }`}
-          >
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '10px 20px', borderRadius: 24,
+            fontSize: 13, fontWeight: 600,
+            backdropFilter: 'blur(12px)',
+            background: isSuccess ? 'var(--success-bg)' : 'var(--accent-bg)',
+            border: `1px solid ${isSuccess ? 'var(--success)' : 'var(--accent-border)'}`,
+            color: isSuccess ? 'var(--success-text)' : 'var(--accent-text)',
+            boxShadow: '0 8px 32px rgba(0,0,0,.25)',
+          }}>
             {isSuccess ? (
               <motion.span
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 600, damping: 20 }}
-                className="w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--success)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
               >
-                <span className="text-white text-[10px] font-black">✓</span>
+                <span style={{ color: '#fff', fontSize: 10, fontWeight: 900 }}>✓</span>
               </motion.span>
             ) : (
               <motion.span
                 animate={{ rotate: 360 }}
                 transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
-                className="w-5 h-5 border-2 border-violet-400/30 border-t-violet-400 rounded-full flex-shrink-0"
+                style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid var(--accent-border)', borderTopColor: 'var(--accent)', display: 'flex', flexShrink: 0 }}
               />
             )}
             <span>{isSuccess ? successText : pendingText}</span>

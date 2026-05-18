@@ -33,11 +33,7 @@ export function getWeb3Auth(): Web3Auth {
     clientId,
     web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_MAINNET,
     privateKeyProvider,
-    uiConfig: {
-      appName: "Proov",
-      theme: { primary: "#7c3aed" },
-      loginMethodsOrder: ["google", "twitter", "email_passwordless"],
-    },
+    // No uiConfig — whitelabel requires paid plan
   });
 
   return _web3auth;
