@@ -37,8 +37,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const savedMode = (localStorage.getItem('proov_mode') as ColorMode) || 'system';
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     setSystemDark(mq.matches);
-    const validTheme = THEMES[savedTheme] ? savedTheme : 'bloom';
-    setThemeIdState(validTheme);
+    setThemeIdState(THEMES[savedTheme] ? savedTheme : 'bloom');
     setModeState(savedMode);
     setMounted(true);
     const handler = (e: MediaQueryListEvent) => setSystemDark(e.matches);

@@ -8,6 +8,18 @@ import { useStartSession, useEndSession } from '@/hooks/useSession';
 import { getHabitMeta } from '@/lib/habitMeta';
 import { TxToast } from '@/components/shared/TxToast';
 
+// Cursor glow hook for timer page
+function useCursorGlow() {
+  useEffect(() => {
+    const move = (e: MouseEvent) => {
+      const el = document.getElementById('timer-cursor-glow');
+      if (el) { el.style.left = e.clientX + 'px'; el.style.top = e.clientY + 'px'; }
+    };
+    window.addEventListener('mousemove', move);
+    return () => window.removeEventListener('mousemove', move);
+  }, []);
+}
+
 const STOPS = [5, 10, 15, 20, 25, 30, 45, 60, 90, 120, 180, 240];
 const CIRC = 2 * Math.PI * 54;
 
@@ -33,9 +45,10 @@ type TimerState = 'pick' | 'running' | 'done';
 
 interface PickedHabit { id: string; name: string; emoji: string; duration: number; }
 
-// ── Duration picker (shared between habit + custom) ──────────────────────
+// ── Duration picker — live slider value during drag, snaps on release ────
 function DurationPicker({ value, onChange }: { value: number; onChange: (n: number) => void }) {
   const [mode, setMode] = useState<'slider' | 'manual'>('slider');
+  const [sliderDisplay, setSliderDisplay] = useState(value); // exact value while dragging
   const stopIdx = STOPS.indexOf(snapToStop(value));
 
   const modeBtn = (m: 'slider' | 'manual', label: string) => (
@@ -60,13 +73,14 @@ function DurationPicker({ value, onChange }: { value: number; onChange: (n: numb
 
       {mode === 'slider' ? (
         <div>
-          <p style={{ textAlign:'center', fontSize:22, fontWeight:700, color:'var(--text)', marginBottom:12, letterSpacing:-1 }}>
-            {fmtDur(value)}
+          <p style={{ textAlign:'center', fontSize:24, fontWeight:800, color:'var(--text)', marginBottom:12, letterSpacing:-1 }}>
+            {fmtDur(sliderDisplay)}
           </p>
           <input
-            type="range" min={0} max={STOPS.length - 1}
-            value={stopIdx >= 0 ? stopIdx : 4}
-            onChange={e => onChange(STOPS[parseInt(e.target.value)])}
+            type="range" min={1} max={240}
+            value={sliderDisplay}
+            onInput={(e) => setSliderDisplay(parseInt((e.target as HTMLInputElement).value))}
+            onChange={(e) => { const s = snapToStop(parseInt(e.target.value)); onChange(s); setSliderDisplay(s); }}
             className="duration-slider" style={{ width:'100%' }}
           />
           <div style={{ display:'flex', justifyContent:'space-between', marginTop:6 }}>
@@ -227,6 +241,7 @@ export default function GrindTimerPage() {
   const router = useRouter();
   const { address, isConnected } = useAccount();
   useEffect(() => { if (!isConnected) router.push('/'); }, [isConnected, router]);
+  useCursorGlow();
 
   const { habits } = useHabits();
   const habitMeta = address ? getHabitMeta(address) : {};
@@ -328,6 +343,8 @@ export default function GrindTimerPage() {
 
   return (
     <div className="min-h-screen app-bg pb-24 relative overflow-hidden">
+      {/* Cursor glow — follows mouse on desktop */}
+      <div id="timer-cursor-glow" style={{ position: 'fixed', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, var(--accent-bg), transparent 70%)', transform: 'translate(-50%, -50%)', pointerEvents: 'none', zIndex: 0, transition: 'left .1s ease, top .1s ease', opacity: 0.6 }} />
       <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full opacity-[0.07]"
         style={{ background:'radial-gradient(circle,var(--accent),transparent 70%)' }} />
 

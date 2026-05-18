@@ -55,16 +55,24 @@ function MemberRow({
         <p className="text-white/30 text-xs mt-0.5">{currentStreak.toString()} day streak</p>
       </div>
 
-      <button
-        onClick={() => onWitness(memberAddr, 0)}
-        disabled={isWitnessing || !!isSelf}
-        className="text-white/20 hover:opacity-80 text-xs transition-colors
-          opacity-0 group-hover:opacity-100 disabled:opacity-0"
-      >
-        Witness
-      </button>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+        <button onClick={() => onWitness(memberAddr, 0)} disabled={isWitnessing || !!isSelf} style={{ fontSize: 10, color: 'var(--text3)', background: 'none', border: 'none', cursor: isSelf ? 'default' : 'pointer', fontFamily: 'inherit', opacity: isSelf ? 0 : 1 }}>
+          Witness
+        </button>
+      </div>
     </motion.div>
   );
+}
+
+// Cheer helpers
+function canCheer(memberAddr: string): boolean {
+  if (typeof window === "undefined") return false;
+  const today = new Date().toDateString();
+  return !localStorage.getItem(`proov_cheered_${memberAddr}_${today}`);
+}
+function doCheer(memberAddr: string) {
+  const today = new Date().toDateString();
+  localStorage.setItem(`proov_cheered_${memberAddr}_${today}`, "1");
 }
 
 export default function CirclePage() {
@@ -81,6 +89,12 @@ export default function CirclePage() {
   const [input, setInput] = useState("");
   const [inputError, setInputError] = useState("");
   const [resolvedAddr, setResolvedAddr] = useState<string | null>(null);
+  const [cheeredMap, setCheeredMap] = useState<Record<string, boolean>>({});
+
+  const handleCheer = (addr: string) => {
+    doCheer(addr);
+    setCheeredMap(m => ({ ...m, [addr]: true }));
+  };
 
   useEffect(() => {
     if (sendOk || acceptOk || rejectOk || witnessOk) refetch();
@@ -246,21 +260,33 @@ export default function CirclePage() {
         <div>
           <p className="text-white/30 text-xs font-semibold uppercase tracking-widest mb-3">Your Circle</p>
           {circle.length === 0 ? (
-            <div className="glass rounded-2xl p-10 text-center">
-              <p className="text-4xl mb-3">◉</p>
-              <p className="text-white/40 text-sm">Your circle is empty.</p>
-              <p className="text-white/20 text-xs mt-1">Add members by username or account ID above.</p>
+            <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, padding: '2.5rem', textAlign: 'center' }}>
+              <p style={{ fontSize: 36, marginBottom: 10 }}>◉</p>
+              <p style={{ fontSize: 14, color: 'var(--text2)' }}>Your circle is empty.</p>
+              <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>Add members by username or account ID above.</p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {circle.map(addr => (
-                <MemberRow
-                  key={addr} address={addr}
-                  isSelf={addr.toLowerCase() === address?.toLowerCase()}
-                  onWitness={witnessHabit}
-                  isWitnessing={isWitnessing}
-                />
-              ))}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {circle.map(addr => {
+                const isSelf = addr.toLowerCase() === address?.toLowerCase();
+                const cheered = cheeredMap[addr] || !canCheer(addr);
+                return (
+                  <div key={addr}>
+                    <MemberRow address={addr} isSelf={isSelf} onWitness={witnessHabit} isWitnessing={isWitnessing} />
+                    {!isSelf && (
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: -4, paddingRight: 2 }}>
+                        {!cheered ? (
+                          <button onClick={() => handleCheer(addr)} style={{ padding: '4px 12px', borderRadius: 14, border: '1px solid var(--pink-border)', background: 'var(--pink-bg)', color: 'var(--pink-text)', fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                            🌸 Cheer
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: 10, color: 'var(--text3)', padding: '4px 0' }}>Cheered ✓</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

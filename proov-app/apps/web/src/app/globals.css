@@ -35,7 +35,7 @@ html {
 }
 
 body {
-  font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  font-family: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -43,7 +43,9 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-button { font-family: inherit; cursor: pointer; }
+button { font-family: 'Bricolage Grotesque', inherit; cursor: pointer; }
+h1, h2, h3 { font-family: 'Bricolage Grotesque', sans-serif; }
+.serif-italic { font-family: 'Instrument Serif', serif; font-style: italic; }
 
 /* ─── Top gradient bar ───────────────────────────────────────────────────── */
 .top-bar {
@@ -117,7 +119,7 @@ input, textarea, select {
   border-radius: 10px;
   padding: 10px 14px;
   font-size: 14px;
-  font-family: inherit;
+  font-family: 'Bricolage Grotesque', inherit;
   outline: none;
   transition: border .15s;
 }
@@ -416,6 +418,12 @@ input[type="range"] { accent-color: var(--accent); }
   width: 20px; height: 20px; border-radius: 50%;
   background: var(--btn-primary-bg); cursor: pointer; border: none;
 }
+
+/* ─── Dark mode text contrast guarantee ─────────────────────────────────── */
+/* Ensures text always uses CSS variable colors, never invisible on dark bg */
+* { color: inherit; }
+input, textarea, select { color: var(--text); }
+button { color: inherit; }
 
 /* ─── Scrollbar ──────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 4px; }
