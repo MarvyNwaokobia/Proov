@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { WalletProvider } from "@/components/wallet-provider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { AppErrorBoundary } from "@/components/providers/AppErrorBoundary";
 import { OfflineIndicator } from "@/components/shared/OfflineIndicator";
 import { BottomNav } from "@/components/shared/BottomNav";
 
@@ -48,13 +49,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
       </head>
       <body>
-        <ThemeProvider>
-          <WalletProvider>
-            <OfflineIndicator />
-            <div style={{ paddingBottom: '80px' }}>{children}</div>
-            <BottomNav />
-          </WalletProvider>
-        </ThemeProvider>
+        <AppErrorBoundary>
+          <ThemeProvider>
+            <WalletProvider>
+              <OfflineIndicator />
+              <div style={{ paddingBottom: '80px' }}>{children}</div>
+              <BottomNav />
+            </WalletProvider>
+          </ThemeProvider>
+        </AppErrorBoundary>
       </body>
     </html>
   );

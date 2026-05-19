@@ -43,12 +43,15 @@ function buildConnectors() {
   if (!clientId || typeof window === "undefined") {
     return [mock({ accounts: ["0x0000000000000000000000000000000000000001"] as const })];
   }
-  return [
-    // Social / email — Web3Auth (index 0)
-    Web3AuthConnector({ web3AuthInstance: getWeb3Auth() }),
-    // Wallet — MetaMask / injected (index 1)
-    injected({ shimDisconnect: true }),
-  ];
+  try {
+    return [
+      Web3AuthConnector({ web3AuthInstance: getWeb3Auth() }),
+      injected({ shimDisconnect: true }),
+    ];
+  } catch {
+    // Web3Auth failed to initialise — fall back to mock so the app still loads
+    return [mock({ accounts: ["0x0000000000000000000000000000000000000001"] as const })];
+  }
 }
 
 export const wagmiConfig = createConfig({
@@ -58,5 +61,8 @@ export const wagmiConfig = createConfig({
     [celo.id]: http("https://forno.celo.org"),
     [celoSepolia.id]: http("https://forno.celo-sepolia.celo-testnet.org"),
   },
-  ssr: true,
+  // ssr: false — server uses mock connectors, client uses Web3Auth.
+  // Setting ssr: true causes wagmi to attempt state reconciliation between
+  // those two different connector sets, which throws on hydration.
+  ssr: false,
 });
