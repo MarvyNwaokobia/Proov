@@ -91,7 +91,7 @@ export default function SettingsPage() {
         <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, overflow: 'hidden', marginBottom: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '1rem' }}>
             <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent), var(--accent2, var(--accent)))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, color: '#fff', flexShrink: 0 }}>
-              {(username || 'U').slice(0, 1).toUpperCase()}
+              {(username || 'P').slice(0, 1).toUpperCase()}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               {editingUsername ? (
@@ -115,10 +115,12 @@ export default function SettingsPage() {
                 </div>
               ) : (
                 <div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>@{username || 'set a username'}</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>
+                    {username ? `@${username}` : 'Set your name'}
+                  </div>
                   <button onClick={() => { setEditingUsername(true); setNewUsername(''); }}
                     style={{ background: 'none', border: 'none', fontSize: 11, color: 'var(--accent-text)', cursor: 'pointer', fontFamily: 'inherit', padding: 0, marginTop: 2 }}>
-                    Edit username
+                    {username ? 'Edit username' : 'Pick a username →'}
                   </button>
                 </div>
               )}

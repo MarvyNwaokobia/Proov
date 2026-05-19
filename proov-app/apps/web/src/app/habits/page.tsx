@@ -268,8 +268,19 @@ export default function HabitsPage() {
             {activeHabits.length === 0 && (
               <div style={{ marginBottom: 16 }}>
                 <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: "var(--text3)", marginBottom: 8 }}>Suggestions</p>
-                <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 8 }}>
-                  {SUGGESTED_HABITS.map(s => (<button key={s.name} onClick={() => { setPrefill({ name: s.name, categoryId: s.category, duration: s.duration, habitType: CATEGORY_TO_TYPE[s.category] ?? HabitType.CUSTOM }); setShowForm(true); }} style={{ flexShrink: 0, width: 130, padding: ".875rem", borderRadius: 14, cursor: "pointer", fontFamily: "inherit", textAlign: "left", background: "var(--card-bg)", border: "1px solid var(--card-border)" }}><span style={{ fontSize: 20, display: "block", marginBottom: 5 }}>{s.emoji}</span><p style={{ fontSize: 11, fontWeight: 600, color: "var(--text)", margin: 0, marginBottom: 3 }}>{s.name}</p><p style={{ fontSize: 9, color: "var(--accent-text)", margin: 0, fontWeight: 600 }}>Customise →</p></button>))}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  {SUGGESTED_HABITS.slice(0, 6).map(s => (
+                    <button key={s.name}
+                      onClick={() => { setPrefill({ name: s.name, categoryId: s.category, duration: s.duration, habitType: CATEGORY_TO_TYPE[s.category] ?? HabitType.CUSTOM }); setShowForm(true); }}
+                      style={{ padding: ".875rem", borderRadius: 14, cursor: "pointer", fontFamily: "inherit", textAlign: "left", background: "var(--card-bg)", border: "1px solid var(--card-border)", transition: "transform .15s, border .15s" }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--accent-border)"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ""; (e.currentTarget as HTMLElement).style.borderColor = "var(--card-border)"; }}
+                    >
+                      <span style={{ fontSize: 20, display: "block", marginBottom: 6 }}>{s.emoji}</span>
+                      <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", margin: 0, marginBottom: 3 }}>{s.name}</p>
+                      <p style={{ fontSize: 10, color: "var(--accent-text)", margin: 0, fontWeight: 500 }}>Customise →</p>
+                    </button>
+                  ))}
                 </div>
               </div>
             )}

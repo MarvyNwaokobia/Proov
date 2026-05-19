@@ -163,7 +163,7 @@ export default function CirclePage() {
           <Link href="/dashboard" className="w-8 h-8 glass rounded-xl flex items-center justify-center text-white/50 hover:text-white transition-colors text-sm">←</Link>
           <div>
             <p className="text-white font-bold">Circle</p>
-            <p className="text-white/30 text-xs">{circle.length}/10 members</p>
+            <p style={{ fontSize: 12, color: 'var(--text2)' }}>{circle.length}/10 members</p>
           </div>
         </div>
       </div>
@@ -263,7 +263,7 @@ export default function CirclePage() {
             <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, padding: '2.5rem', textAlign: 'center' }}>
               <p style={{ fontSize: 36, marginBottom: 10 }}>◉</p>
               <p style={{ fontSize: 14, color: 'var(--text2)' }}>Your circle is empty.</p>
-              <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>Add members by @username or address above.</p>
+              <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>Add by @username or address</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
