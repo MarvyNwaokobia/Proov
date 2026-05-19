@@ -127,7 +127,7 @@ export default function CirclePage() {
     let target: string | null = null;
 
     if (val.startsWith("0x") && val.length === 42) {
-      if (!isAddress(val)) { setInputError("Not a valid account ID."); return; }
+      if (!isAddress(val)) { setInputError("Not a valid address."); return; }
       target = val;
     } else {
       const username = val.replace(/^@/, "");
@@ -178,7 +178,7 @@ export default function CirclePage() {
               value={input}
               onChange={e => { setInput(e.target.value); setInputError(""); }}
               onKeyDown={e => { if (e.key === "Enter") handleSend(); }}
-              placeholder="Username or account ID..."
+              placeholder="@username or address"
               className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white
                 placeholder-white/20 text-sm focus:outline-none focus:outline-none transition-colors"
             />
@@ -215,7 +215,7 @@ export default function CirclePage() {
           </AnimatePresence>
 
           <p className="text-white/20 text-xs">
-            When your streak breaks, your entire circle is notified automatically.
+            Your circle sees your habits and cheers you on.
           </p>
         </div>
 
@@ -263,7 +263,7 @@ export default function CirclePage() {
             <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, padding: '2.5rem', textAlign: 'center' }}>
               <p style={{ fontSize: 36, marginBottom: 10 }}>◉</p>
               <p style={{ fontSize: 14, color: 'var(--text2)' }}>Your circle is empty.</p>
-              <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>Add members by username or account ID above.</p>
+              <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>Add members by @username or address above.</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
