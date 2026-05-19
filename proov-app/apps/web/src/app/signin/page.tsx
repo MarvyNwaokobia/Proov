@@ -8,6 +8,7 @@ import type { ColorMode } from '@/lib/themes';
 import { getPostLoginRoute } from '@/lib/auth';
 import { isMiniPay, connectMiniPay } from '@/lib/minipay';
 import { findAddressByUsername } from '@/lib/username';
+import { clearWeb3AuthSession } from '@/lib/clearSession';
 
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -52,7 +53,13 @@ export default function SignInPage() {
     }
   }, [isConnected, router]);
 
-  const triggerConnect = () => {
+  const triggerConnect = async () => {
+    // Wipe any cached session so Google always shows the account picker
+    await clearWeb3AuthSession();
+    try {
+      const { getWeb3Auth } = await import('@/lib/wagmi-config');
+      await getWeb3Auth().logout({ cleanup: true });
+    } catch {}
     const c = connectors[0];
     if (c) connect({ connector: c });
   };

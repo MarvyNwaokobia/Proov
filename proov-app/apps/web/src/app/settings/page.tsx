@@ -56,27 +56,20 @@ export default function SettingsPage() {
   };
 
   const handleSignOut = async () => {
+    // Always attempt Web3Auth logout — don't check .connected which may lag
     try {
       const { getWeb3Auth } = await import('@/lib/wagmi-config');
-      const web3auth = getWeb3Auth();
-      if (web3auth.connected) await web3auth.logout({ cleanup: true });
-    } catch (e) {
-      console.warn('web3auth logout error:', e);
-    }
+      await getWeb3Auth().logout({ cleanup: true });
+    } catch {}
+    // Disconnect wagmi
     disconnect();
-    // Clear our auth flags
+    // Clear our app auth flags
     localStorage.removeItem('proov_authenticated');
     localStorage.removeItem('proov_address');
     localStorage.removeItem('proov_email');
-    // Clear Web3Auth / OpenLogin session cache so Google account picker shows next time
-    const toRemove: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && (key.startsWith('openlogin_') || key.startsWith('Web3Auth-') || key === 'sk')) {
-        toRemove.push(key);
-      }
-    }
-    toRemove.forEach(k => localStorage.removeItem(k));
+    // Wipe ALL Web3Auth / OpenLogin session storage (localStorage + sessionStorage + IndexedDB)
+    const { clearWeb3AuthSession } = await import('@/lib/clearSession');
+    await clearWeb3AuthSession();
     window.location.href = '/';
   };
 
