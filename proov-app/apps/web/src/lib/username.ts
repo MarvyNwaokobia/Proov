@@ -21,14 +21,15 @@ export function isUsernameTaken(username: string, excludeAddress?: string): bool
 
 export function registerUsername(username: string, address: string): boolean {
   const registry = getRegistry();
-  const lower = username.toLowerCase();
+  const lower = username.toLowerCase().replace(/^@/, '');
 
   // Taken by someone else?
   if (registry[lower] && registry[lower] !== address.toLowerCase()) return false;
 
   registry[lower] = address.toLowerCase();
   localStorage.setItem(REGISTRY_KEY, JSON.stringify(registry));
-  localStorage.setItem(USER_KEY(address), JSON.stringify({ username, updatedAt: new Date().toISOString() }));
+  localStorage.setItem(USER_KEY(address), JSON.stringify({ username: lower, updatedAt: new Date().toISOString() }));
+  localStorage.setItem('proov_username', lower);
   return true;
 }
 
@@ -55,7 +56,24 @@ export function validateUsername(username: string): { valid: boolean; message: s
   if (clean.length < 3)  return { valid: false, message: 'At least 3 characters' };
   if (clean.length > 20) return { valid: false, message: 'Max 20 characters' };
   if (!/^[a-zA-Z0-9_]+$/.test(clean)) return { valid: false, message: 'Letters, numbers, underscores only' };
-  return { valid: true, message: '✓ Looks good' };
+  return { valid: true, message: '✓ Available' };
+}
+
+// Alias for getUsername — used by settings/username-setup
+export function getUsernameForAddress(address: string): string | null {
+  return getUsername(address);
+}
+
+export function generateSuggestions(base: string): string[] {
+  const clean = base.replace(/[^a-zA-Z0-9]/g, '').toLowerCase().slice(0, 12);
+  if (!clean) return [];
+  const candidates = [
+    clean,
+    `${clean}_grind`,
+    `${clean}_does`,
+    clean.slice(0, 8),
+  ].filter(s => s.length >= 3 && !isUsernameTaken(s));
+  return [...new Set(candidates)].slice(0, 4);
 }
 
 // Display helper — returns username if set, else shortened address
@@ -63,4 +81,11 @@ export function displayName(address: string): string {
   const username = getUsername(address);
   if (username) return username;
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
+}
+
+// Store simple proov_username key too (for easy lookup without address)
+export function registerUsernameWithSimpleKey(username: string, address: string): boolean {
+  const ok = registerUsername(username, address);
+  if (ok) localStorage.setItem('proov_username', username.toLowerCase().replace(/^@/, ''));
+  return ok;
 }

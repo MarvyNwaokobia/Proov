@@ -1,196 +1,170 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAccount, useDisconnect } from "wagmi";
-import { getUsername, setUsername, validateUsername, isUsernameTaken } from "@/lib/username";
-import { ThemeToggle } from "@/components/shared/ThemeToggle";
-import { useCircle } from "@/hooks/useCircle";
-import { useLeaderboard } from "@/hooks/useStreak";
-
-function shortAddr(addr: string) { return `${addr.slice(0,6)}…${addr.slice(-4)}`; }
+'use client';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useDisconnect } from 'wagmi';
+import Link from 'next/link';
+import { ThemeToggle } from '@/components/shared/ThemeToggle';
+import { validateUsername, isUsernameTaken, registerUsername } from '@/lib/username';
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
-  const { circle } = useCircle();
-  const { entries } = useLeaderboard(50);
 
-  const [currentUsername, setCurrentUsername] = useState<string | null>(null);
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState("");
-  const [hint, setHint] = useState("");
-  const [hintOk, setHintOk] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [username, setUsername] = useState('');
+  const [editingUsername, setEditingUsername] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+  const [usernameHint, setUsernameHint] = useState('');
+  const [usernameHintColor, setUsernameHintColor] = useState('var(--text3)');
+  const [address, setAddress] = useState('');
+  const [userRank] = useState<number>(14);
+  const [savedToast, setSavedToast] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => { if (!isConnected) router.push("/"); }, [isConnected, router]);
-  useEffect(() => { if (address) setCurrentUsername(getUsername(address)); }, [address]);
+  useEffect(() => {
+    setMounted(true);
+    const addr = localStorage.getItem('proov_address') || '';
+    setAddress(addr);
+    if (addr) {
+      const raw = localStorage.getItem(`proov_username_${addr.toLowerCase()}`);
+      if (raw) { try { setUsername(JSON.parse(raw).username || ''); } catch {} }
+    }
+    const fallback = localStorage.getItem('proov_username');
+    if (fallback && !username) setUsername(fallback);
+  }, []);
 
-  const checkDraft = (val: string) => {
-    setDraft(val);
-    const clean = val.trim();
-    if (!clean) { setHint(''); setHintOk(false); return; }
+  const checkNewUsername = (val: string) => {
+    setNewUsername(val);
+    const clean = val.replace(/^@/, '');
+    if (!clean) { setUsernameHint(''); return; }
     const { valid, message } = validateUsername(clean);
-    if (!valid) { setHint(message); setHintOk(false); return; }
-    if (isUsernameTaken(clean, address ?? '')) { setHint('Already taken — try another'); setHintOk(false); return; }
-    setHint('✓ Available'); setHintOk(true);
+    if (!valid) { setUsernameHint(message); setUsernameHintColor('#f43f5e'); return; }
+    if (isUsernameTaken(clean, address)) { setUsernameHint('Already taken'); setUsernameHintColor('#f43f5e'); return; }
+    setUsernameHint('✓ Available');
+    setUsernameHintColor('var(--accent)');
   };
 
-  const handleSave = () => {
-    if (!hintOk || !address) return;
-    setUsername(address, draft.trim());
-    setCurrentUsername(draft.trim());
-    setEditing(false); setDraft(''); setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  const saveUsername = () => {
+    const clean = newUsername.replace(/^@/, '');
+    const ok = registerUsername(clean, address);
+    if (!ok) { setUsernameHint('Already taken'); setUsernameHintColor('#f43f5e'); return; }
+    setUsername(clean);
+    setEditingUsername(false);
+    setNewUsername('');
+    setUsernameHint('');
+    setSavedToast(true);
+    setTimeout(() => setSavedToast(false), 2500);
   };
 
-  const myRank = address ? entries.findIndex(e => e.address.toLowerCase() === address.toLowerCase()) + 1 : 0;
-  const initials = (currentUsername ?? shortAddr(address ?? '0x')).slice(0, 2).toUpperCase();
+  const handleSignOut = () => {
+    disconnect();
+    localStorage.removeItem('proov_authenticated');
+    localStorage.removeItem('proov_address');
+    localStorage.removeItem('proov_email');
+    router.push('/');
+  };
 
-  if (!isConnected) return null;
-
-  const Section = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <div style={{ marginBottom: '1.25rem' }}>
-      <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '1.5px', color: 'var(--text3)', textTransform: 'uppercase', marginBottom: 8 }}>{label}</p>
-      <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, overflow: 'hidden' }}>
-        {children}
-      </div>
-    </div>
-  );
-
-  const Row = ({ children, last = false, onClick }: { children: React.ReactNode; last?: boolean; onClick?: () => void }) => (
-    <div onClick={onClick} style={{ padding: '14px 16px', borderBottom: last ? 'none' : '1px solid var(--border)', cursor: onClick ? 'pointer' : 'default' }}>{children}</div>
-  );
+  if (!mounted) return null;
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', paddingBottom: 100 }}>
-      <div style={{ background: 'var(--nav-bg)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: '1px solid var(--border)', padding: '1rem 1.25rem', position: 'sticky', top: 0, zIndex: 30 }}>
-        <div style={{ maxWidth: 520, margin: '0 auto' }}>
-          <p style={{ color: 'var(--text)', fontWeight: 700, fontSize: 16 }}>Settings</p>
-        </div>
-      </div>
+    <>
+      <div className="blobs"><div className="blob b1" /><div className="blob b2" /></div>
+      <div className="top-bar" />
 
-      <div style={{ maxWidth: 520, margin: '0 auto', padding: '1.25rem' }}>
+      <div className="page-wrap" style={{ paddingTop: 18 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: '-.5px', marginBottom: '1.5rem' }}>Settings</h1>
 
-        {/* Leaderboard card at top */}
-        <div onClick={() => router.push('/leaderboard')} style={{ background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', borderRadius: 14, padding: '0.875rem', marginBottom: '1.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 28 }}>🏆</span>
+        {/* Leaderboard shortcut */}
+        <Link href="/leaderboard"
+          style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '1rem', background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', borderRadius: 16, textDecoration: 'none', marginBottom: '1.5rem', transition: 'transform .15s' }}
+          onMouseEnter={e => ((e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)')}
+          onMouseLeave={e => ((e.currentTarget as HTMLElement).style.transform = '')}>
+          <span style={{ fontSize: 32 }}>🏆</span>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Leaderboard</div>
-            <div style={{ fontSize: 11, color: 'var(--text2)' }}>{myRank > 0 ? `You're #${myRank} globally` : 'See how you rank'}</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Leaderboard</div>
+            <div style={{ fontSize: 12, color: 'var(--text2)' }}>You&apos;re #{userRank} globally</div>
           </div>
           <span style={{ color: 'var(--accent-text)', fontSize: 18 }}>›</span>
-        </div>
+        </Link>
 
         {/* Profile */}
-        <Section label="Profile">
-          <Row last>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg,var(--accent),var(--accent2,var(--accent)))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 900, color: 'var(--btn-primary-text)', flexShrink: 0 }}>
-                {initials}
-              </div>
-              <div style={{ flex: 1 }}>
-                {!editing ? (
-                  <div>
-                    <p style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)' }}>
-                      {currentUsername ?? <span style={{ color: 'var(--text3)', fontWeight: 400, fontSize: 14 }}>Not set</span>}
-                    </p>
-                    {address && <p style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'monospace', marginTop: 2 }}>{shortAddr(address)}</p>}
-                    {saved && <p style={{ fontSize: 11, color: 'var(--success-text)', marginTop: 2 }}>✓ Saved</p>}
+        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '0.625rem' }}>Profile</p>
+        <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, overflow: 'hidden', marginBottom: '1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '1rem' }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent), var(--accent2, var(--accent)))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, color: '#fff', flexShrink: 0 }}>
+              {(username || 'U').slice(0, 1).toUpperCase()}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              {editingUsername ? (
+                <div>
+                  <div style={{ position: 'relative', marginBottom: 4 }}>
+                    <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 14, fontWeight: 700, color: 'var(--accent)' }}>@</span>
+                    <input type="text" value={newUsername} onChange={e => checkNewUsername(e.target.value)} autoFocus placeholder={username}
+                      style={{ paddingLeft: 24, fontSize: 14, fontWeight: 600, padding: '7px 7px 7px 24px' }} />
                   </div>
-                ) : (
-                  <div style={{ flex: 1 }}>
-                    <input autoFocus value={draft} onChange={e => checkDraft(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }} placeholder="@yourname" maxLength={20} style={{ marginBottom: 4 }} />
-                    {hint && <p style={{ fontSize: 11, color: hintOk ? 'var(--success-text)' : '#f43f5e', marginBottom: 4 }}>{hint}</p>}
-                    <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-                      <button onClick={() => { setEditing(false); setDraft(''); }} style={{ flex: 1, padding: '7px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text3)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
-                      <button onClick={handleSave} disabled={!hintOk} style={{ flex: 1, padding: '7px', borderRadius: 8, border: 'none', background: hintOk ? 'var(--btn-primary-bg)' : 'var(--bg3)', color: hintOk ? 'var(--btn-primary-text)' : 'var(--text3)', fontSize: 12, fontWeight: 600, cursor: hintOk ? 'pointer' : 'default', fontFamily: 'inherit' }}>Save</button>
-                    </div>
+                  {usernameHint && <p style={{ fontSize: 10, color: usernameHintColor, marginBottom: 6 }}>{usernameHint}</p>}
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={saveUsername} disabled={usernameHint !== '✓ Available'}
+                      style={{ padding: '5px 14px', borderRadius: 8, border: 'none', background: usernameHint === '✓ Available' ? 'var(--btn-primary-bg)' : 'var(--bg3)', color: usernameHint === '✓ Available' ? 'var(--btn-primary-text)' : 'var(--text3)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      Save
+                    </button>
+                    <button onClick={() => { setEditingUsername(false); setNewUsername(''); setUsernameHint(''); }}
+                      style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text3)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      Cancel
+                    </button>
                   </div>
-                )}
-              </div>
-              {!editing && (
-                <button onClick={() => { setDraft(currentUsername ?? ''); setEditing(true); }} style={{ fontSize: 12, color: 'var(--accent-text)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
-                  {currentUsername ? 'Edit' : 'Set name'}
-                </button>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>@{username || 'set a username'}</div>
+                  <button onClick={() => { setEditingUsername(true); setNewUsername(''); }}
+                    style={{ background: 'none', border: 'none', fontSize: 11, color: 'var(--accent-text)', cursor: 'pointer', fontFamily: 'inherit', padding: 0, marginTop: 2 }}>
+                    Edit username
+                  </button>
+                </div>
               )}
             </div>
-          </Row>
-        </Section>
+          </div>
+        </div>
 
         {/* Appearance */}
-        <Section label="Appearance">
-          <Row last><ThemeToggle /></Row>
-        </Section>
+        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '0.625rem' }}>Appearance</p>
+        <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, padding: '1rem', marginBottom: '1.25rem' }}>
+          <ThemeToggle />
+        </div>
 
         {/* Habits */}
-        <Section label="Habits">
-          <Row onClick={() => router.push('/habits')}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 14, color: 'var(--text)' }}>Manage habits</span>
-              <span style={{ color: 'var(--text3)', fontSize: 14 }}>›</span>
-            </div>
-          </Row>
-          <Row last>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 14, color: 'var(--text)' }}>Default privacy</span>
-              <span style={{ fontSize: 12, color: 'var(--text3)' }}>Private</span>
-            </div>
-          </Row>
-        </Section>
+        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '0.625rem' }}>Habits</p>
+        <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, overflow: 'hidden', marginBottom: '1.25rem' }}>
+          <Link href="/habits" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1rem', textDecoration: 'none', borderBottom: '1px solid var(--border)' }}>
+            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>Manage habits</span>
+            <span style={{ color: 'var(--accent-text)', fontSize: 14 }}>›</span>
+          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1rem' }}>
+            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>Default privacy</span>
+            <span style={{ fontSize: 12, color: 'var(--text3)' }}>Private</span>
+          </div>
+        </div>
 
         {/* Circle */}
-        <Section label="Circle">
-          <Row last onClick={() => router.push('/circle')}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 14, color: 'var(--text)' }}>Your circle</span>
-              <span style={{ fontSize: 12, color: 'var(--text3)' }}>{circle.length} members ›</span>
-            </div>
-          </Row>
-        </Section>
-
-        {/* Notifications */}
-        <Section label="Notifications">
-          <Row last>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <p style={{ fontSize: 14, color: 'var(--text)' }}>Streak reminders</p>
-                <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>Coming soon</p>
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--text3)', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 20, padding: '4px 10px' }}>Soon</div>
-            </div>
-          </Row>
-        </Section>
+        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '0.625rem' }}>Circle</p>
+        <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, overflow: 'hidden', marginBottom: '1.25rem' }}>
+          <Link href="/circle" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1rem', textDecoration: 'none' }}>
+            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>Manage your circle</span>
+            <span style={{ color: 'var(--accent-text)', fontSize: 14 }}>›</span>
+          </Link>
+        </div>
 
         {/* Account */}
-        <Section label="Account">
-          <Row>
-            <p style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'monospace', wordBreak: 'break-all' }}>{address}</p>
-          </Row>
-          <Row>
-            <button onClick={() => { disconnect(); router.push("/"); }} style={{ background: 'none', border: 'none', color: '#f43f5e', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', width: '100%', textAlign: 'left', padding: 0 }}>
-              Sign out
-            </button>
-          </Row>
-          <Row last>
-            {!showDeleteConfirm ? (
-              <button onClick={() => setShowDeleteConfirm(true)} style={{ background: 'none', border: 'none', color: 'var(--text3)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', width: '100%', textAlign: 'left', padding: 0 }}>
-                Delete account
-              </button>
-            ) : (
-              <div>
-                <p style={{ fontSize: 13, color: 'var(--text)', marginBottom: 8 }}>This will delete your profile. Your onchain records remain.</p>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => setShowDeleteConfirm(false)} style={{ flex: 1, padding: 8, borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text3)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
-                  <button style={{ flex: 1, padding: 8, borderRadius: 8, border: 'none', background: '#f43f5e', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Confirm</button>
-                </div>
-              </div>
-            )}
-          </Row>
-        </Section>
+        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '0.625rem' }}>Account</p>
+        <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, overflow: 'hidden', marginBottom: '2rem' }}>
+          <button onClick={handleSignOut}
+            style={{ display: 'block', width: '100%', padding: '0.875rem 1rem', textAlign: 'left', background: 'transparent', border: 'none', fontSize: 13, fontWeight: 500, color: '#f43f5e', cursor: 'pointer', fontFamily: 'inherit' }}>
+            Sign out
+          </button>
+        </div>
       </div>
-    </div>
+
+      <div className={`toast ${savedToast ? 'show' : ''}`} style={{ background: 'var(--success)' }}>✓ Saved</div>
+    </>
   );
 }
