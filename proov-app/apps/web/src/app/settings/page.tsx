@@ -64,9 +64,19 @@ export default function SettingsPage() {
       console.warn('web3auth logout error:', e);
     }
     disconnect();
+    // Clear our auth flags
     localStorage.removeItem('proov_authenticated');
     localStorage.removeItem('proov_address');
     localStorage.removeItem('proov_email');
+    // Clear Web3Auth / OpenLogin session cache so Google account picker shows next time
+    const toRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith('openlogin_') || key.startsWith('Web3Auth-') || key === 'sk')) {
+        toRemove.push(key);
+      }
+    }
+    toRemove.forEach(k => localStorage.removeItem(k));
     window.location.href = '/';
   };
 

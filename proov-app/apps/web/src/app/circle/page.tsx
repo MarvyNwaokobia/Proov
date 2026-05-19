@@ -35,31 +35,45 @@ function MemberRow({
     <motion.div
       initial={{ opacity: 0, x: -8 }}
       animate={{ opacity: 1, x: 0 }}
-      className="glass glass-hover rounded-2xl p-4 flex items-center gap-4 group"
+      style={{
+        background: 'var(--card-bg)', border: '1px solid var(--card-border)',
+        borderRadius: 16, padding: '1rem',
+        display: 'flex', alignItems: 'center', gap: 14,
+        transition: 'border .2s',
+      }}
     >
-      <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-        style={{ background: 'linear-gradient(135deg,var(--accent),var(--accent2))' }}>
-        <span style={{ color: 'var(--btn-primary-text)', fontSize: 12, fontWeight: 700 }}>
+      <div style={{
+        width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+        background: 'linear-gradient(135deg, var(--accent), var(--accent2, var(--accent)))',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <span style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>
           {name.slice(0, 2).toUpperCase()}
         </span>
       </div>
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <p className="text-white text-sm font-medium">{name}</p>
-          {isSelf && <span className="text-[10px] font-medium" style={{ color:'var(--accent-text)' }}>(you)</span>}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', margin: 0 }}>{name}</p>
+          {isSelf && <span style={{ fontSize: 10, fontWeight: 500, color: 'var(--accent-text)' }}>(you)</span>}
           {isActiveToday && (
-            <span className="w-1.5 h-1.5 rounded-full animate-pulse flex-shrink-0" style={{ background:'var(--success)' }} />
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--success)', flexShrink: 0, display: 'inline-block' }} />
           )}
         </div>
-        <p className="text-white/30 text-xs mt-0.5">{currentStreak.toString()} day streak</p>
+        <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>{currentStreak.toString()} day streak</p>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-        <button onClick={() => onWitness(memberAddr, 0)} disabled={isWitnessing || !!isSelf} style={{ fontSize: 10, color: 'var(--text3)', background: 'none', border: 'none', cursor: isSelf ? 'default' : 'pointer', fontFamily: 'inherit', opacity: isSelf ? 0 : 1 }}>
-          Witness
-        </button>
-      </div>
+      <button
+        onClick={() => onWitness(memberAddr, 0)}
+        disabled={isWitnessing || !!isSelf}
+        style={{
+          fontSize: 10, color: 'var(--text3)', background: 'none', border: 'none',
+          cursor: isSelf ? 'default' : 'pointer', fontFamily: 'inherit',
+          opacity: isSelf ? 0 : 1,
+        }}
+      >
+        Witness
+      </button>
     </motion.div>
   );
 }
@@ -100,50 +114,33 @@ export default function CirclePage() {
     if (sendOk || acceptOk || rejectOk || witnessOk) refetch();
   }, [sendOk, acceptOk, rejectOk, witnessOk, refetch]);
 
-  // Live-resolve username as user types
   useEffect(() => {
     const val = input.trim();
     if (!val) { setResolvedAddr(null); setInputError(""); return; }
     if (val.startsWith("0x") && val.length === 42) {
-      setResolvedAddr(val);
-      setInputError("");
+      setResolvedAddr(val); setInputError("");
     } else {
       const username = val.replace(/^@/, "");
       const found = findAddressByUsername(username);
-      if (found) {
-        setResolvedAddr(found);
-        setInputError("");
-      } else {
-        setResolvedAddr(null);
-        // Don't show error while typing, only on submit
-      }
+      if (found) { setResolvedAddr(found); setInputError(""); }
+      else setResolvedAddr(null);
     }
   }, [input]);
 
   const handleSend = () => {
     const val = input.trim();
     if (!val) return;
-
     let target: string | null = null;
-
     if (val.startsWith("0x") && val.length === 42) {
       if (!isAddress(val)) { setInputError("Not a valid address."); return; }
       target = val;
     } else {
       const username = val.replace(/^@/, "");
       const found = findAddressByUsername(username);
-      if (!found) {
-        setInputError(`No user found with username "${username}"`);
-        return;
-      }
+      if (!found) { setInputError(`No user found with username "${username}"`); return; }
       target = found;
     }
-
-    if (target?.toLowerCase() === address?.toLowerCase()) {
-      setInputError("That's you!");
-      return;
-    }
-
+    if (target?.toLowerCase() === address?.toLowerCase()) { setInputError("That's you!"); return; }
     setInputError("");
     sendRequest(target as `0x${string}`);
     setInput("");
@@ -153,63 +150,87 @@ export default function CirclePage() {
   if (!isConnected) return null;
 
   return (
-    <div className="min-h-screen app-bg pb-24 relative overflow-hidden">
-      <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-[400px] h-[200px] opacity-[0.04] rounded-full"
-        style={{ background: "radial-gradient(ellipse, var(--accent), transparent)" }} />
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', paddingBottom: 96 }}>
+
+      {/* Accent glow — purely decorative */}
+      <div style={{
+        position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
+        width: 400, height: 200, borderRadius: '50%', pointerEvents: 'none',
+        background: 'radial-gradient(ellipse, var(--accent-bg), transparent)',
+        opacity: 0.4,
+      }} />
 
       {/* Header */}
       <div style={{
         background: 'var(--nav-bg)',
         borderBottom: '1px solid var(--border)',
         padding: '1rem 1.25rem',
-        position: 'sticky',
-        top: 0,
-        zIndex: 30,
+        position: 'sticky', top: 0, zIndex: 30,
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
       }}>
         <div style={{ maxWidth: 512, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Link href="/dashboard" style={{ width: 32, height: 32, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: 'var(--text3)', textDecoration: 'none', border: '1px solid var(--border2)', background: 'var(--bg2)', flexShrink: 0 }}>←</Link>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, var(--accent), var(--accent2, var(--accent)))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: '#fff', flexShrink: 0 }}>🤝</div>
+          <Link href="/dashboard" style={{
+            width: 32, height: 32, borderRadius: 10, flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 14, color: 'var(--text3)', textDecoration: 'none',
+            border: '1px solid var(--border2)', background: 'var(--bg2)',
+          }}>←</Link>
+          <div style={{
+            width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+            background: 'linear-gradient(135deg, var(--accent), var(--accent2, var(--accent)))',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 18, color: '#fff',
+          }}>🤝</div>
           <div>
-            <p style={{ fontWeight: 700, color: 'var(--text)', fontSize: 15 }}>Circle</p>
-            <p style={{ fontSize: 12, color: 'var(--text2)' }}>{circle.length}/10 members</p>
+            <p style={{ fontWeight: 700, color: 'var(--text)', fontSize: 15, margin: 0 }}>Circle</p>
+            <p style={{ fontSize: 12, color: 'var(--text2)', margin: 0 }}>{circle.length}/10 members</p>
           </div>
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 pt-5 space-y-5">
+      <div style={{ maxWidth: 512, margin: '0 auto', padding: '1.25rem 1.25rem 0' }}>
 
-        {/* Add member */}
-        <div className="glass rounded-3xl p-5 space-y-3">
-          <p className="text-white/40 text-xs font-semibold uppercase tracking-widest">Add Member</p>
-          <div className="flex gap-2">
+        {/* ── Add member ── */}
+        <div style={{
+          background: 'var(--card-bg)', border: '1px solid var(--card-border)',
+          borderRadius: 20, padding: '1.25rem', marginBottom: '1.25rem',
+        }}>
+          <p style={{
+            fontSize: 10, fontWeight: 700, letterSpacing: 1.5,
+            textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10,
+          }}>Add Member</p>
+
+          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
             <input
               value={input}
               onChange={e => { setInput(e.target.value); setInputError(""); }}
               onKeyDown={e => { if (e.key === "Enter") handleSend(); }}
               placeholder="@username or address"
-              className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white
-                placeholder-white/20 text-sm focus:outline-none focus:outline-none transition-colors"
+              style={{ flex: 1 }}
             />
             <motion.button
               whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
               onClick={handleSend}
               disabled={isSending || !input.trim()}
-              className="disabled:opacity-40 text-sm font-bold px-5 rounded-xl transition-colors"
-              style={{ background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)' }}
+              style={{
+                padding: '0 18px', borderRadius: 12, border: 'none',
+                background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)',
+                fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                opacity: (isSending || !input.trim()) ? 0.4 : 1,
+                whiteSpace: 'nowrap',
+              }}
             >
               {isSending ? "…" : "Invite"}
             </motion.button>
           </div>
 
-          {/* Resolved address preview */}
           {resolvedAddr && !inputError && (
             <motion.p
               initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-              className="text-xs flex items-center gap-1" style={{ color:'var(--success)' }}
+              style={{ fontSize: 11, color: 'var(--success)', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}
             >
-              <span>✓</span> {shortAddr(resolvedAddr)}
+              ✓ {shortAddr(resolvedAddr)}
             </motion.p>
           )}
 
@@ -217,45 +238,61 @@ export default function CirclePage() {
             {inputError && (
               <motion.p
                 initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                className="text-red-400 text-xs"
+                style={{ fontSize: 11, color: '#f43f5e', marginBottom: 4 }}
               >
                 {inputError}
               </motion.p>
             )}
           </AnimatePresence>
 
-          <p className="text-white/20 text-xs">
+          <p style={{ fontSize: 11, color: 'var(--text3)' }}>
             Your circle sees your habits and cheers you on.
           </p>
         </div>
 
-        {/* Pending requests */}
+        {/* ── Pending requests ── */}
         <AnimatePresence>
           {pending.length > 0 && (
-            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-              <p className="text-amber-400/60 text-xs font-semibold uppercase tracking-widest mb-3">
+            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ marginBottom: '1.25rem' }}>
+              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--amber)', marginBottom: 10 }}>
                 ⏳ Requests · {pending.length}
               </p>
-              <div className="space-y-2">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {pending.map(from => (
                   <motion.div
                     key={from}
                     initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 8 }}
-                    className="glass rounded-2xl p-4 flex items-center gap-4 border border-amber-500/10"
+                    style={{
+                      background: 'var(--card-bg)', border: '1px solid var(--card-border)',
+                      borderRadius: 16, padding: '1rem',
+                      display: 'flex', alignItems: 'center', gap: 12,
+                    }}
                   >
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-600 to-orange-700 flex items-center justify-center flex-shrink-0">
-                      <span className="text-white text-xs font-bold">{from.slice(2, 4).toUpperCase()}</span>
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 12, flexShrink: 0,
+                      background: 'linear-gradient(135deg, var(--amber), #b45309)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>{from.slice(2, 4).toUpperCase()}</span>
                     </div>
-                    <p className="text-white text-sm flex-1">{displayName(from)}</p>
-                    <div className="flex gap-2">
+                    <p style={{ fontSize: 13, color: 'var(--text)', flex: 1, margin: 0 }}>{displayName(from)}</p>
+                    <div style={{ display: 'flex', gap: 8 }}>
                       <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                         onClick={() => acceptRequest(from)} disabled={isAccepting || isRejecting}
-                        className="text-xs font-bold px-4 py-2 rounded-xl transition-colors disabled:opacity-40"
-                        style={{ background:'var(--btn-primary-bg)', color:'var(--btn-primary-text)' }}>
+                        style={{
+                          fontSize: 12, fontWeight: 700, padding: '7px 16px', borderRadius: 10,
+                          border: 'none', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)',
+                          cursor: 'pointer', fontFamily: 'inherit', opacity: (isAccepting || isRejecting) ? 0.4 : 1,
+                        }}>
                         Accept
                       </motion.button>
                       <button onClick={() => rejectRequest(from)} disabled={isAccepting || isRejecting}
-                        className="glass text-white/40 hover:text-white text-xs px-3 py-2 rounded-xl transition-all disabled:opacity-40">
+                        style={{
+                          fontSize: 12, padding: '7px 12px', borderRadius: 10,
+                          border: '1px solid var(--border2)', background: 'transparent',
+                          color: 'var(--text3)', cursor: 'pointer', fontFamily: 'inherit',
+                          opacity: (isAccepting || isRejecting) ? 0.4 : 1,
+                        }}>
                         Reject
                       </button>
                     </div>
@@ -266,14 +303,19 @@ export default function CirclePage() {
           )}
         </AnimatePresence>
 
-        {/* Circle members */}
+        {/* ── Circle members ── */}
         <div>
-          <p className="text-white/30 text-xs font-semibold uppercase tracking-widest mb-3">Your Circle</p>
+          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10 }}>
+            Your Circle
+          </p>
           {circle.length === 0 ? (
-            <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, padding: '2.5rem', textAlign: 'center' }}>
+            <div style={{
+              background: 'var(--card-bg)', border: '1px solid var(--card-border)',
+              borderRadius: 16, padding: '2.5rem', textAlign: 'center',
+            }}>
               <p style={{ fontSize: 36, marginBottom: 10 }}>◉</p>
-              <p style={{ fontSize: 14, color: 'var(--text2)' }}>Your circle is empty.</p>
-              <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>Add by @username or address</p>
+              <p style={{ fontSize: 14, color: 'var(--text2)', margin: 0 }}>Your circle is empty.</p>
+              <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>Add by @username or address above</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -284,9 +326,14 @@ export default function CirclePage() {
                   <div key={addr}>
                     <MemberRow address={addr} isSelf={isSelf} onWitness={witnessHabit} isWitnessing={isWitnessing} />
                     {!isSelf && (
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: -4, paddingRight: 2 }}>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
                         {!cheered ? (
-                          <button onClick={() => handleCheer(addr)} style={{ padding: '4px 12px', borderRadius: 14, border: '1px solid var(--pink-border)', background: 'var(--pink-bg)', color: 'var(--pink-text)', fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          <button onClick={() => handleCheer(addr)} style={{
+                            padding: '4px 12px', borderRadius: 14,
+                            border: '1px solid var(--pink-border)', background: 'var(--pink-bg)',
+                            color: 'var(--pink-text)', fontSize: 10, fontWeight: 600,
+                            cursor: 'pointer', fontFamily: 'inherit',
+                          }}>
                             🌸 Cheer
                           </button>
                         ) : (

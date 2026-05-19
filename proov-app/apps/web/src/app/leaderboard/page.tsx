@@ -24,82 +24,92 @@ export default function LeaderboardPage() {
   if (!isConnected) return null;
 
   return (
-    <div className="min-h-screen app-bg pb-24 relative overflow-hidden">
-      <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[250px] opacity-[0.05] rounded-full"
-        style={{ background: "radial-gradient(ellipse, var(--accent), transparent)" }} />
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', paddingBottom: 96 }}>
+
+      {/* Accent glow */}
+      <div style={{
+        position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
+        width: 500, height: 250, borderRadius: '50%', pointerEvents: 'none',
+        background: 'radial-gradient(ellipse, var(--accent-bg), transparent)', opacity: 0.4,
+      }} />
 
       {/* Header */}
       <div style={{
-        background: 'var(--nav-bg)',
-        borderBottom: '1px solid var(--border)',
-        padding: '1rem 1.25rem',
-        position: 'sticky',
-        top: 0,
-        zIndex: 30,
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
+        background: 'var(--nav-bg)', borderBottom: '1px solid var(--border)',
+        padding: '1rem 1.25rem', position: 'sticky', top: 0, zIndex: 30,
+        backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
       }}>
         <div style={{ maxWidth: 512, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Link href="/dashboard" style={{ width: 32, height: 32, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: 'var(--text3)', textDecoration: 'none', border: '1px solid var(--border2)', background: 'var(--bg2)', flexShrink: 0 }}>←</Link>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, var(--accent), var(--accent2, var(--accent)))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: '#fff', flexShrink: 0 }}>🏆</div>
+          <Link href="/dashboard" style={{
+            width: 32, height: 32, borderRadius: 10, flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 14, color: 'var(--text3)', textDecoration: 'none',
+            border: '1px solid var(--border2)', background: 'var(--bg2)',
+          }}>←</Link>
+          <div style={{
+            width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+            background: 'linear-gradient(135deg, var(--accent), var(--accent2, var(--accent)))',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 18, color: '#fff',
+          }}>🏆</div>
           <div>
-            <p style={{ fontWeight: 700, color: 'var(--text)', fontSize: 15 }}>Leaderboard</p>
-            <p style={{ fontSize: 12, color: 'var(--text3)' }}>Ranked by streak</p>
+            <p style={{ fontWeight: 700, color: 'var(--text)', fontSize: 15, margin: 0 }}>Leaderboard</p>
+            <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0 }}>Ranked by streak</p>
           </div>
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 pt-5">
+      <div style={{ maxWidth: 512, margin: '0 auto', padding: '1.25rem 1.25rem 0' }}>
 
         {/* Top 3 podium */}
         {!isLoading && entries.length >= 3 && (
-          <div className="flex items-end justify-center gap-3 mb-6">
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 12, marginBottom: 24 }}>
+
             {/* 2nd */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="flex-1">
-              <Link href={`/profile/${entries[1].address}`} className="flex flex-col items-center gap-2">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-gray-500 to-gray-700 flex items-center justify-center">
-                  <span className="text-white text-sm font-bold">{entries[1].address.slice(2, 4).toUpperCase()}</span>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} style={{ flex: 1 }}>
+              <Link href={`/profile/${entries[1].address}`} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 48, height: 48, borderRadius: 16, background: 'linear-gradient(135deg, #6b7280, #4b5563)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>{entries[1].address.slice(2, 4).toUpperCase()}</span>
                 </div>
-                <span className="text-xl">🥈</span>
-                <p className="text-white/60 text-[10px] text-center">{displayName(entries[1].address)}</p>
-                <div className="w-full glass rounded-xl py-3 text-center">
-                  <p className="text-white font-bold text-lg">{entries[1].streak.toString()}</p>
-                  <p className="text-white/30 text-[10px]">days</p>
+                <span style={{ fontSize: 20 }}>🥈</span>
+                <p style={{ fontSize: 10, color: 'var(--text3)', textAlign: 'center', margin: 0 }}>{displayName(entries[1].address)}</p>
+                <div style={{ width: '100%', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 12, padding: '10px 0', textAlign: 'center' }}>
+                  <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', margin: 0 }}>{entries[1].streak.toString()}</p>
+                  <p style={{ fontSize: 9, color: 'var(--text3)', margin: 0 }}>days</p>
                 </div>
               </Link>
             </motion.div>
 
             {/* 1st */}
-            <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="flex-1">
-              <Link href={`/profile/${entries[0].address}`} className="flex flex-col items-center gap-2">
+            <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} style={{ flex: 1 }}>
+              <Link href={`/profile/${entries[0].address}`} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
                 <motion.div
-                  animate={{ boxShadow: ["0 0 16px rgba(245,158,11,0.3)", "0 0 32px rgba(245,158,11,0.5)", "0 0 16px rgba(245,158,11,0.3)"] }}
+                  animate={{ boxShadow: ['0 0 16px rgba(245,158,11,0.3)', '0 0 32px rgba(245,158,11,0.5)', '0 0 16px rgba(245,158,11,0.3)'] }}
                   transition={{ duration: 2, repeat: Infinity }}
-                  className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center"
+                  style={{ width: 64, height: 64, borderRadius: 20, background: 'linear-gradient(135deg, #f59e0b, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
-                  <span className="text-white text-lg font-black">{entries[0].address.slice(2, 4).toUpperCase()}</span>
+                  <span style={{ color: '#fff', fontSize: 18, fontWeight: 900 }}>{entries[0].address.slice(2, 4).toUpperCase()}</span>
                 </motion.div>
-                <span className="text-2xl">🥇</span>
-                <p className="text-white/80 text-[10px] text-center">{displayName(entries[0].address)}</p>
-                <div className="w-full rounded-xl py-3 text-center"
-                  style={{ background: "linear-gradient(135deg, #92400e40, #78350f40)", border: "1px solid rgba(245,158,11,0.2)" }}>
-                  <p className="text-amber-300 font-black text-2xl">{entries[0].streak.toString()}</p>
-                  <p className="text-amber-500/50 text-[10px]">days</p>
+                <span style={{ fontSize: 24 }}>🥇</span>
+                <p style={{ fontSize: 10, color: 'var(--text2)', textAlign: 'center', margin: 0 }}>{displayName(entries[0].address)}</p>
+                <div style={{ width: '100%', borderRadius: 12, padding: '10px 0', textAlign: 'center', background: 'rgba(146,64,14,0.25)', border: '1px solid rgba(245,158,11,0.2)' }}>
+                  <p style={{ fontSize: 24, fontWeight: 900, color: '#fcd34d', margin: 0 }}>{entries[0].streak.toString()}</p>
+                  <p style={{ fontSize: 9, color: 'rgba(245,158,11,0.5)', margin: 0 }}>days</p>
                 </div>
               </Link>
             </motion.div>
 
             {/* 3rd */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="flex-1">
-              <Link href={`/profile/${entries[2].address}`} className="flex flex-col items-center gap-2">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-800 to-orange-900 flex items-center justify-center">
-                  <span className="text-white text-sm font-bold">{entries[2].address.slice(2, 4).toUpperCase()}</span>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} style={{ flex: 1 }}>
+              <Link href={`/profile/${entries[2].address}`} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 48, height: 48, borderRadius: 16, background: 'linear-gradient(135deg, #92400e, #78350f)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>{entries[2].address.slice(2, 4).toUpperCase()}</span>
                 </div>
-                <span className="text-xl">🥉</span>
-                <p className="text-white/60 text-[10px] text-center">{displayName(entries[2].address)}</p>
-                <div className="w-full glass rounded-xl py-3 text-center">
-                  <p className="text-white font-bold text-lg">{entries[2].streak.toString()}</p>
-                  <p className="text-white/30 text-[10px]">days</p>
+                <span style={{ fontSize: 20 }}>🥉</span>
+                <p style={{ fontSize: 10, color: 'var(--text3)', textAlign: 'center', margin: 0 }}>{displayName(entries[2].address)}</p>
+                <div style={{ width: '100%', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 12, padding: '10px 0', textAlign: 'center' }}>
+                  <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', margin: 0 }}>{entries[2].streak.toString()}</p>
+                  <p style={{ fontSize: 9, color: 'var(--text3)', margin: 0 }}>days</p>
                 </div>
               </Link>
             </motion.div>
@@ -108,44 +118,49 @@ export default function LeaderboardPage() {
 
         {/* Full list */}
         {isLoading ? (
-          <div className="text-center py-16">
-            <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-              className="w-8 h-8 rounded-full mx-auto" style={{ border: '2px solid var(--accent-bg)', borderTopColor: 'var(--accent)' }} />
+          <div style={{ textAlign: 'center', padding: '4rem 0' }}>
+            <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+              style={{ width: 32, height: 32, borderRadius: '50%', margin: '0 auto', border: '2px solid var(--accent-bg)', borderTopColor: 'var(--accent)' }} />
           </div>
         ) : entries.length === 0 ? (
-          <div className="glass rounded-3xl p-12 text-center">
-            <p className="text-4xl mb-3">◈</p>
-            <p className="text-white/40 text-sm">No players yet.</p>
-            <p className="text-white/20 text-xs mt-1">Be the first to log a habit.</p>
+          <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 20, padding: '3rem', textAlign: 'center' }}>
+            <p style={{ fontSize: 36, marginBottom: 10 }}>◈</p>
+            <p style={{ fontSize: 14, color: 'var(--text2)', margin: 0 }}>No players yet.</p>
+            <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>Be the first to log a habit.</p>
           </div>
         ) : (
-          <div className="space-y-1.5">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {entries.slice(entries.length >= 3 ? 3 : 0).map((entry, i) => {
               const rank = (entries.length >= 3 ? 3 : 0) + i;
               const isMe = entry.address.toLowerCase() === address?.toLowerCase();
               const name = displayName(entry.address);
               return (
-                <motion.div key={entry.address} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.025 }}>
-                  <Link href={`/profile/${entry.address}`}
-                    className={`flex items-center gap-4 rounded-2xl px-4 py-3 transition-all ${isMe ? "" : "glass glass-hover"}`}
-                    style={isMe ? { background: 'var(--accent-bg)', border: '1px solid var(--accent-border)' } : undefined}
+                <motion.div key={entry.address} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.025 }}>
+                  <Link
+                    href={`/profile/${entry.address}`}
+                    style={{
+                      textDecoration: 'none',
+                      display: 'flex', alignItems: 'center', gap: 14,
+                      borderRadius: 16, padding: '10px 14px',
+                      background: isMe ? 'var(--accent-bg)' : 'var(--card-bg)',
+                      border: `1px solid ${isMe ? 'var(--accent-border)' : 'var(--card-border)'}`,
+                      transition: 'border .15s',
+                    }}
                   >
-                    <span className="text-white/30 text-xs font-mono w-7 text-right flex-shrink-0">
+                    <span style={{ fontSize: 12, fontWeight: 700, minWidth: 28, textAlign: 'right', flexShrink: 0, color: 'var(--text3)', fontFamily: 'monospace' }}>
                       {rank < 3 ? MEDALS[rank] : `#${rank + 1}`}
                     </span>
-                    <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'var(--accent-bg)', border: '1px solid var(--accent-border)' }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--accent-bg)', border: '1px solid var(--accent-border)' }}>
                       <span style={{ color: 'var(--accent-text)', fontSize: 10, fontWeight: 700 }}>{entry.address.slice(2, 4).toUpperCase()}</span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm truncate" style={{ color: isMe ? 'var(--accent-text)' : 'var(--text2)' }}>
-                        {name}
-                        {isMe && <span style={{ color: 'var(--accent-text)', fontSize: 10, marginLeft: 6 }}>you</span>}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 13, color: isMe ? 'var(--accent-text)' : 'var(--text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {name}{isMe && <span style={{ color: 'var(--accent-text)', fontSize: 10, marginLeft: 6 }}>you</span>}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <span className="text-white font-bold text-sm">{entry.streak.toString()}</span>
-                      <span className="text-white/30 text-xs">🔥</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--streak-color, var(--amber))' }}>{entry.streak.toString()}</span>
+                      <span style={{ fontSize: 11 }}>🔥</span>
                     </div>
                   </Link>
                 </motion.div>

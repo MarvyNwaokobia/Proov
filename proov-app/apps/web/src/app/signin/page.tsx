@@ -1,15 +1,13 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAccount, useConnect } from 'wagmi';
 import { useTheme } from '@/components/providers/ThemeProvider';
 import Link from 'next/link';
-import { useEffect } from 'react';
 import type { ColorMode } from '@/lib/themes';
 import { getPostLoginRoute } from '@/lib/auth';
 import { isMiniPay, connectMiniPay } from '@/lib/minipay';
-
-type EmailMethod = 'link' | 'code';
+import { findAddressByUsername } from '@/lib/username';
 
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -32,10 +30,8 @@ export default function SignInPage() {
   const { connect, connectors, isPending } = useConnect();
   const { mode, setMode } = useTheme();
 
-  const [email, setEmail] = useState('');
-  const [emailMethod, setEmailMethod] = useState<EmailMethod>('link');
-  const [codeSent, setCodeSent] = useState(false);
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [usernameInput, setUsernameInput] = useState('');
+  const [usernameError, setUsernameError] = useState('');
 
   useEffect(() => {
     if (isMiniPay()) {
@@ -61,25 +57,14 @@ export default function SignInPage() {
     if (c) connect({ connector: c });
   };
 
-  const handleSendEmail = () => {
-    if (!email.trim()) return;
-    triggerConnect();
-    setCodeSent(true);
-  };
-
-  const handleOtpChange = (val: string, idx: number) => {
-    const next = [...otp];
-    next[idx] = val.slice(-1);
-    setOtp(next);
-    if (val && idx < 5) document.getElementById(`otp-${idx + 1}`)?.focus();
-  };
-
-  const handleOtpPaste = (e: React.ClipboardEvent) => {
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    if (pasted.length === 6) {
-      setOtp(pasted.split(''));
-      document.getElementById('otp-5')?.focus();
-    }
+  const handleUsernameSignIn = () => {
+    const clean = usernameInput.replace(/^@/, '').trim();
+    if (!clean) return;
+    const address = findAddressByUsername(clean);
+    if (!address) { setUsernameError('Username not found — check spelling or sign up'); return; }
+    localStorage.setItem('proov_authenticated', 'true');
+    localStorage.setItem('proov_address', address);
+    router.push('/dashboard');
   };
 
   const MODES: { value: ColorMode; label: string }[] = [
@@ -130,8 +115,46 @@ export default function SignInPage() {
           {/* Card */}
           <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 20, padding: '1.5rem', marginBottom: '1rem' }}>
 
+            {/* Username sign-in */}
+            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10 }}>Sign in with username</p>
+            <div style={{ position: 'relative', marginBottom: 6 }}>
+              <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 14, fontWeight: 700, color: 'var(--accent)', zIndex: 1 }}>@</span>
+              <input
+                type="text"
+                placeholder="yourname"
+                value={usernameInput}
+                onChange={e => { setUsernameInput(e.target.value); setUsernameError(''); }}
+                onKeyDown={e => e.key === 'Enter' && handleUsernameSignIn()}
+                style={{ paddingLeft: 28 }}
+              />
+            </div>
+            {usernameError && (
+              <p style={{ fontSize: 11, color: '#f43f5e', marginBottom: 8 }}>{usernameError}</p>
+            )}
+            <button
+              onClick={handleUsernameSignIn}
+              disabled={!usernameInput.trim()}
+              style={{
+                width: '100%', padding: '10px', borderRadius: 12, border: 'none',
+                background: usernameInput.trim() ? 'var(--btn-primary-bg)' : 'var(--bg3)',
+                color: usernameInput.trim() ? 'var(--btn-primary-text)' : 'var(--text3)',
+                fontSize: 13, fontWeight: 600,
+                cursor: usernameInput.trim() ? 'pointer' : 'not-allowed',
+                fontFamily: 'inherit', marginBottom: 16, transition: 'all .15s',
+              }}
+            >
+              Sign in →
+            </button>
+
+            {/* Divider */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, fontSize: 11, color: 'var(--text3)' }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+              or continue with
+              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            </div>
+
             {/* Social */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <button onClick={triggerConnect} disabled={isPending} style={socialBtnStyle}
                 onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg3)')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
@@ -150,94 +173,6 @@ export default function SignInPage() {
                 🌐 More social options
               </button>
             </div>
-
-            {/* Divider */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '0.875rem 0', fontSize: 11, color: 'var(--text3)' }}>
-              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-              or with email
-              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-            </div>
-
-            {!codeSent ? (
-              <>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="your@email.com"
-                  style={{ marginBottom: 10 }}
-                  onKeyDown={e => e.key === 'Enter' && handleSendEmail()}
-                />
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 12 }}>
-                  {(['link', 'code'] as EmailMethod[]).map(m => (
-                    <button key={m} onClick={() => setEmailMethod(m)} style={{
-                      padding: '8px', borderRadius: 10, fontSize: 12, fontWeight: 500,
-                      cursor: 'pointer', fontFamily: 'inherit',
-                      border: `1.5px solid ${emailMethod === m ? 'var(--accent)' : 'var(--border)'}`,
-                      background: emailMethod === m ? 'var(--accent-bg)' : 'transparent',
-                      color: emailMethod === m ? 'var(--accent-text)' : 'var(--text3)',
-                      transition: 'all .15s',
-                    }}>
-                      {m === 'link' ? '✉️ Magic link' : '🔢 6-digit code'}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  onClick={handleSendEmail}
-                  disabled={isPending || !email.trim()}
-                  style={{
-                    width: '100%', padding: 12, borderRadius: 12, border: 'none',
-                    background: email.trim() ? 'var(--btn-primary-bg)' : 'var(--bg3)',
-                    color: email.trim() ? 'var(--btn-primary-text)' : 'var(--text3)',
-                    fontSize: 14, fontWeight: 600,
-                    cursor: email.trim() ? 'pointer' : 'not-allowed',
-                    fontFamily: 'inherit', transition: 'all .15s',
-                  }}
-                >
-                  {isPending ? 'Connecting...' : emailMethod === 'link' ? 'Send magic link' : 'Send code'}
-                </button>
-              </>
-            ) : emailMethod === 'link' ? (
-              <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-                <div style={{ fontSize: 36, marginBottom: 10 }}>📬</div>
-                <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>Check your inbox</p>
-                <p style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6 }}>We sent a sign-in link to {email}</p>
-                <button onClick={() => setCodeSent(false)} style={{ marginTop: 14, background: 'none', border: 'none', fontSize: 12, color: 'var(--accent-text)', cursor: 'pointer', fontFamily: 'inherit' }}>
-                  Try a different method
-                </button>
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: '1rem' }}>Enter the 6-digit code sent to {email}</p>
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: '1rem' }} onPaste={handleOtpPaste}>
-                  {otp.map((digit, i) => (
-                    <input
-                      key={i}
-                      id={`otp-${i}`}
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={1}
-                      value={digit}
-                      onChange={e => handleOtpChange(e.target.value, i)}
-                      onKeyDown={e => {
-                        if (e.key === 'Backspace' && !digit && i > 0) {
-                          document.getElementById(`otp-${i - 1}`)?.focus();
-                        }
-                      }}
-                      style={{
-                        width: 44, height: 52, textAlign: 'center', fontSize: 22,
-                        fontWeight: 700, padding: 0, borderRadius: 10,
-                        border: `2px solid ${digit ? 'var(--accent)' : 'var(--border2)'}`,
-                        background: 'var(--input-bg)', color: 'var(--text)',
-                      }}
-                    />
-                  ))}
-                </div>
-                <button onClick={() => setCodeSent(false)} style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--text3)', cursor: 'pointer', fontFamily: 'inherit' }}>
-                  Resend code
-                </button>
-              </div>
-            )}
           </div>
 
           <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--text3)' }}>
