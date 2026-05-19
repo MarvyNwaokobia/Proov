@@ -49,13 +49,14 @@ export default function DashboardPage() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (!isConnected) router.replace('/');
-  }, [isConnected, router]);
-
-  useEffect(() => {
+    if (isConnected) {
+      // Keep the flag in sync for returning users whose Web3Auth session was restored
+      localStorage.setItem('proov_authenticated', 'true');
+      return;
+    }
     const isAuth = localStorage.getItem('proov_authenticated');
     if (!isAuth || isAuth !== 'true') router.replace('/');
-  }, [router]);
+  }, [isConnected, router]);
 
   useEffect(() => {
     const storedUsername =

@@ -1,5 +1,6 @@
 export function isMiniPay(): boolean {
   if (typeof window === 'undefined') return false;
+  if (typeof navigator === 'undefined') return false;
   return (
     navigator.userAgent.toLowerCase().includes('minipay') ||
     !!(window as any).ethereum?.isMiniPay
