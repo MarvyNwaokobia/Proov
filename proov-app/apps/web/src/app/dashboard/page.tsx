@@ -53,19 +53,24 @@ export default function DashboardPage() {
   }, [isConnected, router]);
 
   useEffect(() => {
+    const storedUsername =
+      localStorage.getItem('proov_username') ||
+      (() => {
+        const addr = localStorage.getItem('proov_address') || '';
+        if (!addr) return null;
+        try {
+          const raw = localStorage.getItem(`proov_username_${addr.toLowerCase()}`);
+          return raw ? JSON.parse(raw).username : null;
+        } catch { return null; }
+      })() ||
+      null;
+
+    if (storedUsername) setUsername(storedUsername);
+  }, []);
+
+  useEffect(() => {
     setMounted(true);
     const today = new Date().toDateString();
-
-    // Username
-    const addr = address || localStorage.getItem('proov_address') || '';
-    const profileRaw = addr ? localStorage.getItem(`proov_username_${addr}`) : null;
-    if (profileRaw) {
-      try { setUsername(JSON.parse(profileRaw).username || ''); } catch {}
-    }
-    if (!profileRaw) {
-      const fallback = localStorage.getItem('proov_username');
-      if (fallback) setUsername(fallback);
-    }
 
     // Habits
     const habitsRaw = localStorage.getItem('proov_habits');
@@ -184,7 +189,16 @@ export default function DashboardPage() {
         </div>
 
         {/* Streak card */}
-        <div className="streak-card" style={{ marginBottom: '1rem' }}>
+        <div style={{
+          background: 'linear-gradient(135deg, var(--accent, #059669), var(--accent2, #047857))',
+          borderRadius: 16,
+          padding: '1rem',
+          marginBottom: '1rem',
+          position: 'relative',
+          overflow: 'hidden',
+          color: '#ffffff',
+        }}>
+          <div style={{ position: 'absolute', right: -20, top: -20, width: 90, height: 90, borderRadius: '50%', background: 'rgba(255,255,255,.08)', pointerEvents: 'none' }} />
           <div style={{ position: 'relative', zIndex: 1 }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'rgba(255,255,255,.65)', marginBottom: 4 }}>
               Current streak
