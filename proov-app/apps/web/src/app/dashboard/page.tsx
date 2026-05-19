@@ -53,6 +53,11 @@ export default function DashboardPage() {
   }, [isConnected, router]);
 
   useEffect(() => {
+    const isAuth = localStorage.getItem('proov_authenticated');
+    if (!isAuth || isAuth !== 'true') router.replace('/');
+  }, [router]);
+
+  useEffect(() => {
     const storedUsername =
       localStorage.getItem('proov_username') ||
       (() => {

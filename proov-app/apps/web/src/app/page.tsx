@@ -16,6 +16,8 @@ export default function LandingPage() {
   const { isConnected } = useAccount();
 
   useEffect(() => {
+    const isAuth = localStorage.getItem('proov_authenticated');
+    if (isAuth === 'true') { router.replace('/dashboard'); return; }
     if (isConnected) router.replace('/dashboard');
   }, [isConnected, router]);
 
