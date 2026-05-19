@@ -55,12 +55,19 @@ export default function SettingsPage() {
     setTimeout(() => setSavedToast(false), 2500);
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    try {
+      const { getWeb3Auth } = await import('@/lib/wagmi-config');
+      const web3auth = getWeb3Auth();
+      if (web3auth.connected) await web3auth.logout({ cleanup: true });
+    } catch (e) {
+      console.warn('web3auth logout error:', e);
+    }
     disconnect();
     localStorage.removeItem('proov_authenticated');
     localStorage.removeItem('proov_address');
     localStorage.removeItem('proov_email');
-    router.push('/');
+    window.location.href = '/';
   };
 
   if (!mounted) return null;

@@ -158,11 +158,21 @@ export default function CirclePage() {
         style={{ background: "radial-gradient(ellipse, var(--accent), transparent)" }} />
 
       {/* Header */}
-      <div className="glass border-b border-white/[0.06] px-4 py-4 sticky top-0 z-30">
-        <div className="max-w-lg mx-auto flex items-center gap-3">
-          <Link href="/dashboard" className="w-8 h-8 glass rounded-xl flex items-center justify-center text-white/50 hover:text-white transition-colors text-sm">←</Link>
+      <div style={{
+        background: 'var(--nav-bg)',
+        borderBottom: '1px solid var(--border)',
+        padding: '1rem 1.25rem',
+        position: 'sticky',
+        top: 0,
+        zIndex: 30,
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+      }}>
+        <div style={{ maxWidth: 512, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Link href="/dashboard" style={{ width: 32, height: 32, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: 'var(--text3)', textDecoration: 'none', border: '1px solid var(--border2)', background: 'var(--bg2)', flexShrink: 0 }}>←</Link>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, var(--accent), var(--accent2, var(--accent)))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: '#fff', flexShrink: 0 }}>🤝</div>
           <div>
-            <p className="text-white font-bold">Circle</p>
+            <p style={{ fontWeight: 700, color: 'var(--text)', fontSize: 15 }}>Circle</p>
             <p style={{ fontSize: 12, color: 'var(--text2)' }}>{circle.length}/10 members</p>
           </div>
         </div>
