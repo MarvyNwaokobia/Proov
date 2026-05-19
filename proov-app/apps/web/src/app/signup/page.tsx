@@ -5,6 +5,8 @@ import { useAccount, useConnect } from 'wagmi';
 import { useTheme } from '@/components/providers/ThemeProvider';
 import Link from 'next/link';
 import type { ColorMode } from '@/lib/themes';
+import { getPostLoginRoute } from '@/lib/auth';
+import { isMiniPay, connectMiniPay } from '@/lib/minipay';
 
 type EmailMethod = 'link' | 'code';
 
@@ -34,7 +36,24 @@ export default function SignUpPage() {
   const [codeSent, setCodeSent] = useState(false);
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
 
-  useEffect(() => { if (isConnected) router.replace('/dashboard'); }, [isConnected, router]);
+  useEffect(() => {
+    if (isMiniPay()) {
+      connectMiniPay().then(addr => {
+        if (addr) {
+          localStorage.setItem('proov_authenticated', 'true');
+          localStorage.setItem('proov_address', addr);
+          router.push(getPostLoginRoute());
+        }
+      });
+    }
+  }, [router]);
+
+  useEffect(() => {
+    if (isConnected) {
+      localStorage.setItem('proov_authenticated', 'true');
+      router.push(getPostLoginRoute());
+    }
+  }, [isConnected, router]);
 
   const triggerConnect = () => {
     const c = connectors[0];
