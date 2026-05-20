@@ -1,5 +1,3 @@
-const GOLDSKY_URL = process.env.NEXT_PUBLIC_GOLDSKY_URL || '';
-
 export interface LeaderboardEntry {
   id: string;
   currentStreak: number;
@@ -9,6 +7,8 @@ export interface LeaderboardEntry {
 }
 
 export async function getLeaderboard(limit = 100): Promise<LeaderboardEntry[]> {
+  if (typeof window === 'undefined') return [];
+  const GOLDSKY_URL = process.env.NEXT_PUBLIC_GOLDSKY_URL;
   if (!GOLDSKY_URL) return [];
 
   const query = `{
@@ -46,7 +46,10 @@ export async function getUserStats(address: string): Promise<{
   totalCompletions: number;
   rank: number;
 } | null> {
-  if (!GOLDSKY_URL || !address) return null;
+  if (typeof window === 'undefined') return null;
+  if (!address || address === '') return null;
+  const GOLDSKY_URL = process.env.NEXT_PUBLIC_GOLDSKY_URL;
+  if (!GOLDSKY_URL) return null;
 
   const query = `{
     user(id: "${address.toLowerCase()}") {

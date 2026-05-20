@@ -145,17 +145,19 @@ export default function DashboardPage() {
       setTimeout(() => clearTimeout(wt), 10000); // safety cleanup
     }
 
-    // Goldsky leaderboard snapshot
+    // Goldsky leaderboard snapshot — only when authenticated
     const addr = localStorage.getItem('proov_address') || '';
-    Promise.all([getLeaderboard(2), getUserStats(addr)]).then(([top, myStats]) => {
-      if (top.length > 0) {
-        setLbTop(top.map(e => ({ name: `@${e.id.slice(0, 8)}`, streak: e.currentStreak })));
-      }
-      if (myStats) {
-        setCurrentStreak(myStats.currentStreak);
-        setUserRank(myStats.rank);
-      }
-    });
+    if (addr) {
+      Promise.all([getLeaderboard(2), getUserStats(addr)]).then(([top, myStats]) => {
+        if (top.length > 0) {
+          setLbTop(top.map(e => ({ name: `@${e.id.slice(0, 8)}`, streak: e.currentStreak })));
+        }
+        if (myStats) {
+          setCurrentStreak(myStats.currentStreak);
+          setUserRank(myStats.rank);
+        }
+      });
+    }
   }, [address]);
 
   const completedCount = habits.filter(h => h.completedToday).length;
