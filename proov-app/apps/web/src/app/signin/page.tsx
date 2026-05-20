@@ -58,11 +58,24 @@ export default function SignInPage() {
   }, [router]);
 
   useEffect(() => {
-    if (isConnected && connectedAddress) {
-      const email = localStorage.getItem('proov_email') || '';
-      resolveIdentity(connectedAddress, email, 'google', 'web3auth');
+    if (!isConnected || !connectedAddress) return;
+    const emailVal = localStorage.getItem('proov_email') || '';
+    resolveIdentity(connectedAddress, emailVal, 'google', 'web3auth');
+
+    // Check Supabase for existing profile — returning user skips onboarding
+    import('@/lib/supabase').then(({ getUsernameForAddress }) =>
+      getUsernameForAddress(connectedAddress)
+    ).then(existingUsername => {
+      if (existingUsername) {
+        localStorage.setItem('proov_username', existingUsername);
+        localStorage.setItem('proov_tutorial_done', '1');
+        router.push('/dashboard');
+      } else {
+        router.push(getPostLoginRoute());
+      }
+    }).catch(() => {
       router.push(getPostLoginRoute());
-    }
+    });
   }, [isConnected, connectedAddress, router]);
 
   const triggerConnect = async () => {

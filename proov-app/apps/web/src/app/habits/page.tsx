@@ -24,7 +24,7 @@ import { HABIT_TEMPLATES, ARCHETYPE_LABELS, type Archetype } from "@/lib/habitTe
 
 function humanizeError(error: unknown): string {
   const msg = String((error as Error)?.message ?? error);
-  if (/insufficient[_ ]funds|overshot|balance 0/i.test(msg)) return "Insufficient balance — add cUSD and try again.";
+  if (/insufficient[_ ]funds|overshot|balance 0/i.test(msg)) return "Insufficient CELO balance. Add CELO to your wallet to continue.";
   if (/user rejected|cancelled/i.test(msg)) return "You cancelled that action.";
   return "Something went wrong. Please try again.";
 }
