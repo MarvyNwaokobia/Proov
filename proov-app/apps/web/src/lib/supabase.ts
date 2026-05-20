@@ -3,7 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-export const supabase = url && key ? createClient(url, key) : null;
+// Guard against SSR: createClient accesses localStorage during init
+export const supabase = typeof window !== 'undefined' && url && key ? createClient(url, key) : null;
 
 // ── USERNAME FUNCTIONS ──────────────────────────────────────
 
