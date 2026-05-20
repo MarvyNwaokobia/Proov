@@ -33,7 +33,7 @@ export default function LeaderboardPage() {
 
   // Prefer Goldsky when available; fall back to on-chain contract data
   const entries = goldskyLoaded && goldskyEntries.length > 0
-    ? goldskyEntries.map(e => ({ address: e.id as `0x${string}`, streak: BigInt(e.currentStreak) }))
+    ? goldskyEntries.map(e => ({ address: e.id as `0x${string}`, streak: BigInt(e.currentStreak ?? 0) }))
     : contractEntries;
   const isLoading = goldskyLoaded ? false : contractLoading;
 

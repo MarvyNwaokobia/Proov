@@ -31,7 +31,6 @@ export async function getLeaderboard(limit = 100): Promise<LeaderboardEntry[]> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query }),
-      next: { revalidate: 30 },
     });
     const json = await res.json();
     return json?.data?.users || [];
@@ -69,7 +68,6 @@ export async function getUserStats(address: string): Promise<{
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query }),
-      next: { revalidate: 30 },
     });
     const json = await res.json();
     const user = json?.data?.user;
