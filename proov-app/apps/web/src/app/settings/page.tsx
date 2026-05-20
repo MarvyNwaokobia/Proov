@@ -5,6 +5,7 @@ import { useDisconnect } from 'wagmi';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
 import { validateUsername, isUsernameTaken, registerUsername } from '@/lib/username';
+import { setIdentityUsername } from '@/lib/auth';
 import {
   IconTrophy,
   IconChevronRight,
@@ -23,6 +24,7 @@ export default function SettingsPage() {
   const [address, setAddress] = useState('');
   const [userRank] = useState<number>(14);
   const [savedToast, setSavedToast] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -49,9 +51,10 @@ export default function SettingsPage() {
   };
 
   const saveUsername = () => {
-    const clean = newUsername.replace(/^@/, '');
+    const clean = newUsername.replace(/^@/, '').toLowerCase();
     const ok = registerUsername(clean, address);
     if (!ok) { setUsernameHint('Already taken'); setUsernameHintColor('#f43f5e'); return; }
+    setIdentityUsername(address, clean);
     setUsername(clean);
     setEditingUsername(false);
     setNewUsername('');
@@ -169,6 +172,35 @@ export default function SettingsPage() {
             <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>Manage your circle</span>
             <IconChevronRight size={16} stroke={2} color="var(--text3)" />
           </Link>
+        </div>
+
+        {/* Wallet */}
+        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '0.625rem' }}>Your Wallet</p>
+        <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, padding: '1rem', marginBottom: '1.25rem' }}>
+          <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 8, lineHeight: 1.6 }}>
+            This wallet is linked to your account. Fund it with CELO to record habits onchain.
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--bg2)', borderRadius: 10, marginBottom: 8 }}>
+            <span style={{ fontSize: 12, color: 'var(--text)', fontFamily: 'monospace', letterSpacing: '.5px' }}>
+              {address ? `${address.slice(0, 8)}...${address.slice(-6)}` : 'Not connected'}
+            </span>
+            <button
+              onClick={() => { navigator.clipboard.writeText(address); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+              style={{ fontSize: 11, color: 'var(--accent-text)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}
+            >
+              {copied ? 'Copied ✓' : 'Copy'}
+            </button>
+          </div>
+          {address && (
+            <a
+              href={`https://celoscan.io/address/${address}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ fontSize: 11, color: 'var(--accent-text)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
+            >
+              View on Celoscan →
+            </a>
+          )}
         </div>
 
         {/* Account */}

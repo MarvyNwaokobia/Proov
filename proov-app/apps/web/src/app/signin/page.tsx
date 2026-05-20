@@ -5,7 +5,7 @@ import { useAccount, useConnect } from 'wagmi';
 import { useTheme } from '@/components/providers/ThemeProvider';
 import Link from 'next/link';
 import type { ColorMode } from '@/lib/themes';
-import { getPostLoginRoute } from '@/lib/auth';
+import { getPostLoginRoute, resolveIdentity } from '@/lib/auth';
 import { isMiniPay, connectMiniPay } from '@/lib/minipay';
 import { clearWeb3AuthSession } from '@/lib/clearSession';
 
@@ -36,7 +36,7 @@ const WalletIcon = () => (
 
 export default function SignInPage() {
   const router = useRouter();
-  const { isConnected } = useAccount();
+  const { isConnected, address: connectedAddress } = useAccount();
   const { connect, connectors, isPending } = useConnect();
   const { mode, setMode } = useTheme();
 
@@ -50,8 +50,7 @@ export default function SignInPage() {
     if (isMiniPay()) {
       connectMiniPay().then(addr => {
         if (addr) {
-          localStorage.setItem('proov_authenticated', 'true');
-          localStorage.setItem('proov_address', addr);
+          resolveIdentity(addr, '', 'wallet', 'injected');
           router.push(getPostLoginRoute());
         }
       });
@@ -59,11 +58,12 @@ export default function SignInPage() {
   }, [router]);
 
   useEffect(() => {
-    if (isConnected) {
-      localStorage.setItem('proov_authenticated', 'true');
+    if (isConnected && connectedAddress) {
+      const email = localStorage.getItem('proov_email') || '';
+      resolveIdentity(connectedAddress, email, 'google', 'web3auth');
       router.push(getPostLoginRoute());
     }
-  }, [isConnected, router]);
+  }, [isConnected, connectedAddress, router]);
 
   const triggerConnect = async () => {
     // Wipe any cached session so Google always shows the account picker

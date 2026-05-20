@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { validateUsername, isUsernameTaken, registerUsername, generateSuggestions } from '@/lib/username';
+import { setIdentityUsername } from '@/lib/auth';
 
 export default function UsernameSetupPage() {
   const router = useRouter();
@@ -52,7 +53,7 @@ export default function UsernameSetupPage() {
   const handleSubmit = () => {
     if (!canSubmit) return;
     setLoading(true);
-    const clean = value.replace(/^@/, '');
+    const clean = value.replace(/^@/, '').toLowerCase();
     const ok = registerUsername(clean, address);
     if (!ok) {
       setHint('Already taken — try another');
@@ -60,6 +61,7 @@ export default function UsernameSetupPage() {
       setLoading(false);
       return;
     }
+    setIdentityUsername(address, clean);
     const tutorialDone = localStorage.getItem('proov_tutorial_done');
     router.push(tutorialDone ? '/dashboard' : '/tutorial');
   };
