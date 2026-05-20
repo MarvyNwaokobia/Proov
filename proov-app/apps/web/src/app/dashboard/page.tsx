@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import Link from 'next/link';
 import { getLeaderboard, getUserStats } from '@/lib/goldsky';
+import { Walkthrough } from '@/components/shared/Walkthrough';
 import {
   IconFlame,
   IconCheckbox,
@@ -60,6 +61,7 @@ export default function DashboardPage() {
   const [mounted, setMounted] = useState(false);
   const [lbTop, setLbTop] = useState<{ name: string; streak: number }[]>([]);
   const [userRank, setUserRank] = useState(0);
+  const [showWalkthrough, setShowWalkthrough] = useState(false);
 
   useEffect(() => {
     if (isConnected) {
@@ -124,6 +126,14 @@ export default function DashboardPage() {
     const cheeredRaw = localStorage.getItem(`proov_cheered_${today}`);
     if (cheeredRaw) {
       try { setCheered(JSON.parse(cheeredRaw)); } catch {}
+    }
+
+    // Show walkthrough for new users
+    const tutorialDone = localStorage.getItem('proov_tutorial_done');
+    const isNewUser = localStorage.getItem('proov_is_new_user');
+    if (!tutorialDone && isNewUser === 'true') {
+      const wt = setTimeout(() => setShowWalkthrough(true), 800);
+      setTimeout(() => clearTimeout(wt), 10000); // safety cleanup
     }
 
     // Goldsky leaderboard snapshot
@@ -221,7 +231,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Streak card */}
-        <div style={{
+        <div id="wt-streak-card" style={{
           background: 'linear-gradient(135deg, var(--accent, #059669), var(--accent2, #047857))',
           borderRadius: 16,
           padding: '1rem',
@@ -281,7 +291,7 @@ export default function DashboardPage() {
           </div>
         ) : (
           /* 2-column grid — no horizontal scroll ever */
-          <div style={{
+          <div id="wt-habits-grid" style={{
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
             gap: 10,
@@ -347,6 +357,7 @@ export default function DashboardPage() {
             ))}
             {/* Add habit cell */}
             <Link
+              id="wt-add-habit"
               href="/habits"
               style={{
                 background: 'transparent',
@@ -446,7 +457,7 @@ export default function DashboardPage() {
           <div className="section-label" style={{ margin: '0 0 0.625rem' }}>Leaderboard</div>
           <Link href="/leaderboard" style={{ fontSize: 11, color: 'var(--accent-text)', textDecoration: 'none', fontWeight: 500 }}>See all →</Link>
         </div>
-        <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14, overflow: 'hidden', marginBottom: '1rem' }}>
+        <div id="wt-leaderboard" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14, overflow: 'hidden', marginBottom: '1rem' }}>
           {[
             ...(lbTop.length >= 2
               ? [
@@ -511,6 +522,13 @@ export default function DashboardPage() {
 
       {/* Toast */}
       <div className={`toast ${toastVisible ? 'show' : ''}`}>{toast}</div>
+
+      {showWalkthrough && (
+        <Walkthrough onComplete={() => {
+          setShowWalkthrough(false);
+          localStorage.removeItem('proov_is_new_user');
+        }} />
+      )}
     </>
   );
 }

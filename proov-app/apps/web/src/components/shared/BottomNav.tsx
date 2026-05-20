@@ -10,11 +10,11 @@ import {
 } from '@tabler/icons-react';
 
 const NAV_ITEMS = [
-  { href: '/dashboard', icon: IconHome2,     label: 'Home'     },
-  { href: '/habits',    icon: IconCheckbox,  label: 'Habits'   },
-  { href: '/timer',     icon: IconBolt,      label: 'Grind'    },
-  { href: '/circle',    icon: IconUsers,     label: 'Circle'   },
-  { href: '/settings',  icon: IconSettings2, label: 'Settings' },
+  { href: '/dashboard', icon: IconHome2,     label: 'Home',     wtId: ''              },
+  { href: '/habits',    icon: IconCheckbox,  label: 'Habits',   wtId: ''              },
+  { href: '/timer',     icon: IconBolt,      label: 'Grind',    wtId: 'wt-nav-grind'  },
+  { href: '/circle',    icon: IconUsers,     label: 'Circle',   wtId: 'wt-nav-circle' },
+  { href: '/settings',  icon: IconSettings2, label: 'Settings', wtId: ''              },
 ];
 
 const PUBLIC_PATHS = ['/', '/signin', '/signup', '/onboarding', '/username-setup', '/tutorial'];
@@ -34,10 +34,10 @@ export function BottomNav() {
       WebkitBackdropFilter: 'blur(12px)',
       borderTop: '1px solid var(--border)',
     }}>
-      {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
+      {NAV_ITEMS.map(({ href, icon: Icon, label, wtId }) => {
         const active = path === href || (href !== '/dashboard' && path.startsWith(href));
         return (
-          <Link key={href} href={href} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, minWidth: 48, paddingBottom: 2 }}>
+          <Link key={href} href={href} id={wtId || undefined} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, minWidth: 48, paddingBottom: 2 }}>
             <Icon
               size={22}
               stroke={1.8}

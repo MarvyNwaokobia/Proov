@@ -63,14 +63,16 @@ export default function UsernameSetupPage() {
     }
     setIdentityUsername(address, clean);
     const tutorialDone = localStorage.getItem('proov_tutorial_done');
-    router.push(tutorialDone ? '/dashboard' : '/tutorial');
+    if (!tutorialDone) localStorage.setItem('proov_is_new_user', 'true');
+    router.push('/dashboard');
   };
 
   const handleSkip = () => {
     const temp = 'user_' + Math.random().toString(36).slice(2, 7);
     registerUsername(temp, address);
     const tutorialDone = localStorage.getItem('proov_tutorial_done');
-    router.push(tutorialDone ? '/dashboard' : '/tutorial');
+    if (!tutorialDone) localStorage.setItem('proov_is_new_user', 'true');
+    router.push('/dashboard');
   };
 
   const borderColor = hint === '✓ Available'
