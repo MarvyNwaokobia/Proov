@@ -19,9 +19,9 @@ All three contracts are deployed behind **UUPS upgradeable proxies**. The proxy 
 
 | Contract | Proxy Address |
 |----------|--------------|
-| ProovCore | `0xA08Bc6EDd1A09500Dea6bc810A8fCE24a458B617` |
-| SessionManager | `0x5f121712C0dBE853b9B079BE25100e0604AA7AcF` |
-| CircleManager | `0xe61b662C0e2C0855A9d14E8fF2BF1f5065F072A7` |
+| ProovCore | `0xdac1162E05B6BfA9e192C95fc38512bE4169eBBF` |
+| SessionManager | `0x8f67A90563b102313dde309A6Cd9056a31311e76` |
+| CircleManager | `0xFDd2796CFA3e94494C53F58479EF56f48EBE640f` |
 
 > Verified on [Celoscan](https://celoscan.io)
 

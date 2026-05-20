@@ -2,8 +2,9 @@
   "network": "celo-mainnet",
   "chainId": 42220,
   "deployer": "0xc6A4b73030d8a9eb8166C2FAB2400B421026FD19",
-  "deployedAt": "2026-05-16T17:39:17.236Z",
-  "ProovCore": "0xA08Bc6EDd1A09500Dea6bc810A8fCE24a458B617",
-  "SessionManager": "0x5f121712C0dBE853b9B079BE25100e0604AA7AcF",
-  "CircleManager": "0xe61b662C0e2C0855A9d14E8fF2BF1f5065F072A7"
+  "deployedAt": "2026-05-20T12:04:07.979Z",
+  "ProovCore": "0xdac1162E05B6BfA9e192C95fc38512bE4169eBBF",
+  "SessionManager": "0x8f67A90563b102313dde309A6Cd9056a31311e76",
+  "CircleManager": "0xFDd2796CFA3e94494C53F58479EF56f48EBE640f",
+  "upgradePattern": "UUPS"
 }
