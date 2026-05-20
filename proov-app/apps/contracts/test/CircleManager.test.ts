@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import { CircleManager } from "../typechain-types";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
@@ -13,7 +13,11 @@ describe("CircleManager", function () {
   beforeEach(async function () {
     [owner, alice, bob, carol] = await ethers.getSigners();
     const CircleManagerFactory = await ethers.getContractFactory("CircleManager");
-    circleManager = await CircleManagerFactory.deploy();
+    circleManager = (await upgrades.deployProxy(CircleManagerFactory, [owner.address], {
+      initializer: "initialize",
+      kind: "uups",
+      unsafeAllow: ["constructor"],
+    })) as unknown as CircleManager;
     await circleManager.waitForDeployment();
   });
 
@@ -54,7 +58,7 @@ describe("CircleManager", function () {
       await circleManager.connect(alice).sendRequest(bob.address);
     });
 
-    it("connects both users and emits event", async function () {
+    it("connects both users and emits RequestAccepted", async function () {
       await expect(circleManager.connect(bob).acceptRequest(alice.address))
         .to.emit(circleManager, "RequestAccepted")
         .withArgs(alice.address, bob.address);
@@ -66,6 +70,12 @@ describe("CircleManager", function () {
       const bobCircle = await circleManager.getCircle(bob.address);
       expect(aliceCircle).to.include(bob.address);
       expect(bobCircle).to.include(alice.address);
+    });
+
+    it("also emits MemberAdded", async function () {
+      await expect(circleManager.connect(bob).acceptRequest(alice.address))
+        .to.emit(circleManager, "MemberAdded")
+        .withArgs(bob.address, alice.address, await ethers.provider.getBlock("latest").then(b => b!.timestamp + 1));
     });
 
     it("clears pending request after accept", async function () {
@@ -143,6 +153,25 @@ describe("CircleManager", function () {
     });
   });
 
+  describe("cheer", function () {
+    beforeEach(async function () {
+      await circleManager.connect(alice).sendRequest(bob.address);
+      await circleManager.connect(bob).acceptRequest(alice.address);
+    });
+
+    it("emits CheerSent between circle members", async function () {
+      await expect(circleManager.connect(alice).cheer(bob.address))
+        .to.emit(circleManager, "CheerSent")
+        .withArgs(alice.address, bob.address, await ethers.provider.getBlock("latest").then(b => b!.timestamp + 1));
+    });
+
+    it("reverts if not in circle", async function () {
+      await expect(
+        circleManager.connect(carol).cheer(alice.address)
+      ).to.be.revertedWith("CircleManager: not in circle");
+    });
+  });
+
   describe("notifyStreakBroken", function () {
     it("emits StreakBrokenNotified with circle members", async function () {
       await circleManager.connect(alice).sendRequest(bob.address);
@@ -157,6 +186,13 @@ describe("CircleManager", function () {
   describe("MAX_CIRCLE_SIZE", function () {
     it("is 10", async function () {
       expect(await circleManager.MAX_CIRCLE_SIZE()).to.equal(10);
+    });
+  });
+
+  describe("UUPS upgrade", function () {
+    it("owner can upgrade the implementation", async function () {
+      const CircleManagerV2 = await ethers.getContractFactory("CircleManager");
+      await expect(upgrades.upgradeProxy(await circleManager.getAddress(), CircleManagerV2, { unsafeAllow: ["constructor"] })).to.not.be.rejected;
     });
   });
 

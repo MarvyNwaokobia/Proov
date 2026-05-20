@@ -1,27 +1,27 @@
-# Proov — Your discipline. Onchain. Forever.
+# Proov — Your discipline. Onchain.
 
 > **Prove it. Every day.**  
-> Habits. Streaks. Accountability. All onchain — permanent, verifiable, yours.
+> Habits. Streaks. Accountability. All onchain.
 
 Proov is a habit-tracking and personal accountability dApp built on [Celo](https://celo.org). Users create habits, run focus timers, log fitness activities with AI verification, write journal entries, and build daily streaks. Friends connect to form accountability circles. When a streak breaks, the circle is automatically notified onchain. A global leaderboard ranks every user by streak.
-
-**No pets. No NFTs. No DeFi. Just habits, streaks, accountability, and AI verification — all onchain.**
 
 ---
 
 ## Live Demo
 
-> _Deploy link added after mainnet launch_
+> [_Deploy link added after mainnet launch_](https://proov-one.vercel.app/)
 
 ---
 
-## Smart Contracts (Celo Mainnet / Sepolia)
+## Smart Contracts (Celo Mainnet)
 
-| Contract | Address |
-|----------|---------|
-| ProovCore | `TBD` |
-| SessionManager | `TBD` |
-| CircleManager | `TBD` |
+All three contracts are deployed behind **UUPS upgradeable proxies**. The proxy addresses below never change — only the implementation behind them is replaced on upgrades.
+
+| Contract | Proxy Address |
+|----------|--------------|
+| ProovCore | `0xA08Bc6EDd1A09500Dea6bc810A8fCE24a458B617` |
+| SessionManager | `0x5f121712C0dBE853b9B079BE25100e0604AA7AcF` |
+| CircleManager | `0xe61b662C0e2C0855A9d14E8fF2BF1f5065F072A7` |
 
 > Verified on [Celoscan](https://celoscan.io)
 
@@ -77,7 +77,7 @@ Proov is a habit-tracking and personal accountability dApp built on [Celo](https
 | Layer | Technology |
 |-------|-----------|
 | Blockchain | [Celo](https://celo.org) (L2, post-March 2025 migration) |
-| Smart contracts | Solidity 0.8.28, Hardhat, OpenZeppelin |
+| Smart contracts | Solidity 0.8.28, Hardhat, OpenZeppelin UUPS Upgradeable |
 | Frontend | Next.js 14, TypeScript, Tailwind CSS |
 | Wallet auth | [Web3Auth](https://web3auth.io) (social login) + injected wallet (MetaMask) |
 | Onchain reads/writes | [wagmi](https://wagmi.sh) v2 + [viem](https://viem.sh) v2 |
@@ -98,9 +98,10 @@ packages/
 │   │   ├── SessionManager.sol   ← focus timer sessions
 │   │   └── CircleManager.sol    ← accountability circles
 │   ├── scripts/
-│   │   ├── deploy.ts            ← deploys all 3, wires them together
-│   │   └── register-agent.ts   ← ERC-8004 AI agent registration
-│   └── test/                   ← 50 tests, all passing
+│   │   ├── deploy-upgradeable.ts ← UUPS proxy deploy (ProovCore, SessionManager, CircleManager)
+│   │   ├── deploy.ts             ← legacy direct deploy (kept for reference)
+│   │   └── register-agent.ts    ← ERC-8004 AI agent registration
+│   └── test/                    ← 58 tests, all passing
 │
 └── apps/web/                   ← Next.js 14 frontend
     ├── app/
@@ -206,20 +207,22 @@ pnpm dev
 
 ## Deploying Contracts
 
+Contracts use the **UUPS upgradeable proxy pattern**. The proxy address is permanent; only the implementation changes on upgrades.
+
 ```bash
 cd apps/contracts
 
-# Testnet
-./node_modules/.bin/hardhat run scripts/deploy.ts --network celoSepolia
+# First deploy (creates proxies)
+npx hardhat run scripts/deploy-upgradeable.ts --network celo
 
-# Verify on Celoscan
-./node_modules/.bin/hardhat verify --network celoSepolia <PROOV_CORE_ADDRESS>
-./node_modules/.bin/hardhat verify --network celoSepolia <SESSION_MANAGER_ADDRESS> <PROOV_CORE_ADDRESS>
-./node_modules/.bin/hardhat verify --network celoSepolia <CIRCLE_MANAGER_ADDRESS>
+# Future upgrades (proxy address stays the same)
+npx hardhat run scripts/upgrade.ts --network celo
 
-# Mainnet when ready
-./node_modules/.bin/hardhat run scripts/deploy.ts --network celo
+# Verify proxy on Celoscan
+npx hardhat verify --network celo <PROXY_ADDRESS>
 ```
+
+After the first deploy, update Vercel with the three proxy addresses printed by the script.
 
 ### Register the AI Agent (ERC-8004)
 
@@ -237,14 +240,14 @@ cd apps/contracts
 ./node_modules/.bin/hardhat test
 ```
 
-**50 tests across 3 contract suites — all passing:**
+**58 tests across 3 contract suites — all passing:**
 
 ```
-CircleManager   ·  15 tests
-ProovCore       ·  19 tests
-SessionManager  ·  16 tests
+CircleManager   ·  18 tests  (+ cheer, MemberAdded, UUPS upgrade)
+ProovCore       ·  22 tests  (+ UUPS upgrade x2)
+SessionManager  ·  18 tests  (+ SessionEnded, UUPS upgrade)
 ─────────────────────────────
-50 passing (1s)
+58 passing
 ```
 
 ---

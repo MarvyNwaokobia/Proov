@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { ProovCore } from "../typechain-types";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
@@ -16,8 +16,12 @@ describe("ProovCore", function () {
 
   beforeEach(async function () {
     [owner, user1, user2, authorized] = await ethers.getSigners();
-    const ProovCore = await ethers.getContractFactory("ProovCore");
-    proovCore = await ProovCore.deploy();
+    const ProovCoreFactory = await ethers.getContractFactory("ProovCore");
+    proovCore = (await upgrades.deployProxy(ProovCoreFactory, [owner.address], {
+      initializer: "initialize",
+      kind: "uups",
+      unsafeAllow: ["constructor"],
+    })) as unknown as ProovCore;
     await proovCore.waitForDeployment();
   });
 
@@ -224,6 +228,20 @@ describe("ProovCore", function () {
       expect(streaks[0]).to.equal(2);
       expect(addrs[1]).to.equal(user2.address);
       expect(streaks[1]).to.equal(1);
+    });
+  });
+
+  describe("UUPS upgrade", function () {
+    it("owner can upgrade the implementation", async function () {
+      const ProovCoreV2 = await ethers.getContractFactory("ProovCore");
+      await expect(upgrades.upgradeProxy(await proovCore.getAddress(), ProovCoreV2, { unsafeAllow: ["constructor"] })).to.not.be.rejected;
+    });
+
+    it("non-owner cannot upgrade", async function () {
+      const ProovCoreV2 = await ethers.getContractFactory("ProovCore", user1);
+      await expect(
+        upgrades.upgradeProxy(await proovCore.getAddress(), ProovCoreV2, { unsafeAllow: ["constructor"] })
+      ).to.be.rejectedWith(/OwnableUnauthorizedAccount/);
     });
   });
 

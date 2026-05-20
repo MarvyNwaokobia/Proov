@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { ProovCore, SessionManager } from "../typechain-types";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
@@ -18,11 +18,19 @@ describe("SessionManager", function () {
     [owner, user1, user2] = await ethers.getSigners();
 
     const ProovCoreFactory = await ethers.getContractFactory("ProovCore");
-    proovCore = await ProovCoreFactory.deploy();
+    proovCore = (await upgrades.deployProxy(ProovCoreFactory, [owner.address], {
+      initializer: "initialize",
+      kind: "uups",
+      unsafeAllow: ["constructor"],
+    })) as unknown as ProovCore;
     await proovCore.waitForDeployment();
 
     const SessionManagerFactory = await ethers.getContractFactory("SessionManager");
-    sessionManager = await SessionManagerFactory.deploy(await proovCore.getAddress());
+    sessionManager = (await upgrades.deployProxy(
+      SessionManagerFactory,
+      [owner.address, await proovCore.getAddress()],
+      { initializer: "initialize", kind: "uups", unsafeAllow: ["constructor"] }
+    )) as unknown as SessionManager;
     await sessionManager.waitForDeployment();
 
     await proovCore.setSessionManager(await sessionManager.getAddress());
@@ -71,6 +79,15 @@ describe("SessionManager", function () {
 
       const s = await proovCore.getStats(user1.address);
       expect(s.currentStreak).to.equal(1);
+    });
+
+    it("also emits SessionEnded on completion", async function () {
+      await sessionManager.connect(user1).startSession(0);
+      await time.increase(1499);
+      const tx = await sessionManager.connect(user1).endSession();
+      const receipt = await tx.wait();
+      const event = receipt?.logs.find((l: any) => l.fragment?.name === "SessionEnded");
+      expect(event).to.not.be.undefined;
     });
 
     it("saves completed session to history", async function () {
@@ -133,6 +150,13 @@ describe("SessionManager", function () {
       await expect(
         sessionManager.connect(user1).endSession()
       ).to.be.revertedWith("SessionManager: no active session");
+    });
+  });
+
+  describe("UUPS upgrade", function () {
+    it("owner can upgrade the implementation", async function () {
+      const SessionManagerV2 = await ethers.getContractFactory("SessionManager");
+      await expect(upgrades.upgradeProxy(await sessionManager.getAddress(), SessionManagerV2, { unsafeAllow: ["constructor"] })).to.not.be.rejected;
     });
   });
 

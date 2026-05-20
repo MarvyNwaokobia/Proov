@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract ProovCore is ReentrancyGuard, Ownable {
+contract ProovCore is Initializable, UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuard {
 
     // ── Enums ──────────────────────────────────────────────────
     enum HabitType { FOCUS, FITNESS, READING, HYDRATION, SLEEP, CUSTOM }
@@ -30,6 +32,7 @@ contract ProovCore is ReentrancyGuard, Ownable {
     }
 
     // ── State ──────────────────────────────────────────────────
+    // CRITICAL: Never remove or reorder these variables in future upgrades.
     mapping(address => Habit[]) private _habits;
     mapping(address => UserStats) public stats;
     mapping(address => mapping(uint256 => uint256)) public dailyCompletions; // user → day → count
@@ -43,11 +46,14 @@ contract ProovCore is ReentrancyGuard, Ownable {
 
     uint256[] public STREAK_MILESTONES;
 
+    // Reserve 50 slots for future storage additions without breaking layout
+    uint256[50] private __gap;
+
     // ── Events ─────────────────────────────────────────────────
-    event HabitCreated(address indexed user, uint256 habitId, string name, HabitType habitType);
-    event HabitCompleted(address indexed user, uint256 habitId, uint256 day);
+    event HabitCreated(address indexed user, uint256 indexed habitId, string name, uint256 timestamp);
+    event HabitCompleted(address indexed user, uint256 indexed habitId, uint256 streak, uint256 timestamp);
     event HabitDeactivated(address indexed user, uint256 habitId);
-    event StreakUpdated(address indexed user, uint256 newStreak);
+    event StreakUpdated(address indexed user, uint256 newStreak, uint256 longestStreak, uint256 timestamp);
     event StreakBroken(address indexed user, uint256 oldStreak);
     event MilestoneReached(address indexed user, uint256 milestone);
     event JournalLogged(address indexed user, uint256 day, bytes32 contentHash);
@@ -61,9 +67,20 @@ contract ProovCore is ReentrancyGuard, Ownable {
         _;
     }
 
-    constructor() Ownable(msg.sender) {
+    // ── UUPS ───────────────────────────────────────────────────
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address initialOwner) public initializer {
+        __Ownable_init(initialOwner);
+
+        
         STREAK_MILESTONES = [7, 21, 30, 50, 100, 200];
     }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     // ── Setup ──────────────────────────────────────────────────
     function setSessionManager(address _sm) external onlyOwner { sessionManager = _sm; }
@@ -87,7 +104,7 @@ contract ProovCore is ReentrancyGuard, Ownable {
             createdAt: block.timestamp,
             active: true
         }));
-        emit HabitCreated(msg.sender, id, name, habitType);
+        emit HabitCreated(msg.sender, id, name, block.timestamp);
         return id;
     }
 
@@ -104,7 +121,7 @@ contract ProovCore is ReentrancyGuard, Ownable {
         dailyCompletions[user][today]++;
         _updateStreak(user, today);
 
-        emit HabitCompleted(user, habitId, today);
+        emit HabitCompleted(user, habitId, stats[user].currentStreak, block.timestamp);
     }
 
     // Called directly by user for fitness/manual habits after AI verification
@@ -119,7 +136,7 @@ contract ProovCore is ReentrancyGuard, Ownable {
         dailyCompletions[msg.sender][today]++;
         _updateStreak(msg.sender, today);
 
-        emit HabitCompleted(msg.sender, habitId, today);
+        emit HabitCompleted(msg.sender, habitId, stats[msg.sender].currentStreak, block.timestamp);
     }
 
     function deactivateHabit(uint256 habitId) external nonReentrant {
@@ -150,16 +167,12 @@ contract ProovCore is ReentrancyGuard, Ownable {
         uint256 lastDay = s.lastCompletionDay;
 
         if (lastDay == today) {
-            // Already active today — no streak change
             return;
         } else if (lastDay == today - 1) {
-            // Consecutive day — streak grows
             s.currentStreak++;
         } else if (lastDay == 0) {
-            // First ever completion
             s.currentStreak = 1;
         } else {
-            // Gap — streak broken
             uint256 old = s.currentStreak;
             s.currentStreak = 1;
             emit StreakBroken(user, old);
@@ -172,7 +185,7 @@ contract ProovCore is ReentrancyGuard, Ownable {
             s.longestStreak = s.currentStreak;
         }
 
-        emit StreakUpdated(user, s.currentStreak);
+        emit StreakUpdated(user, s.currentStreak, s.longestStreak, block.timestamp);
 
         for (uint256 i = 0; i < STREAK_MILESTONES.length; i++) {
             if (s.currentStreak == STREAK_MILESTONES[i]) {
@@ -199,13 +212,11 @@ contract ProovCore is ReentrancyGuard, Ownable {
         uint256 total = _allUsers.length;
         uint256 count = total < limit ? total : limit;
 
-        // Copy into memory for sorting
         address[] memory sorted = new address[](total);
         for (uint256 i = 0; i < total; i++) {
             sorted[i] = _allUsers[i];
         }
 
-        // Insertion sort descending by currentStreak
         for (uint256 i = 0; i < total; i++) {
             for (uint256 j = i + 1; j < total; j++) {
                 if (stats[sorted[j]].currentStreak > stats[sorted[i]].currentStreak) {

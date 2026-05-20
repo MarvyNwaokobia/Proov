@@ -1,34 +1,55 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract CircleManager is ReentrancyGuard, Ownable {
+contract CircleManager is Initializable, UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuard {
 
     uint256 public constant MAX_CIRCLE_SIZE = 10;
-
-    mapping(address => address[]) private _circle;
-    mapping(address => mapping(address => bool)) public connected;
-    mapping(address => address[]) private _pendingRequests;
-    mapping(address => mapping(address => bool)) private _hasPending;
 
     struct Witness {
         address witness;
         uint256 habitId;
         uint256 timestamp;
     }
+
+    // CRITICAL: Never remove or reorder these variables in future upgrades.
+    mapping(address => address[]) private _circle;
+    mapping(address => mapping(address => bool)) public connected;
+    mapping(address => address[]) private _pendingRequests;
+    mapping(address => mapping(address => bool)) private _hasPending;
     mapping(address => Witness[]) public witnesses;
 
+    uint256[50] private __gap;
+
+    // ── Events ─────────────────────────────────────────────────
     event RequestSent(address indexed from, address indexed to);
     event RequestAccepted(address indexed from, address indexed to);
+    event MemberAdded(address indexed circleOwner, address indexed member, uint256 timestamp);
     event RequestRejected(address indexed from, address indexed to);
     event RemovedFromCircle(address indexed user, address indexed removed);
     event WitnessAdded(address indexed user, uint256 habitId, address indexed witness);
     event StreakBrokenNotified(address indexed user, address[] circleMembers);
+    event CheerSent(address indexed from, address indexed to, uint256 timestamp);
 
-    constructor() Ownable(msg.sender) {}
+    // ── UUPS ───────────────────────────────────────────────────
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
 
+    function initialize(address initialOwner) public initializer {
+        __Ownable_init(initialOwner);
+
+        
+    }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+    // ── Circle Logic ───────────────────────────────────────────
     function sendRequest(address to) external nonReentrant {
         require(to != msg.sender, "CircleManager: cannot add self");
         require(!connected[msg.sender][to], "CircleManager: already connected");
@@ -54,6 +75,7 @@ contract CircleManager is ReentrancyGuard, Ownable {
         connected[from][msg.sender] = true;
 
         emit RequestAccepted(from, msg.sender);
+        emit MemberAdded(msg.sender, from, block.timestamp);
     }
 
     function rejectRequest(address from) external nonReentrant {
@@ -84,12 +106,17 @@ contract CircleManager is ReentrancyGuard, Ownable {
         emit WitnessAdded(user, habitId, msg.sender);
     }
 
-    // Called by ProovCore (or frontend after StreakBroken event) to notify circle
+    function cheer(address to) external nonReentrant {
+        require(connected[msg.sender][to], "CircleManager: not in circle");
+        emit CheerSent(msg.sender, to, block.timestamp);
+    }
+
     function notifyStreakBroken(address user) external {
         address[] memory circle = _circle[user];
         emit StreakBrokenNotified(user, circle);
     }
 
+    // ── Views ──────────────────────────────────────────────────
     function getCircle(address user) external view returns (address[] memory) {
         return _circle[user];
     }
@@ -102,6 +129,7 @@ contract CircleManager is ReentrancyGuard, Ownable {
         return witnesses[user];
     }
 
+    // ── Internals ─────────────────────────────────────────────
     function _removeFromArray(address[] storage arr, address target) internal {
         for (uint256 i = 0; i < arr.length; i++) {
             if (arr[i] == target) {
