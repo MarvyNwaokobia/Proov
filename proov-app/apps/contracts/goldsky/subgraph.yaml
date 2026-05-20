@@ -1,0 +1,93 @@
+specVersion: 0.0.4
+description: Proov — Habit tracking on Celo
+repository: https://github.com/MarvyNwaokobia/Proov
+
+schema:
+  file: ./schema.graphql
+
+dataSources:
+  - kind: ethereum/contract
+    name: ProovCore
+    network: celo
+    source:
+      address: "0xdac1162E05B6BfA9e192C95fc38512bE4169eBBF"
+      abi: ProovCore
+      startBlock: 28000000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.6
+      language: wasm/assemblyscript
+      entities:
+        - User
+        - Habit
+        - HabitCompletion
+        - Streak
+        - Milestone
+      abis:
+        - name: ProovCore
+          file: ./abis/ProovCore.json
+      eventHandlers:
+        - event: HabitCreated(indexed address,indexed uint256,string,uint256)
+          handler: handleHabitCreated
+        - event: HabitCompleted(indexed address,indexed uint256,uint256,uint256)
+          handler: handleHabitCompleted
+        - event: HabitDeactivated(indexed address,uint256)
+          handler: handleHabitDeactivated
+        - event: StreakUpdated(indexed address,uint256,uint256,uint256)
+          handler: handleStreakUpdated
+        - event: StreakBroken(indexed address,uint256)
+          handler: handleStreakBroken
+        - event: MilestoneReached(indexed address,uint256)
+          handler: handleMilestoneReached
+      file: ./src/proov-core.ts
+
+  - kind: ethereum/contract
+    name: SessionManager
+    network: celo
+    source:
+      address: "0x8f67A90563b102313dde309A6Cd9056a31311e76"
+      abi: SessionManager
+      startBlock: 28000000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.6
+      language: wasm/assemblyscript
+      entities:
+        - Session
+      abis:
+        - name: SessionManager
+          file: ./abis/SessionManager.json
+      eventHandlers:
+        - event: SessionStarted(indexed address,indexed uint256,uint256)
+          handler: handleSessionStarted
+        - event: SessionCompleted(indexed address,indexed uint256,uint256)
+          handler: handleSessionCompleted
+        - event: SessionAbandoned(indexed address,indexed uint256,uint256)
+          handler: handleSessionAbandoned
+      file: ./src/session-manager.ts
+
+  - kind: ethereum/contract
+    name: CircleManager
+    network: celo
+    source:
+      address: "0xFDd2796CFA3e94494C53F58479EF56f48EBE640f"
+      abi: CircleManager
+      startBlock: 28000000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.6
+      language: wasm/assemblyscript
+      entities:
+        - CircleConnection
+        - Cheer
+      abis:
+        - name: CircleManager
+          file: ./abis/CircleManager.json
+      eventHandlers:
+        - event: MemberAdded(indexed address,indexed address,uint256)
+          handler: handleMemberAdded
+        - event: CheerSent(indexed address,indexed address,uint256)
+          handler: handleCheerSent
+        - event: RemovedFromCircle(indexed address,indexed address)
+          handler: handleRemovedFromCircle
+      file: ./src/circle-manager.ts

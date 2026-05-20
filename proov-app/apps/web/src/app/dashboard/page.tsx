@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import Link from 'next/link';
+import { getLeaderboard, getUserStats } from '@/lib/goldsky';
 import {
   IconFlame,
   IconCheckbox,
@@ -57,6 +58,8 @@ export default function DashboardPage() {
   const [toast, setToast] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [lbTop, setLbTop] = useState<{ name: string; streak: number }[]>([]);
+  const [userRank, setUserRank] = useState(0);
 
   useEffect(() => {
     if (isConnected) {
@@ -122,6 +125,18 @@ export default function DashboardPage() {
     if (cheeredRaw) {
       try { setCheered(JSON.parse(cheeredRaw)); } catch {}
     }
+
+    // Goldsky leaderboard snapshot
+    const addr = localStorage.getItem('proov_address') || '';
+    Promise.all([getLeaderboard(2), getUserStats(addr)]).then(([top, myStats]) => {
+      if (top.length > 0) {
+        setLbTop(top.map(e => ({ name: `@${e.id.slice(0, 8)}`, streak: e.currentStreak })));
+      }
+      if (myStats) {
+        setCurrentStreak(myStats.currentStreak);
+        setUserRank(myStats.rank);
+      }
+    });
   }, [address]);
 
   const completedCount = habits.filter(h => h.completedToday).length;
@@ -433,9 +448,16 @@ export default function DashboardPage() {
         </div>
         <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14, overflow: 'hidden', marginBottom: '1rem' }}>
           {[
-            { rank: '1', medal: '🥇', name: '@sarah_k',   streak: 89, isMe: false },
-            { rank: '2', medal: '🥈', name: '@marcus_o',  streak: 74, isMe: false },
-            { rank: '—', medal: '',   name: `You · @${displayName}`, streak: currentStreak, isMe: true },
+            ...(lbTop.length >= 2
+              ? [
+                  { rank: '1', medal: '🥇', name: lbTop[0].name, streak: lbTop[0].streak, isMe: false },
+                  { rank: '2', medal: '🥈', name: lbTop[1].name, streak: lbTop[1].streak, isMe: false },
+                ]
+              : [
+                  { rank: '1', medal: '🥇', name: '@—',  streak: 0, isMe: false },
+                  { rank: '2', medal: '🥈', name: '@—',  streak: 0, isMe: false },
+                ]),
+            { rank: userRank ? `#${userRank}` : '—', medal: '', name: `You · @${displayName}`, streak: currentStreak, isMe: true },
           ].map((row, i) => (
             <div key={i} style={{
               display: 'flex', alignItems: 'center', gap: 10,

@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useLeaderboard } from "@/hooks/useStreak";
 import { displayName } from "@/lib/username";
+import { getLeaderboard, type LeaderboardEntry } from "@/lib/goldsky";
 
 function shortAddr(addr: string) {
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
@@ -19,7 +20,22 @@ export default function LeaderboardPage() {
   const { address, isConnected, status } = useAccount();
   useEffect(() => { if (status === 'disconnected') router.push("/"); }, [status, router]);
 
-  const { entries, isLoading } = useLeaderboard(50);
+  const { entries: contractEntries, isLoading: contractLoading } = useLeaderboard(50);
+  const [goldskyEntries, setGoldskyEntries] = useState<LeaderboardEntry[]>([]);
+  const [goldskyLoaded, setGoldskyLoaded] = useState(false);
+
+  useEffect(() => {
+    getLeaderboard(100).then(data => {
+      setGoldskyEntries(data);
+      setGoldskyLoaded(true);
+    });
+  }, []);
+
+  // Prefer Goldsky when available; fall back to on-chain contract data
+  const entries = goldskyLoaded && goldskyEntries.length > 0
+    ? goldskyEntries.map(e => ({ address: e.id as `0x${string}`, streak: BigInt(e.currentStreak) }))
+    : contractEntries;
+  const isLoading = goldskyLoaded ? false : contractLoading;
 
   if (!isConnected) return null;
 

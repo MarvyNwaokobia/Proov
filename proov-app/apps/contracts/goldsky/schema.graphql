@@ -1,0 +1,69 @@
+type User @entity {
+  id: ID!
+  address: Bytes!
+  currentStreak: Int!
+  longestStreak: Int!
+  totalCompletions: Int!
+  totalSessions: Int!
+  habits: [Habit!]! @derivedFrom(field: "user")
+  completions: [HabitCompletion!]! @derivedFrom(field: "user")
+  sessions: [Session!]! @derivedFrom(field: "user")
+  milestones: [Milestone!]! @derivedFrom(field: "user")
+  circle: [CircleConnection!]! @derivedFrom(field: "owner")
+  cheersReceived: Int!
+  cheersSent: Int!
+  lastActiveAt: BigInt!
+  createdAt: BigInt!
+}
+
+type Habit @entity {
+  id: ID!
+  habitId: BigInt!
+  user: User!
+  name: String!
+  active: Boolean!
+  currentStreak: Int!
+  totalCompletions: Int!
+  createdAt: BigInt!
+  completions: [HabitCompletion!]! @derivedFrom(field: "habit")
+}
+
+type HabitCompletion @entity {
+  id: ID!
+  user: User!
+  habit: Habit!
+  streak: BigInt!
+  timestamp: BigInt!
+  txHash: String!
+}
+
+type Session @entity {
+  id: ID!
+  user: User!
+  habitId: BigInt!
+  startTime: BigInt!
+  duration: BigInt
+  status: String!
+}
+
+type Milestone @entity {
+  id: ID!
+  user: User!
+  milestone: BigInt!
+  timestamp: BigInt!
+}
+
+type CircleConnection @entity {
+  id: ID!
+  owner: User!
+  member: Bytes!
+  createdAt: BigInt!
+  active: Boolean!
+}
+
+type Cheer @entity {
+  id: ID!
+  from: Bytes!
+  to: Bytes!
+  timestamp: BigInt!
+}
