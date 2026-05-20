@@ -1,6 +1,5 @@
-// Fee currency for all Celo transactions — USDm (cUSD)
-// Source: celopedia-skills builder-guide.md → Allowed Fee Currencies (Mainnet)
-export const FEE_CURRENCY_USDM = "0x765DE816845861e75A25fCA122bb6898B8B1282a" as `0x${string}`;
+// Fee currency for all Celo transactions — native CELO
+export const FEE_CURRENCY_USDM = "0x471EcE3750Da237f93B8E339c536989b8978a438" as `0x${string}`;
 
 // Injects feeCurrency into a writeContract call.
 // feeCurrency is a Celo-specific extension not in standard wagmi types.
