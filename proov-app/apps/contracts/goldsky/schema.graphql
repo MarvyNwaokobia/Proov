@@ -1,4 +1,4 @@
-type User @entity {
+type User @entity(immutable: false) {
   id: ID!
   address: Bytes!
   currentStreak: Int!
@@ -16,7 +16,7 @@ type User @entity {
   createdAt: BigInt!
 }
 
-type Habit @entity {
+type Habit @entity(immutable: false) {
   id: ID!
   habitId: BigInt!
   user: User!
@@ -28,7 +28,7 @@ type Habit @entity {
   completions: [HabitCompletion!]! @derivedFrom(field: "habit")
 }
 
-type HabitCompletion @entity {
+type HabitCompletion @entity(immutable: true) {
   id: ID!
   user: User!
   habit: Habit!
@@ -37,7 +37,7 @@ type HabitCompletion @entity {
   txHash: String!
 }
 
-type Session @entity {
+type Session @entity(immutable: false) {
   id: ID!
   user: User!
   habitId: BigInt!
@@ -46,14 +46,14 @@ type Session @entity {
   status: String!
 }
 
-type Milestone @entity {
+type Milestone @entity(immutable: true) {
   id: ID!
   user: User!
   milestone: BigInt!
   timestamp: BigInt!
 }
 
-type CircleConnection @entity {
+type CircleConnection @entity(immutable: false) {
   id: ID!
   owner: User!
   member: Bytes!
@@ -61,7 +61,7 @@ type CircleConnection @entity {
   active: Boolean!
 }
 
-type Cheer @entity {
+type Cheer @entity(immutable: true) {
   id: ID!
   from: Bytes!
   to: Bytes!
