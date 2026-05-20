@@ -17,6 +17,7 @@ import { useStreak } from "@/hooks/useStreak";
 import { TxToast } from "@/components/shared/TxToast";
 import { isAddress } from "viem";
 import { findAddressByUsername, displayName } from "@/lib/username";
+import { getAddressForUsername } from "@/lib/supabase";
 
 function shortAddr(addr: string) {
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
@@ -156,9 +157,37 @@ export default function CirclePage() {
     setShowConfirmInvite(true);
   };
 
-  const handleConfirmedInvite = () => {
+  const handleConfirmedInvite = async () => {
     if (!pendingInvite) return;
-    sendRequest(pendingInvite as `0x${string}`);
+    let target = pendingInvite;
+
+    // If it looks like a username (not an address), resolve to address via Supabase
+    if (!target.startsWith('0x')) {
+      const clean = target.replace(/^@/, '');
+      try {
+        const supabaseAddr = await getAddressForUsername(clean);
+        if (supabaseAddr) {
+          target = supabaseAddr;
+        } else {
+          // Fall back to local registry
+          const localAddr = findAddressByUsername(clean);
+          if (localAddr) {
+            target = localAddr;
+          } else {
+            setInputError(`@${clean} not found — they need to join Proov first`);
+            setShowConfirmInvite(false);
+            return;
+          }
+        }
+      } catch {
+        // Supabase offline — try local only
+        const localAddr = findAddressByUsername(clean);
+        if (!localAddr) { setInputError('Could not look up username. Try using their address instead.'); setShowConfirmInvite(false); return; }
+        target = localAddr;
+      }
+    }
+
+    sendRequest(target as `0x${string}`);
     setInput("");
     setResolvedAddr(null);
     setPendingInvite("");

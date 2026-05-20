@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { checkUsernameAvailable, createProfile } from '@/lib/supabase';
+import { isUsernameAvailable, registerUsername as registerSupabaseUsername } from '@/lib/supabase';
 import { validateUsername } from '@/lib/username';
 
 interface Props {
@@ -32,7 +32,7 @@ export function UsernameSetup({ address, onComplete }: Props) {
     setStatus('checking'); setHint('Checking...');
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
-      const avail = await checkUsernameAvailable(clean);
+      const avail = await isUsernameAvailable(clean);
       if (avail) { setStatus('available'); setHint('✓ Available'); }
       else { setStatus('taken'); setHint('✗ Already taken — try another'); }
     }, 500);
@@ -43,7 +43,7 @@ export function UsernameSetup({ address, onComplete }: Props) {
     if (status !== 'available') return;
     setLoading(true);
     try {
-      await createProfile(address, clean);
+      await registerSupabaseUsername(address, clean);
       onComplete(clean);
     } catch {
       setStatus('taken');

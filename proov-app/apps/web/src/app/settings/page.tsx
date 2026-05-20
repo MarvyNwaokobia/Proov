@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
 import { validateUsername, isUsernameTaken, registerUsername } from '@/lib/username';
 import { setIdentityUsername } from '@/lib/auth';
+import { updateUsername as updateSupabaseUsername } from '@/lib/supabase';
 import {
   IconTrophy,
   IconChevronRight,
@@ -59,16 +60,30 @@ export default function SettingsPage() {
     }
   };
 
-  const confirmedSaveUsername = () => {
+  const confirmedSaveUsername = async () => {
     const clean = newUsername.replace(/^@/, '').toLowerCase();
-    const ok = registerUsername(clean, address);
-    if (!ok) { setUsernameHint('Already taken'); setUsernameHintColor('#f43f5e'); setShowUsernameConfirm(false); return; }
+    setShowUsernameConfirm(false);
+
+    try {
+      const result = await updateSupabaseUsername(address, clean);
+      if (!result.success) {
+        setUsernameHint(result.error || 'Could not save');
+        setUsernameHintColor('#f43f5e');
+        return;
+      }
+    } catch {
+      console.warn('Supabase unavailable — saving locally only');
+    }
+
+    // Always update localStorage
+    registerUsername(clean, address);
+    localStorage.setItem('proov_username', clean);
     setIdentityUsername(address, clean);
+
     setUsername(clean);
     setEditingUsername(false);
     setNewUsername('');
     setUsernameHint('');
-    setShowUsernameConfirm(false);
     setSavedToast(true);
     setTimeout(() => setSavedToast(false), 2500);
   };

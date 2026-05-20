@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import Link from 'next/link';
 import { getLeaderboard, getUserStats } from '@/lib/goldsky';
+import { getUsernameForAddress } from '@/lib/supabase';
 import { Walkthrough } from '@/components/shared/Walkthrough';
 import {
   IconFlame,
@@ -73,19 +74,27 @@ export default function DashboardPage() {
   }, [isConnected, status, router]);
 
   useEffect(() => {
-    const storedUsername =
-      localStorage.getItem('proov_username') ||
-      (() => {
-        const addr = localStorage.getItem('proov_address') || '';
-        if (!addr) return null;
-        try {
-          const raw = localStorage.getItem(`proov_username_${addr.toLowerCase()}`);
-          return raw ? JSON.parse(raw).username : null;
-        } catch { return null; }
-      })() ||
-      null;
-
-    if (storedUsername) setUsername(storedUsername);
+    const addr = localStorage.getItem('proov_address') || '';
+    // Supabase first (most up to date across devices), then localStorage
+    getUsernameForAddress(addr).then(remote => {
+      if (remote) {
+        setUsername(remote);
+        localStorage.setItem('proov_username', remote);
+      } else {
+        const local =
+          localStorage.getItem('proov_username') ||
+          (() => {
+            try {
+              const raw = localStorage.getItem(`proov_username_${addr.toLowerCase()}`);
+              return raw ? JSON.parse(raw).username : null;
+            } catch { return null; }
+          })();
+        if (local) setUsername(local);
+      }
+    }).catch(() => {
+      const local = localStorage.getItem('proov_username');
+      if (local) setUsername(local);
+    });
   }, []);
 
   useEffect(() => {

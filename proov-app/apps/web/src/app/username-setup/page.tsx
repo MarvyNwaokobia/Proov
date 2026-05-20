@@ -3,6 +3,10 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { validateUsername, isUsernameTaken, registerUsername, generateSuggestions } from '@/lib/username';
 import { setIdentityUsername } from '@/lib/auth';
+import {
+  isUsernameAvailable,
+  registerUsername as registerSupabaseUsername,
+} from '@/lib/supabase';
 
 export default function UsernameSetupPage() {
   const router = useRouter();
@@ -35,33 +39,51 @@ export default function UsernameSetupPage() {
     setHint('Checking...');
     setHintColor('var(--text3)');
     clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      const taken = isUsernameTaken(clean, address);
-      if (taken) {
-        setHint('Already taken — try another');
-        setHintColor('#f43f5e');
-      } else {
-        setHint('✓ Available');
-        setHintColor('var(--accent)');
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const available = await isUsernameAvailable(clean);
+        if (available) {
+          setHint('✓ Available');
+          setHintColor('var(--accent)');
+        } else {
+          setHint('Already taken — try another');
+          setHintColor('#f43f5e');
+        }
+      } catch {
+        // Supabase unavailable — fall back to localStorage
+        const takenLocally = isUsernameTaken(clean, address);
+        setHint(takenLocally ? 'Already taken — try another' : '✓ Available');
+        setHintColor(takenLocally ? '#f43f5e' : 'var(--accent)');
+      } finally {
+        setChecking(false);
       }
-      setChecking(false);
     }, 400);
   };
 
   const canSubmit = hint === '✓ Available' && !checking;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!canSubmit) return;
     setLoading(true);
     const clean = value.replace(/^@/, '').toLowerCase();
-    const ok = registerUsername(clean, address);
-    if (!ok) {
-      setHint('Already taken — try another');
-      setHintColor('#f43f5e');
-      setLoading(false);
-      return;
+
+    try {
+      const result = await registerSupabaseUsername(address, clean);
+      if (!result.success) {
+        setHint(result.error || 'Already taken — try another');
+        setHintColor('#f43f5e');
+        setLoading(false);
+        return;
+      }
+    } catch {
+      console.warn('Supabase unavailable, saving username locally');
     }
+
+    // Always save locally too (offline fallback)
+    registerUsername(clean, address);
+    localStorage.setItem('proov_username', clean);
     setIdentityUsername(address, clean);
+
     const tutorialDone = localStorage.getItem('proov_tutorial_done');
     if (!tutorialDone) localStorage.setItem('proov_is_new_user', 'true');
     router.push('/dashboard');
