@@ -69,6 +69,7 @@ export default function GrindTimerPage() {
 
   const [secondsLeft, setSecondsLeft] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const justCompletedRef = useRef(false);
 
   // Cursor glow
   const glowRef = useRef<HTMLDivElement>(null);
@@ -150,6 +151,58 @@ export default function GrindTimerPage() {
     }
   }, [searchParams]);
 
+  // Request notification permission when page loads
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // Fire notification + sound when timer completes
+  useEffect(() => {
+    if (view === 'done' && justCompletedRef.current) {
+      justCompletedRef.current = false;
+
+      // Browser notification
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        new Notification('Session complete', {
+          body: selectedHabit
+            ? `${selectedHabit.name} — ${fmtDur(duration)} done`
+            : `${fmtDur(duration)} session complete`,
+          icon: '/icon-192.png',
+        });
+      }
+
+      // Subtle completion sound: C5 → E5 → G5 chord
+      try {
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.setValueAtTime(523, ctx.currentTime);
+        osc.frequency.setValueAtTime(659, ctx.currentTime + 0.15);
+        osc.frequency.setValueAtTime(784, ctx.currentTime + 0.3);
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.8);
+      } catch {}
+
+      // Silent background endSession
+      if (isConnected && process.env.NEXT_PUBLIC_SESSION_MANAGER_ADDRESS) {
+        try {
+          writeContract(withCeloFee({
+            address: process.env.NEXT_PUBLIC_SESSION_MANAGER_ADDRESS as `0x${string}`,
+            abi: SESSION_ABI,
+            functionName: 'endSession' as const,
+            args: [] as [],
+          }));
+        } catch {}
+      }
+    }
+  }, [view, selectedHabit, duration, isConnected]);
+
   // Countdown
   useEffect(() => {
     if (view !== 'running') {
@@ -161,6 +214,7 @@ export default function GrindTimerPage() {
         if (s <= 1) {
           clearInterval(intervalRef.current!);
           localStorage.removeItem('proov_active_timer');
+          justCompletedRef.current = true;
           setView('done');
           return 0;
         }
@@ -203,16 +257,7 @@ export default function GrindTimerPage() {
         localStorage.setItem(key, JSON.stringify(completions));
       }
     }
-    if (isConnected && process.env.NEXT_PUBLIC_SESSION_MANAGER_ADDRESS) {
-      try {
-        writeContract(withCeloFee({
-          address: process.env.NEXT_PUBLIC_SESSION_MANAGER_ADDRESS as `0x${string}`,
-          abi: SESSION_ABI,
-          functionName: 'endSession' as const,
-          args: [] as [],
-        }));
-      } catch {}
-    }
+    // endSession already fired silently when timer completed
     setView('pick');
     setSelectedHabit(null);
     setIsCustom(false);

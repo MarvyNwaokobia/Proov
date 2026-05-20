@@ -109,10 +109,15 @@ export default function CirclePage() {
   const [inputError, setInputError] = useState("");
   const [resolvedAddr, setResolvedAddr] = useState<string | null>(null);
   const [cheeredMap, setCheeredMap] = useState<Record<string, boolean>>({});
+  const [pendingInvite, setPendingInvite] = useState<string>("");
+  const [showConfirmInvite, setShowConfirmInvite] = useState(false);
+  const [cheerToast, setCheerToast] = useState({ visible: false });
 
   const handleCheer = (addr: string) => {
     doCheer(addr);
     setCheeredMap(m => ({ ...m, [addr]: true }));
+    setCheerToast({ visible: true });
+    setTimeout(() => setCheerToast({ visible: false }), 2500);
   };
 
   useEffect(() => {
@@ -147,9 +152,17 @@ export default function CirclePage() {
     }
     if (target?.toLowerCase() === address?.toLowerCase()) { setInputError("That's you!"); return; }
     setInputError("");
-    sendRequest(target as `0x${string}`);
+    setPendingInvite(target);
+    setShowConfirmInvite(true);
+  };
+
+  const handleConfirmedInvite = () => {
+    if (!pendingInvite) return;
+    sendRequest(pendingInvite as `0x${string}`);
     setInput("");
     setResolvedAddr(null);
+    setPendingInvite("");
+    setShowConfirmInvite(false);
   };
 
   if (!isConnected) return null;
@@ -358,6 +371,49 @@ export default function CirclePage() {
       <TxToast hash={acceptHash}  pendingText="Connecting…"       successText="Connected! ✓" />
       <TxToast hash={rejectHash}  pendingText="Rejecting…"        successText="Request rejected." />
       <TxToast hash={witnessHash} pendingText="Witnessing…"       successText="Witnessed!" />
+
+      {/* Cheer toast */}
+      <div style={{
+        position: 'fixed', bottom: 84, left: '50%',
+        transform: `translateX(-50%) translateY(${cheerToast.visible ? 0 : 16}px)`,
+        opacity: cheerToast.visible ? 1 : 0,
+        background: 'var(--pink)', color: '#fff',
+        padding: '9px 18px', borderRadius: 20,
+        fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
+        pointerEvents: 'none', zIndex: 9999,
+        transition: 'all 0.3s cubic-bezier(.34,1.56,.64,1)',
+        whiteSpace: 'nowrap', boxShadow: '0 4px 16px rgba(0,0,0,.15)',
+      }}>
+        Cheer sent
+      </div>
+
+      {/* Confirm invite modal */}
+      {showConfirmInvite && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100, padding: '0 1rem 1.5rem' }}
+          onClick={() => setShowConfirmInvite(false)}
+        >
+          <div
+            style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 20, padding: '1.5rem', width: '100%', maxWidth: 400 }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>Add to circle?</div>
+            <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: '1.25rem', lineHeight: 1.6 }}>
+              <strong style={{ color: 'var(--text)' }}>{pendingInvite.startsWith('0x') ? `${pendingInvite.slice(0, 8)}…${pendingInvite.slice(-4)}` : pendingInvite}</strong> will see your habit activity and you'll see theirs.
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <button onClick={() => setShowConfirmInvite(false)}
+                style={{ padding: 11, borderRadius: 12, border: '1px solid var(--border2)', background: 'transparent', color: 'var(--text2)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Cancel
+              </button>
+              <button onClick={handleConfirmedInvite}
+                style={{ padding: 11, borderRadius: 12, border: 'none', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Add them
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

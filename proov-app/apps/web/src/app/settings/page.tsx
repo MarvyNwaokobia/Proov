@@ -25,6 +25,7 @@ export default function SettingsPage() {
   const [userRank] = useState<number>(14);
   const [savedToast, setSavedToast] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showUsernameConfirm, setShowUsernameConfirm] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -51,14 +52,23 @@ export default function SettingsPage() {
   };
 
   const saveUsername = () => {
+    if (username) {
+      setShowUsernameConfirm(true);
+    } else {
+      confirmedSaveUsername();
+    }
+  };
+
+  const confirmedSaveUsername = () => {
     const clean = newUsername.replace(/^@/, '').toLowerCase();
     const ok = registerUsername(clean, address);
-    if (!ok) { setUsernameHint('Already taken'); setUsernameHintColor('#f43f5e'); return; }
+    if (!ok) { setUsernameHint('Already taken'); setUsernameHintColor('#f43f5e'); setShowUsernameConfirm(false); return; }
     setIdentityUsername(address, clean);
     setUsername(clean);
     setEditingUsername(false);
     setNewUsername('');
     setUsernameHint('');
+    setShowUsernameConfirm(false);
     setSavedToast(true);
     setTimeout(() => setSavedToast(false), 2500);
   };
@@ -123,7 +133,7 @@ export default function SettingsPage() {
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button onClick={saveUsername} disabled={usernameHint !== '✓ Available'}
                       style={{ padding: '5px 14px', borderRadius: 8, border: 'none', background: usernameHint === '✓ Available' ? 'var(--btn-primary-bg)' : 'var(--bg3)', color: usernameHint === '✓ Available' ? 'var(--btn-primary-text)' : 'var(--text3)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                      Save
+                      Save username
                     </button>
                     <button onClick={() => { setEditingUsername(false); setNewUsername(''); setUsernameHint(''); }}
                       style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text3)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -214,6 +224,36 @@ export default function SettingsPage() {
       </div>
 
       <div className={`toast ${savedToast ? 'show' : ''}`} style={{ background: 'var(--success)' }}>✓ Saved</div>
+
+      {/* Username change confirm modal */}
+      {showUsernameConfirm && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100, padding: '0 1rem 1.5rem' }}
+          onClick={() => setShowUsernameConfirm(false)}
+        >
+          <div
+            style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 20, padding: '1.5rem', width: '100%', maxWidth: 400 }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>Change username?</div>
+            <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: '1.25rem', lineHeight: 1.6 }}>
+              Your username will change from{' '}
+              <strong style={{ color: 'var(--text)' }}>@{username}</strong> to{' '}
+              <strong style={{ color: 'var(--text)' }}>@{newUsername.replace(/^@/, '')}</strong>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <button onClick={() => setShowUsernameConfirm(false)}
+                style={{ padding: 11, borderRadius: 12, border: '1px solid var(--border2)', background: 'transparent', color: 'var(--text2)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Cancel
+              </button>
+              <button onClick={confirmedSaveUsername}
+                style={{ padding: 11, borderRadius: 12, border: 'none', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

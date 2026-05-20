@@ -136,7 +136,7 @@ export default function DashboardPage() {
 
     if (isNowDone) {
       completions.push(habitId);
-      showToast('Done ✓');
+      showToast('Saved ✓');
     } else {
       const idx = completions.indexOf(habitId);
       if (idx > -1) completions.splice(idx, 1);

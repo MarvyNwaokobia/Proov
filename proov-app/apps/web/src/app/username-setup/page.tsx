@@ -113,12 +113,15 @@ export default function UsernameSetupPage() {
             </div>
 
             {hint ? (
-              <p style={{ fontSize: 11, color: hintColor, marginBottom: '1rem', minHeight: 16, transition: 'color .15s' }}>{hint}</p>
+              <p style={{ fontSize: 11, color: hintColor, marginBottom: '0.5rem', minHeight: 16, transition: 'color .15s' }}>{hint}</p>
             ) : (
-              <p style={{ fontSize: 11, color: 'var(--text3)', marginBottom: '1rem' }}>
+              <p style={{ fontSize: 11, color: 'var(--text3)', marginBottom: '0.5rem' }}>
                 3–20 characters · letters, numbers, underscores
               </p>
             )}
+            <p style={{ fontSize: 11, color: 'var(--text3)', marginBottom: '1rem', lineHeight: 1.5 }}>
+              Your username is how people find you and how your progress is tracked.
+            </p>
 
             {/* Suggestions */}
             {suggestions.length > 0 && (
@@ -144,7 +147,7 @@ export default function UsernameSetupPage() {
               onMouseEnter={e => canSubmit && (e.currentTarget.style.transform = 'translateY(-2px)')}
               onMouseLeave={e => (e.currentTarget.style.transform = '')}
             >
-              {loading ? 'Saving...' : 'Continue →'}
+              {loading ? 'Saving...' : 'Confirm username'}
             </button>
 
             <button onClick={handleSkip}
