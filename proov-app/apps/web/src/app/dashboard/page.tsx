@@ -49,7 +49,7 @@ function formatDate(): string {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { address, isConnected, status } = useAccount();
+  const { address } = useAccount();
 
   const [username, setUsername] = useState('');
   const [currentStreak, setCurrentStreak] = useState(0);
@@ -65,13 +65,9 @@ export default function DashboardPage() {
   const [showWalkthrough, setShowWalkthrough] = useState(false);
 
   useEffect(() => {
-    if (isConnected) {
-      localStorage.setItem('proov_authenticated', 'true');
-      return;
-    }
-    // Only redirect when wagmi has finished loading and confirmed no session
-    if (status === 'disconnected') router.replace('/');
-  }, [isConnected, status, router]);
+    const isAuth = localStorage.getItem('proov_authenticated') === 'true';
+    if (!isAuth) router.replace('/');
+  }, [router]);
 
   useEffect(() => {
     const addr = localStorage.getItem('proov_address') || '';

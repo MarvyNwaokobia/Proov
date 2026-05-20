@@ -1,7 +1,6 @@
 'use client';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAccount } from 'wagmi';
 import Link from 'next/link';
 import { IconFlame } from '@tabler/icons-react';
 
@@ -14,17 +13,11 @@ const FEATURES = [
 
 export default function LandingPage() {
   const router = useRouter();
-  const { isConnected } = useAccount();
 
   useEffect(() => {
-    if (isConnected) {
-      localStorage.setItem('proov_authenticated', 'true');
-      router.replace('/dashboard');
-      return;
-    }
-    const isAuth = localStorage.getItem('proov_authenticated');
-    if (isAuth === 'true') router.replace('/dashboard');
-  }, [isConnected, router]);
+    const isAuth = localStorage.getItem('proov_authenticated') === 'true';
+    if (isAuth) router.replace('/dashboard');
+  }, [router]);
 
   return (
     <>
