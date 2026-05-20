@@ -7,6 +7,7 @@ import Link from 'next/link';
 import type { ColorMode } from '@/lib/themes';
 import { getPostLoginRoute } from '@/lib/auth';
 import { isMiniPay, connectMiniPay } from '@/lib/minipay';
+import { clearWeb3AuthSession } from '@/lib/clearSession';
 
 type EmailMethod = 'link' | 'code' | 'number';
 
@@ -64,7 +65,13 @@ export default function SignUpPage() {
     }
   }, [isConnected, router]);
 
-  const triggerConnect = () => {
+  const triggerConnect = async () => {
+    // Wipe cached session so Google always shows the account picker
+    await clearWeb3AuthSession();
+    try {
+      const { getWeb3Auth } = await import('@/lib/wagmi-config');
+      await getWeb3Auth().logout({ cleanup: true });
+    } catch {}
     const c = connectors[0];
     if (c) connect({ connector: c });
   };

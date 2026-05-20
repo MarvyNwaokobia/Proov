@@ -46,7 +46,7 @@ function formatDate(): string {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, status } = useAccount();
 
   const [username, setUsername] = useState('');
   const [currentStreak, setCurrentStreak] = useState(0);
@@ -60,13 +60,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (isConnected) {
-      // Keep the flag in sync for returning users whose Web3Auth session was restored
       localStorage.setItem('proov_authenticated', 'true');
       return;
     }
-    const isAuth = localStorage.getItem('proov_authenticated');
-    if (!isAuth || isAuth !== 'true') router.replace('/');
-  }, [isConnected, router]);
+    // Only redirect when wagmi has finished loading and confirmed no session
+    if (status === 'disconnected') router.replace('/');
+  }, [isConnected, status, router]);
 
   useEffect(() => {
     const storedUsername =

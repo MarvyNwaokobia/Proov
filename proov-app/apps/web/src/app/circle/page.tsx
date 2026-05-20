@@ -96,8 +96,8 @@ function doCheer(memberAddr: string) {
 
 export default function CirclePage() {
   const router = useRouter();
-  const { address, isConnected } = useAccount();
-  useEffect(() => { if (!isConnected) router.push("/"); }, [isConnected, router]);
+  const { address, isConnected, status } = useAccount();
+  useEffect(() => { if (status === 'disconnected') router.push("/"); }, [status, router]);
 
   const { circle, pending, refetch } = useCircle();
   const { sendRequest,    hash: sendHash,    isPending: isSending,    isSuccess: sendOk    } = useSendRequest();

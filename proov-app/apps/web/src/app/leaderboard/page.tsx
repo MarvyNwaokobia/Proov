@@ -16,8 +16,8 @@ const MEDALS = ["🥇", "🥈", "🥉"];
 
 export default function LeaderboardPage() {
   const router = useRouter();
-  const { address, isConnected } = useAccount();
-  useEffect(() => { if (!isConnected) router.push("/"); }, [isConnected, router]);
+  const { address, isConnected, status } = useAccount();
+  useEffect(() => { if (status === 'disconnected') router.push("/"); }, [status, router]);
 
   const { entries, isLoading } = useLeaderboard(50);
 
