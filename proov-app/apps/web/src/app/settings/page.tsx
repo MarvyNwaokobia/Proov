@@ -5,6 +5,11 @@ import { useDisconnect } from 'wagmi';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
 import { validateUsername, isUsernameTaken, registerUsername } from '@/lib/username';
+import {
+  IconTrophy,
+  IconChevronRight,
+  IconLogout,
+} from '@tabler/icons-react';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -95,12 +100,12 @@ export default function SettingsPage() {
           style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '1rem', background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', borderRadius: 16, textDecoration: 'none', marginBottom: '1.5rem', transition: 'transform .15s' }}
           onMouseEnter={e => ((e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)')}
           onMouseLeave={e => ((e.currentTarget as HTMLElement).style.transform = '')}>
-          <span style={{ fontSize: 32 }}>🏆</span>
+          <IconTrophy size={28} stroke={1.5} color="var(--accent-text)" />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Leaderboard</div>
             <div style={{ fontSize: 12, color: 'var(--text2)' }}>You&apos;re #{userRank} globally</div>
           </div>
-          <span style={{ color: 'var(--accent-text)', fontSize: 18 }}>›</span>
+          <IconChevronRight size={16} stroke={2} color="var(--text3)" />
         </Link>
 
         {/* Profile */}
@@ -156,7 +161,7 @@ export default function SettingsPage() {
         <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, overflow: 'hidden', marginBottom: '1.25rem' }}>
           <Link href="/habits" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1rem', textDecoration: 'none', borderBottom: '1px solid var(--border)' }}>
             <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>Manage habits</span>
-            <span style={{ color: 'var(--accent-text)', fontSize: 14 }}>›</span>
+            <IconChevronRight size={16} stroke={2} color="var(--text3)" />
           </Link>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1rem' }}>
             <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>Default privacy</span>
@@ -169,7 +174,7 @@ export default function SettingsPage() {
         <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, overflow: 'hidden', marginBottom: '1.25rem' }}>
           <Link href="/circle" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1rem', textDecoration: 'none' }}>
             <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>Manage your circle</span>
-            <span style={{ color: 'var(--accent-text)', fontSize: 14 }}>›</span>
+            <IconChevronRight size={16} stroke={2} color="var(--text3)" />
           </Link>
         </div>
 
@@ -177,8 +182,8 @@ export default function SettingsPage() {
         <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '0.625rem' }}>Account</p>
         <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, overflow: 'hidden', marginBottom: '2rem' }}>
           <button onClick={handleSignOut}
-            style={{ display: 'block', width: '100%', padding: '0.875rem 1rem', textAlign: 'left', background: 'transparent', border: 'none', fontSize: 13, fontWeight: 500, color: '#f43f5e', cursor: 'pointer', fontFamily: 'inherit' }}>
-            Sign out
+            style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', padding: '0.875rem 1rem', textAlign: 'left', background: 'transparent', border: 'none', fontSize: 13, fontWeight: 500, color: '#f43f5e', cursor: 'pointer', fontFamily: 'inherit' }}>
+            <IconLogout size={16} stroke={2} /> Sign out
           </button>
         </div>
       </div>

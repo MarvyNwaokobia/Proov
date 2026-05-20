@@ -42,7 +42,7 @@ export default function TutorialPage() {
               onClick={() => isLast ? finish() : setStep(s => s + 1)}
               style={{ width: '100%', padding: 13, borderRadius: 13, border: 'none', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 14px var(--btn-primary-shadow)', marginBottom: 10 }}
             >
-              {isLast ? 'Start grinding →' : 'Next'}
+              {isLast ? "Let's go →" : 'Next'}
             </button>
             <button onClick={finish} style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--text3)', cursor: 'pointer', fontFamily: 'inherit' }}>
               Skip tutorial

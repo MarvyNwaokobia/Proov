@@ -8,6 +8,11 @@ import Link from "next/link";
 import {
   useCircle, useSendRequest, useAcceptRequest, useRejectRequest, useWitnessHabit,
 } from "@/hooks/useCircle";
+import {
+  IconUsers,
+  IconHeart,
+  IconHeartFilled,
+} from '@tabler/icons-react';
 import { useStreak } from "@/hooks/useStreak";
 import { TxToast } from "@/components/shared/TxToast";
 import { isAddress } from "viem";
@@ -181,7 +186,7 @@ export default function CirclePage() {
             background: 'linear-gradient(135deg, var(--accent), var(--accent2, var(--accent)))',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 18, color: '#fff',
-          }}>🤝</div>
+          }}><IconUsers size={18} color="#fff" stroke={1.8} /></div>
           <div>
             <p style={{ fontWeight: 700, color: 'var(--text)', fontSize: 15, margin: 0 }}>Circle</p>
             <p style={{ fontSize: 12, color: 'var(--text2)', margin: 0 }}>{circle.length}/10 members</p>
@@ -246,7 +251,7 @@ export default function CirclePage() {
           </AnimatePresence>
 
           <p style={{ fontSize: 11, color: 'var(--text3)' }}>
-            Your circle sees your habits and cheers you on.
+            Your circle sees your progress, and cheers you on.
           </p>
         </div>
 
@@ -332,12 +337,12 @@ export default function CirclePage() {
                             padding: '4px 12px', borderRadius: 14,
                             border: '1px solid var(--pink-border)', background: 'var(--pink-bg)',
                             color: 'var(--pink-text)', fontSize: 10, fontWeight: 600,
-                            cursor: 'pointer', fontFamily: 'inherit',
+                            cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4,
                           }}>
-                            🌸 Cheer
+                            <IconHeart size={14} stroke={2} /> Cheer
                           </button>
                         ) : (
-                          <span style={{ fontSize: 10, color: 'var(--text3)', padding: '4px 0' }}>Cheered ✓</span>
+                          <span style={{ fontSize: 10, color: 'var(--text3)', padding: '4px 0', display: 'flex', alignItems: 'center', gap: 4 }}><IconHeartFilled size={14} /> Cheered</span>
                         )}
                       </div>
                     )}

@@ -92,7 +92,7 @@ export default function UsernameSetupPage() {
                 What do we call you?
               </h2>
               <p style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6 }}>
-                Your name on the leaderboard, in your circle, everywhere on Proov.
+                How others find you on Proov
               </p>
             </div>
 
@@ -142,7 +142,7 @@ export default function UsernameSetupPage() {
               onMouseEnter={e => canSubmit && (e.currentTarget.style.transform = 'translateY(-2px)')}
               onMouseLeave={e => (e.currentTarget.style.transform = '')}
             >
-              {loading ? 'Saving...' : "Let's go →"}
+              {loading ? 'Saving...' : 'Continue →'}
             </button>
 
             <button onClick={handleSkip}

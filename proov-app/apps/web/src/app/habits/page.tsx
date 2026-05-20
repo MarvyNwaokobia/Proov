@@ -3,6 +3,18 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
 import Link from "next/link";
+import {
+  IconBrain,
+  IconRun,
+  IconYoga,
+  IconBook,
+  IconSalad,
+  IconPalette,
+  IconMoon,
+  IconClock,
+  IconCheck,
+  type Icon as TablerIcon,
+} from '@tabler/icons-react';
 import { useHabits, useCreateHabit, useDeactivateHabit } from "@/hooks/useHabits";
 import { useCircle } from "@/hooks/useCircle";
 import { TxToast } from "@/components/shared/TxToast";
@@ -27,7 +39,17 @@ const CATEGORY_TO_TYPE: Record<string, number> = {
   social: HabitType.CUSTOM, creative: HabitType.CUSTOM, custom: HabitType.CUSTOM,
 };
 
-const CATEGORY_FILTERS = ["All", "🧠 Focus", "💪 Fitness", "🧘 Wellness", "📚 Learning", "🥗 Nutrition", "🎨 Creative", "😴 Sleep"];
+type FilterEntry = { value: string; label: string; Icon: TablerIcon | null };
+const CATEGORY_FILTERS: FilterEntry[] = [
+  { value: "All",          label: "All",       Icon: null         },
+  { value: "🧠 Focus",    label: "Focus",     Icon: IconBrain    },
+  { value: "💪 Fitness",  label: "Fitness",   Icon: IconRun      },
+  { value: "🧘 Wellness", label: "Wellness",  Icon: IconYoga     },
+  { value: "📚 Learning", label: "Learning",  Icon: IconBook     },
+  { value: "🥗 Nutrition",label: "Nutrition", Icon: IconSalad    },
+  { value: "🎨 Creative", label: "Creative",  Icon: IconPalette  },
+  { value: "😴 Sleep",    label: "Sleep",     Icon: IconMoon     },
+];
 
 function DurationPicker({ value, onChange }: { value: number; onChange: (n: number) => void }) {
   const [mode, setMode] = useState<"slider" | "manual">("slider");
@@ -235,8 +257,8 @@ export default function HabitsPage() {
   const filteredHabits = catFilter === "All" ? activeHabits : activeHabits.filter(h => {
     const meta = habitMeta[h.id.toString()];
     const cat = meta ? getCategoryById(meta.categoryId) : null;
-    const filterWord = catFilter.split(" ").slice(1).join(" ");
-    return cat?.label?.includes(filterWord) ?? false;
+    const entry = CATEGORY_FILTERS.find(f => f.value === catFilter);
+    return cat?.label?.includes(entry?.label ?? "") ?? false;
   });
   if (!isConnected) return null;
   return (
@@ -263,7 +285,11 @@ export default function HabitsPage() {
         {activeTab === "all" && !showForm && (
           <>
             <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 6, marginBottom: 12 }}>
-              {CATEGORY_FILTERS.map(f => (<button key={f} onClick={() => setCatFilter(f)} style={{ flexShrink: 0, padding: "5px 12px", borderRadius: 14, fontSize: 10, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", border: `1px solid ${catFilter === f ? "var(--accent)" : "var(--border)"}`, background: catFilter === f ? "var(--accent-bg)" : "transparent", color: catFilter === f ? "var(--accent-text)" : "var(--text3)" }}>{f}</button>))}
+              {CATEGORY_FILTERS.map(({ value, label, Icon }) => (
+                <button key={value} onClick={() => setCatFilter(value)} style={{ flexShrink: 0, padding: "5px 12px", borderRadius: 14, fontSize: 10, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", border: `1px solid ${catFilter === value ? "var(--accent)" : "var(--border)"}`, background: catFilter === value ? "var(--accent-bg)" : "transparent", color: catFilter === value ? "var(--accent-text)" : "var(--text3)", display: "flex", alignItems: "center", gap: 4 }}>
+                  {Icon && <Icon size={14} stroke={1.8} />}{label}
+                </button>
+              ))}
             </div>
             {activeHabits.length === 0 && (
               <div style={{ marginBottom: 16 }}>
@@ -296,7 +322,7 @@ export default function HabitsPage() {
                       <div key={habit.id.toString()} style={{ width: "100%", minWidth: 0, maxWidth: "100%", boxSizing: "border-box", background: "var(--card-bg)", border: `1px solid ${cat ? cat.color + "50" : "var(--card-border)"}`, borderRadius: 14, padding: ".875rem", display: "flex", flexDirection: "column", gap: 5 }}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}><span style={{ fontSize: 20 }}>{cat ? cat.emoji : "◆"}</span><span style={{ fontSize: 10, color: "var(--text3)" }}>{meta?.privacy === "private" ? "🔒" : "👥"}</span></div>
                         <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{habit.name}</p>
-                        <p style={{ fontSize: 10, color: "var(--text3)", margin: 0 }}>{hasTimer ? `⏱ ${Math.round(Number(habit.targetDuration) / 60)} min` : "✅ Tap"} · {Number(habit.frequency) === 0 ? "Daily" : "Weekly"}</p>
+                        <p style={{ fontSize: 10, color: "var(--text3)", margin: 0, display: "flex", alignItems: "center", gap: 3 }}>{hasTimer ? <><IconClock size={12} stroke={1.8} />{Math.round(Number(habit.targetDuration) / 60)} min</> : <><IconCheck size={11} stroke={2.5} />Tap</>} · {Number(habit.frequency) === 0 ? "Daily" : "Weekly"}</p>
                         <button onClick={() => deactivateHabit(Number(habit.id))} style={{ marginTop: 2, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--text3)", fontSize: 9, cursor: "pointer", fontFamily: "inherit" }}>Remove</button>
                       </div>
                     );

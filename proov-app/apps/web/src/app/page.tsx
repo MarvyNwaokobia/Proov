@@ -3,12 +3,13 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import Link from 'next/link';
+import { IconFlame } from '@tabler/icons-react';
 
 const FEATURES = [
-  { emoji: '🧠', title: 'AI verifies you',  desc: 'Describe it. Vague gets rejected.' },
-  { emoji: '🤝', title: 'Your circle sees', desc: 'Every streak. Every break.' },
-  { emoji: '🏆', title: 'Global rank',       desc: 'Show up or fall behind.' },
-  { emoji: '🔥', title: 'Streaks that last', desc: "Can't be faked. Can't be bought." },
+  { emoji: '🧠', title: 'Verified progress',     desc: 'Log what you did. We check it.' },
+  { emoji: '🤝', title: 'Your people witness it', desc: 'They see everything.' },
+  { emoji: '🏆', title: 'Leaderboard',            desc: 'Every day counts.' },
+  { emoji: '🔥', title: 'Real progress',          desc: 'Earned, not claimed.' },
 ];
 
 export default function LandingPage() {
@@ -56,7 +57,7 @@ export default function LandingPage() {
         <div style={{ padding: '2.5rem 0 1.75rem', textAlign: 'center' }}>
           <div className="hero-animate-1" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', borderRadius: 20, padding: '4px 13px', fontSize: 11, color: 'var(--accent-text)', marginBottom: '1.25rem', letterSpacing: '.3px' }}>
             <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--accent)', display: 'inline-block' }} />
-            Proof of habit · Free to join
+            Track habits. Stay accountable
           </div>
 
           <h1 className="hero-h hero-animate-2" style={{ textAlign: 'center', marginBottom: '0.875rem' }}>
@@ -65,8 +66,7 @@ export default function LandingPage() {
           </h1>
 
           <p className="hero-animate-3" style={{ fontSize: 15, color: 'var(--text2)', margin: '0 auto 1.75rem', lineHeight: 1.7, maxWidth: 380 }}>
-            No excuses. No screenshots.<br />
-            Just streaks that can&apos;t be faked.
+            Your progress is real.
           </p>
 
           <div className="hero-animate-4" style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: '1.75rem', flexWrap: 'wrap' }}>
@@ -91,7 +91,7 @@ export default function LandingPage() {
               ))}
             </div>
             <span style={{ color: '#f59e0b' }}>★★★★★</span>
-            <span>1,200+ grinding daily</span>
+            <span>Join thousands building better habits</span>
           </div>
         </div>
 
@@ -114,12 +114,12 @@ export default function LandingPage() {
 
         {/* CTA band */}
         <div className="cta-section" style={{ background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', borderRadius: 18, padding: '1.5rem', textAlign: 'center', margin: '1.25rem 0' }}>
-          <div style={{ fontSize: 32, marginBottom: 8 }}>🔥</div>
+          <div style={{ marginBottom: 8 }}><IconFlame size={32} stroke={1.8} color="var(--accent-text)" /></div>
           <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 6, letterSpacing: '-.3px' }}>
-            Your streak starts today
+            Start today
           </h3>
           <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: '1.25rem', lineHeight: 1.6 }}>
-            Free forever. No card. Takes 30 seconds.
+            Free.
           </p>
           <Link href="/signup" className="btn-primary" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', padding: '13px 32px', fontSize: 15 }}>
             Start today →

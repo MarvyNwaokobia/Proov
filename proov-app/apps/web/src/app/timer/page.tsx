@@ -3,6 +3,12 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAccount, useWriteContract } from 'wagmi';
 import { withCeloFee } from '@/lib/constants';
+import {
+  IconBolt,
+  IconPlayerPlay,
+  IconArrowLeft,
+  IconClock,
+} from '@tabler/icons-react';
 
 interface Habit {
   id: string;
@@ -254,7 +260,7 @@ export default function GrindTimerPage() {
 
         {/* Header */}
         <div style={{ textAlign: 'center', padding: '1rem 0 0.5rem' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', letterSpacing: '-.2px' }}>⚡ Grind Timer</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', letterSpacing: '-.2px', display: 'flex', alignItems: 'center', gap: 5 }}><IconBolt size={16} stroke={2} color="var(--accent-text)" /> Grind Timer</div>
         </div>
 
         {/* Timer ring — always visible */}
@@ -308,7 +314,7 @@ export default function GrindTimerPage() {
                 </>
               ) : (
                 <>
-                  <span style={{ fontSize: 28, color: 'var(--text3)' }}>⚡</span>
+                  <IconBolt size={28} stroke={1.8} color="var(--text3)" />
                   <span style={{ fontSize: 9, color: 'var(--text3)', marginTop: 4 }}>Grind Timer</span>
                 </>
               )}
@@ -326,7 +332,7 @@ export default function GrindTimerPage() {
             </p>
             {!isCustom && <p style={{ fontSize: 12, color: 'var(--text2)', marginBottom: '1rem' }}>Tap to save your streak</p>}
             <button onClick={confirmDone} style={{ padding: '11px 28px', borderRadius: 12, border: 'none', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 14px var(--btn-primary-shadow)' }}>
-              {isCustom ? 'Nice work ✓' : 'Save to streak →'}
+              {isCustom ? 'Nice work ✓. Session saved' : 'Mark complete'}
             </button>
           </div>
         )}
@@ -335,7 +341,7 @@ export default function GrindTimerPage() {
         {view === 'pick' && (
           <div>
             <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.2, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '0.75rem' }}>
-              What habit are you building?
+              Select habit
             </p>
             <input
               type="text"
@@ -395,7 +401,7 @@ export default function GrindTimerPage() {
                 onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--text)'; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border2)'; e.currentTarget.style.color = 'var(--text2)'; }}
               >
-                ⏱ Custom session
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><IconClock size={16} stroke={1.8} /> Custom session</span>
               </button>
             </div>
           </div>
@@ -406,9 +412,9 @@ export default function GrindTimerPage() {
           <div>
             <button
               onClick={() => { setView('pick'); setIsCustom(false); }}
-              style={{ background: 'none', border: 'none', color: 'var(--text3)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', marginBottom: '1rem' }}
+              style={{ background: 'none', border: 'none', color: 'var(--text3)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: 4 }}
             >
-              ← Back
+              <IconArrowLeft size={16} stroke={2} /> Back
             </button>
 
             {/* Selected habit badge */}

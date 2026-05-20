@@ -1,13 +1,20 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import {
+  IconHome2,
+  IconCheckbox,
+  IconBolt,
+  IconUsers,
+  IconSettings2,
+} from '@tabler/icons-react';
 
-const NAV = [
-  { icon: '🏠', label: 'Home',     href: '/dashboard' },
-  { icon: '✅', label: 'Habits',   href: '/habits'    },
-  { icon: '⚡', label: 'Grind',    href: '/timer'     },
-  { icon: '🤝', label: 'Circle',   href: '/circle'    },
-  { icon: '⚙️', label: 'Settings', href: '/settings'  },
+const NAV_ITEMS = [
+  { href: '/dashboard', icon: IconHome2,     label: 'Home'     },
+  { href: '/habits',    icon: IconCheckbox,  label: 'Habits'   },
+  { href: '/timer',     icon: IconBolt,      label: 'Grind'    },
+  { href: '/circle',    icon: IconUsers,     label: 'Circle'   },
+  { href: '/settings',  icon: IconSettings2, label: 'Settings' },
 ];
 
 const PUBLIC_PATHS = ['/', '/signin', '/signup', '/onboarding', '/username-setup', '/tutorial'];
@@ -27,11 +34,15 @@ export function BottomNav() {
       WebkitBackdropFilter: 'blur(12px)',
       borderTop: '1px solid var(--border)',
     }}>
-      {NAV.map(({ icon, label, href }) => {
+      {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
         const active = path === href || (href !== '/dashboard' && path.startsWith(href));
         return (
           <Link key={href} href={href} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, minWidth: 48, paddingBottom: 2 }}>
-            <span style={{ fontSize: 20, lineHeight: 1 }}>{icon}</span>
+            <Icon
+              size={22}
+              stroke={1.8}
+              color={active ? 'var(--accent)' : 'var(--text3)'}
+            />
             <span style={{
               fontSize: 9, fontWeight: active ? 700 : 500,
               color: active ? 'var(--accent-text)' : 'var(--text3)',

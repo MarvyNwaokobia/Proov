@@ -3,6 +3,16 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import Link from 'next/link';
+import {
+  IconFlame,
+  IconCheckbox,
+  IconUsers,
+  IconBolt,
+  IconPlus,
+  IconPlayerPlay,
+  IconCheck,
+  IconSettings2,
+} from '@tabler/icons-react';
 
 interface Habit {
   id: string;
@@ -191,7 +201,9 @@ export default function DashboardPage() {
             </div>
             <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 2 }}>{formatDate()}</div>
           </div>
-          <Link href="/settings" style={{ fontSize: 20, textDecoration: 'none', lineHeight: 1, marginTop: 2 }} title="Settings">⚙️</Link>
+          <Link href="/settings" style={{ textDecoration: 'none', lineHeight: 1, marginTop: 2 }} title="Settings">
+            <IconSettings2 size={20} stroke={1.8} color="var(--text3)" />
+          </Link>
         </div>
 
         {/* Streak card */}
@@ -213,7 +225,7 @@ export default function DashboardPage() {
               <span style={{ fontSize: 36, fontWeight: 800, color: '#fff', letterSpacing: -2, lineHeight: 1 }}>
                 {currentStreak}
               </span>
-              <span style={{ fontSize: 13, color: 'rgba(255,255,255,.75)' }}>days 🔥</span>
+              <span style={{ fontSize: 13, color: 'rgba(255,255,255,.75)', display: 'flex', alignItems: 'center', gap: 3 }}>days <IconFlame size={16} stroke={1.8} color="rgba(255,255,255,.8)" /></span>
               <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
                 <div style={{ fontSize: 9, color: 'rgba(255,255,255,.5)' }}>Best</div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>{longestStreak}</div>
@@ -228,7 +240,7 @@ export default function DashboardPage() {
             </div>
             <div style={{ fontSize: 9, color: 'rgba(255,255,255,.6)' }}>
               {totalHabits === 0
-                ? 'Create your first habit to start'
+                ? 'Add a habit to start your streak'
                 : `${completedCount} of ${totalHabits} habits done today`}
             </div>
           </div>
@@ -236,19 +248,21 @@ export default function DashboardPage() {
 
         {/* Today's habits */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div className="section-label" style={{ margin: '0 0 0.625rem' }}>Today's habits</div>
+          <div className="section-label" style={{ margin: '0 0 0.625rem' }}>Today</div>
           <Link href="/habits" style={{ fontSize: 11, color: 'var(--accent-text)', textDecoration: 'none', fontWeight: 500 }}>Manage →</Link>
         </div>
 
         {habits.length === 0 ? (
           <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14, padding: '1.5rem', textAlign: 'center', marginBottom: '1rem' }}>
-            <div style={{ fontSize: 28, marginBottom: 8 }}>✅</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+              <IconCheckbox size={28} stroke={1.5} color="var(--accent)" />
+            </div>
             <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', marginBottom: 4 }}>No habits yet</p>
             <p style={{ fontSize: 12, color: 'var(--text2)', marginBottom: '0.875rem', lineHeight: 1.6 }}>
-              Create your first habit to start building streaks
+              Add a habit to start your streak
             </p>
-            <Link href="/habits" style={{ padding: '9px 18px', borderRadius: 20, border: 'none', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 12, fontWeight: 600, textDecoration: 'none', display: 'inline-block' }}>
-              + Create first habit
+            <Link href="/habits" style={{ padding: '9px 18px', borderRadius: 20, border: 'none', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 12, fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <IconPlus size={14} stroke={2} /> Create first habit
             </Link>
           </div>
         ) : (
@@ -291,7 +305,7 @@ export default function DashboardPage() {
                       transition: 'all .15s', flexShrink: 0,
                     }}
                   >
-                    ✓
+                    <IconCheck size={12} stroke={2.5} color="#fff" />
                   </button>
                 </div>
                 <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -311,7 +325,8 @@ export default function DashboardPage() {
                     }}
                     onClick={e => e.stopPropagation()}
                   >
-                    <span style={{ fontSize: 9, color: 'var(--accent-text)', fontWeight: 600 }}>▶ Start</span>
+                    <IconPlayerPlay size={10} stroke={2} color="var(--accent-text)" />
+                    <span style={{ fontSize: 9, color: 'var(--accent-text)', fontWeight: 600 }}>Start</span>
                   </Link>
                 )}
               </div>
@@ -330,26 +345,28 @@ export default function DashboardPage() {
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent)'; (e.currentTarget as HTMLElement).style.color = 'var(--accent-text)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border2)'; (e.currentTarget as HTMLElement).style.color = 'var(--text3)'; }}
             >
-              + Add habit
+              <IconPlus size={14} stroke={2} color="var(--text3)" /> Add habit
             </Link>
           </div>
         )}
 
         {/* Circle section */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div className="section-label" style={{ margin: '0 0 0.625rem' }}>Your circle</div>
+          <div className="section-label" style={{ margin: '0 0 0.625rem' }}>Circle</div>
           <Link href="/circle" style={{ fontSize: 11, color: 'var(--accent-text)', textDecoration: 'none', fontWeight: 500 }}>Manage →</Link>
         </div>
 
         {circleMembers.length === 0 ? (
           <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14, padding: '1.25rem', textAlign: 'center', marginBottom: '1rem' }}>
-            <div style={{ fontSize: 26, marginBottom: 6 }}>🤝</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>
+              <IconUsers size={28} stroke={1.5} color="var(--accent)" />
+            </div>
             <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', marginBottom: 4 }}>No circle yet</p>
             <p style={{ fontSize: 11, color: 'var(--text2)', marginBottom: '0.875rem', lineHeight: 1.6 }}>
               Add friends to cheer each other on and stay accountable
             </p>
             <Link href="/circle" style={{ padding: '8px 16px', borderRadius: 20, border: 'none', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 11, fontWeight: 600, textDecoration: 'none', display: 'inline-block' }}>
-              Add your first friend →
+              Invite someone →
             </Link>
           </div>
         ) : (
@@ -398,11 +415,11 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Squads — coming soon */}
+        {/* Group habits — coming soon */}
         <div style={{ background: 'var(--bg2)', border: '1px dashed var(--border2)', borderRadius: 14, padding: '1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: 12, opacity: 0.8 }}>
-          <span style={{ fontSize: 24 }}>👥</span>
+          <IconUsers size={22} stroke={1.5} color="var(--text3)" />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>Squads</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>Group habits</div>
             <div style={{ fontSize: 11, color: 'var(--text3)', lineHeight: 1.5 }}>Do habits together with friends. One squad, one streak.</div>
           </div>
           <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: 'var(--accent-bg)', color: 'var(--accent-text)', whiteSpace: 'nowrap' }}>
@@ -444,13 +461,14 @@ export default function DashboardPage() {
               padding: '13px', borderRadius: 14, border: 'none',
               background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)',
               fontSize: 13, fontWeight: 700, textDecoration: 'none', textAlign: 'center',
-              display: 'block', boxShadow: '0 4px 14px var(--btn-primary-shadow)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              boxShadow: '0 4px 14px var(--btn-primary-shadow)',
               transition: 'transform .15s',
             }}
             onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')}
             onMouseLeave={e => (e.currentTarget.style.transform = '')}
           >
-            ⚡ Start session
+            <IconBolt size={16} stroke={2} /> Start session
           </Link>
           <Link
             href="/habits"
@@ -458,13 +476,13 @@ export default function DashboardPage() {
               padding: '13px', borderRadius: 14,
               border: '1px solid var(--border2)', background: 'transparent',
               color: 'var(--text2)', fontSize: 13, fontWeight: 500,
-              textDecoration: 'none', textAlign: 'center', display: 'block',
+              textDecoration: 'none', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               transition: 'all .15s',
             }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent)'; (e.currentTarget as HTMLElement).style.color = 'var(--text)'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border2)'; (e.currentTarget as HTMLElement).style.color = 'var(--text2)'; }}
           >
-            + New habit
+            <IconPlus size={16} stroke={2} /> New habit
           </Link>
         </div>
 
