@@ -45,6 +45,8 @@ export default function SignUpPage() {
   const [emailMethod, setEmailMethod] = useState<EmailMethod>('link');
   const [codeSent, setCodeSent] = useState(false);
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (isMiniPay()) {
@@ -87,6 +89,54 @@ export default function SignUpPage() {
     } catch {}
     const c = connectors[0];
     if (c) connect({ connector: c });
+  };
+
+  const handleWalletConnect = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const { isMiniPay } = await import('@/lib/minipay');
+      if (isMiniPay()) {
+        const accounts = await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
+        const addr = accounts[0];
+        localStorage.setItem('proov_authenticated', 'true');
+        localStorage.setItem('proov_address', addr);
+        router.push(getPostLoginRoute());
+        return;
+      }
+
+      if (typeof window !== 'undefined' && (window as any).ethereum) {
+        try {
+          const accounts = await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
+          if (accounts?.[0]) {
+            const addr = accounts[0];
+            const { getUsernameForAddress } = await import('@/lib/supabase');
+            const existing = await getUsernameForAddress(addr).catch(() => null);
+            localStorage.setItem('proov_authenticated', 'true');
+            localStorage.setItem('proov_address', addr);
+            if (existing) {
+              localStorage.setItem('proov_username', existing);
+              localStorage.setItem('proov_tutorial_done', '1');
+              router.push('/dashboard');
+            } else {
+              localStorage.setItem('proov_is_new_user', 'true');
+              router.push('/username-setup');
+            }
+            return;
+          }
+        } catch (walletErr: any) {
+          if (walletErr.code === 4001) { setError('Connection cancelled.'); setLoading(false); return; }
+        }
+      }
+
+      // No injected wallet — fall back to wagmi connector[1] (injected shimDisconnect)
+      const c = connectors[1] ?? connectors[0];
+      if (c) connect({ connector: c });
+    } catch (e: any) {
+      setError(e?.message || 'Wallet connection failed.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const inputValue = emailMethod === 'number' ? phone : email;
@@ -293,13 +343,13 @@ export default function SignUpPage() {
             </div>
 
             {/* Wallet connect */}
-            <button onClick={triggerConnect} disabled={isPending}
+            <button onClick={handleWalletConnect} disabled={loading || isPending}
               style={{ ...socialBtnStyle, color: 'var(--text2)', fontSize: 13 }}
               onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg3)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
               <WalletIcon />
-              Continue with Wallet
+              {loading ? 'Connecting…' : 'Continue with Wallet'}
             </button>
 
             <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text3)', marginTop: '1rem' }}>

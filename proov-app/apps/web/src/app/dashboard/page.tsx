@@ -280,7 +280,7 @@ export default function DashboardPage() {
         {/* Today's habits */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div className="section-label" style={{ margin: '0 0 0.625rem' }}>Today</div>
-          <Link href="/habits" style={{ fontSize: 11, color: 'var(--accent-text)', textDecoration: 'none', fontWeight: 500 }}>Manage →</Link>
+          <Link href="/habits" className="pill-link">Manage →</Link>
         </div>
 
         {habits.length === 0 ? (
@@ -292,7 +292,7 @@ export default function DashboardPage() {
             <p style={{ fontSize: 12, color: 'var(--text2)', marginBottom: '0.875rem', lineHeight: 1.6 }}>
               Add a habit to start your streak
             </p>
-            <Link href="/habits" style={{ padding: '9px 18px', borderRadius: 20, border: 'none', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 12, fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <Link href="/habits" className="create-btn" style={{ padding: '9px 18px', borderRadius: 20 }}>
               <IconPlus size={14} stroke={2} /> Create first habit
             </Link>
           </div>
@@ -308,6 +308,7 @@ export default function DashboardPage() {
             {habits.map(habit => (
               <div
                 key={habit.id}
+                className="card-interactive"
                 style={{
                   background: 'var(--card-bg)',
                   border: `1px solid ${habit.completedToday ? 'var(--accent-border)' : 'var(--card-border)'}`,
@@ -316,10 +317,7 @@ export default function DashboardPage() {
                   width: '100%',
                   minWidth: 0,
                   boxSizing: 'border-box',
-                  transition: 'border .15s, transform .2s',
                 }}
-                onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')}
-                onMouseLeave={e => (e.currentTarget.style.transform = '')}
               >
                 {/* Emoji + checkbox */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -385,7 +383,7 @@ export default function DashboardPage() {
         {/* Circle section */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div className="section-label" style={{ margin: '0 0 0.625rem' }}>Circle</div>
-          <Link href="/circle" style={{ fontSize: 11, color: 'var(--accent-text)', textDecoration: 'none', fontWeight: 500 }}>Manage →</Link>
+          <Link href="/circle" className="pill-link">Manage →</Link>
         </div>
 
         {circleMembers.length === 0 ? (
@@ -462,7 +460,7 @@ export default function DashboardPage() {
         {/* Leaderboard snapshot */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div className="section-label" style={{ margin: '0 0 0.625rem' }}>Leaderboard</div>
-          <Link href="/leaderboard" style={{ fontSize: 11, color: 'var(--accent-text)', textDecoration: 'none', fontWeight: 500 }}>See all →</Link>
+          <Link href="/leaderboard" className="pill-link">See all →</Link>
         </div>
         <div id="wt-leaderboard" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14, overflow: 'hidden', marginBottom: '1rem' }}>
           {[

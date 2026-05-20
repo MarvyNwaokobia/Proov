@@ -402,7 +402,7 @@ export default function GrindTimerPage() {
                   <>
                     <div style={{ fontSize: 24, marginBottom: 8 }}>✅</div>
                     <p style={{ marginBottom: 8 }}>No timed habits yet</p>
-                    <a href="/habits" style={{ color: 'var(--accent-text)', fontSize: 12, fontWeight: 600 }}>Create one →</a>
+                    <a href="/habits" className="create-btn" style={{ marginTop: 4 }}>Create one →</a>
                   </>
                 ) : 'No habits match your search'}
               </div>

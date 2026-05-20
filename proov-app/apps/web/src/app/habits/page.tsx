@@ -297,14 +297,13 @@ export default function HabitsPage() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                   {SUGGESTED_HABITS.slice(0, 6).map(s => (
                     <button key={s.name}
+                      className="card-interactive"
                       onClick={() => { setPrefill({ name: s.name, categoryId: s.category, duration: s.duration, habitType: CATEGORY_TO_TYPE[s.category] ?? HabitType.CUSTOM }); setShowForm(true); }}
-                      style={{ padding: ".875rem", borderRadius: 14, cursor: "pointer", fontFamily: "inherit", textAlign: "left", background: "var(--card-bg)", border: "1px solid var(--card-border)", transition: "transform .15s, border .15s" }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--accent-border)"; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ""; (e.currentTarget as HTMLElement).style.borderColor = "var(--card-border)"; }}
+                      style={{ padding: ".875rem", borderRadius: 14, fontFamily: "inherit", textAlign: "left", background: "var(--card-bg)", border: "1px solid var(--card-border)" }}
                     >
                       <span style={{ fontSize: 20, display: "block", marginBottom: 6 }}>{s.emoji}</span>
                       <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", margin: 0, marginBottom: 3 }}>{s.name}</p>
-                      <p style={{ fontSize: 10, color: "var(--accent-text)", margin: 0, fontWeight: 500 }}>Customise →</p>
+                      <p className="customise-link" style={{ margin: 0 }}>Customise →</p>
                     </button>
                   ))}
                 </div>
