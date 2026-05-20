@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAccount, useConnect } from 'wagmi';
 import { useTheme } from '@/components/providers/ThemeProvider';
@@ -8,7 +8,7 @@ import type { ColorMode } from '@/lib/themes';
 import { getPostLoginRoute } from '@/lib/auth';
 import { isMiniPay, connectMiniPay } from '@/lib/minipay';
 
-type EmailMethod = 'link' | 'code';
+type EmailMethod = 'link' | 'code' | 'number';
 
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -25,6 +25,14 @@ const XIcon = () => (
   </svg>
 );
 
+const WalletIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="5" width="20" height="14" rx="2"/>
+    <path d="M16 12h.01"/>
+    <path d="M2 10h20"/>
+  </svg>
+);
+
 export default function SignUpPage() {
   const router = useRouter();
   const { isConnected } = useAccount();
@@ -32,6 +40,7 @@ export default function SignUpPage() {
   const { mode, setMode } = useTheme();
 
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [emailMethod, setEmailMethod] = useState<EmailMethod>('link');
   const [codeSent, setCodeSent] = useState(false);
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -60,8 +69,11 @@ export default function SignUpPage() {
     if (c) connect({ connector: c });
   };
 
+  const inputValue = emailMethod === 'number' ? phone : email;
+  const hasInput = inputValue.trim().length > 0;
+
   const handleSendEmail = () => {
-    if (!email.trim()) return;
+    if (!hasInput) return;
     triggerConnect();
     setCodeSent(true);
   };
@@ -102,10 +114,10 @@ export default function SignUpPage() {
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 1.25rem 3rem', position: 'relative', zIndex: 1, background: 'var(--bg)' }}>
 
         {/* Logo */}
-        <div style={{ marginTop: '1.5rem', marginBottom: '1.5rem', textAlign: 'center' }}>
+        <div style={{ marginTop: '1.5rem', marginBottom: '1.25rem', textAlign: 'center' }}>
           <div style={{ width: 44, height: 44, borderRadius: 12, background: 'linear-gradient(135deg, var(--accent), var(--accent2, var(--accent)))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, color: '#fff', margin: '0 auto 10px' }}>P</div>
           <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-.5px', marginBottom: 4 }}>Start your streak</h2>
-          <p style={{ fontSize: 13, color: 'var(--text2)' }}>Free forever. No card needed.</p>
+          <p style={{ fontSize: 13, color: 'var(--text2)' }}>Free. No card needed.</p>
         </div>
 
         <div style={{ width: '100%', maxWidth: 400 }}>
@@ -150,7 +162,7 @@ export default function SignUpPage() {
               </button>
             </div>
 
-            {/* Divider */}
+            {/* Email divider */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '0.875rem 0', fontSize: 11, color: 'var(--text3)' }}>
               <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
               or with email
@@ -159,41 +171,54 @@ export default function SignUpPage() {
 
             {!codeSent ? (
               <>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="your@email.com"
-                  style={{ marginBottom: 10 }}
-                  onKeyDown={e => e.key === 'Enter' && handleSendEmail()}
-                />
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 12 }}>
-                  {(['link', 'code'] as EmailMethod[]).map(m => (
+                {emailMethod === 'number' ? (
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                    placeholder="+1 (555) 000-0000"
+                    style={{ marginBottom: 10 }}
+                  />
+                ) : (
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    style={{ marginBottom: 10 }}
+                    onKeyDown={e => e.key === 'Enter' && handleSendEmail()}
+                  />
+                )}
+
+                {/* Method buttons — 3 options */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 12 }}>
+                  {(['link', 'code', 'number'] as EmailMethod[]).map(m => (
                     <button key={m} onClick={() => setEmailMethod(m)} style={{
-                      padding: '8px', borderRadius: 10, fontSize: 12, fontWeight: 500,
+                      padding: '7px 4px', borderRadius: 10, fontSize: 11, fontWeight: 500,
                       cursor: 'pointer', fontFamily: 'inherit',
                       border: `1.5px solid ${emailMethod === m ? 'var(--accent)' : 'var(--border)'}`,
                       background: emailMethod === m ? 'var(--accent-bg)' : 'transparent',
                       color: emailMethod === m ? 'var(--accent-text)' : 'var(--text3)',
                       transition: 'all .15s',
                     }}>
-                      {m === 'link' ? '✉️ Magic link' : '🔢 6-digit code'}
+                      {m === 'link' ? '✉️ Link' : m === 'code' ? '🔢 Code' : '📱 Number'}
                     </button>
                   ))}
                 </div>
+
                 <button
                   onClick={handleSendEmail}
-                  disabled={isPending || !email.trim()}
+                  disabled={isPending || !hasInput}
                   style={{
                     width: '100%', padding: 12, borderRadius: 12, border: 'none',
-                    background: email.trim() ? 'var(--btn-primary-bg)' : 'var(--bg3)',
-                    color: email.trim() ? 'var(--btn-primary-text)' : 'var(--text3)',
+                    background: hasInput ? 'var(--btn-primary-bg)' : 'var(--bg3)',
+                    color: hasInput ? 'var(--btn-primary-text)' : 'var(--text3)',
                     fontSize: 14, fontWeight: 600,
-                    cursor: email.trim() ? 'pointer' : 'not-allowed',
+                    cursor: hasInput ? 'pointer' : 'not-allowed',
                     fontFamily: 'inherit', transition: 'all .15s',
                   }}
                 >
-                  {isPending ? 'Connecting...' : emailMethod === 'link' ? 'Send magic link' : 'Send code'}
+                  {isPending ? 'Connecting...' : emailMethod === 'link' ? 'Send magic link' : emailMethod === 'code' ? 'Send code' : 'Send SMS code'}
                 </button>
               </>
             ) : emailMethod === 'link' ? (
@@ -207,7 +232,9 @@ export default function SignUpPage() {
               </div>
             ) : (
               <div style={{ textAlign: 'center' }}>
-                <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: '1rem' }}>Enter the 6-digit code sent to {email}</p>
+                <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: '1rem' }}>
+                  Enter the code sent to {emailMethod === 'number' ? phone : email}
+                </p>
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: '1rem' }} onPaste={handleOtpPaste}>
                   {otp.map((digit, i) => (
                     <input
@@ -237,6 +264,23 @@ export default function SignUpPage() {
                 </button>
               </div>
             )}
+
+            {/* Wallet divider */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '0.875rem 0', fontSize: 11, color: 'var(--text3)' }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+              or use wallet
+              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            </div>
+
+            {/* Wallet connect */}
+            <button onClick={triggerConnect} disabled={isPending}
+              style={{ ...socialBtnStyle, color: 'var(--text2)', fontSize: 13 }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg3)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              <WalletIcon />
+              Continue with Wallet
+            </button>
 
             <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text3)', marginTop: '1rem' }}>
               By joining you agree to our{' '}

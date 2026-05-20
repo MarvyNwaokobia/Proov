@@ -7,7 +7,8 @@ import Link from 'next/link';
 import type { ColorMode } from '@/lib/themes';
 import { getPostLoginRoute } from '@/lib/auth';
 import { isMiniPay, connectMiniPay } from '@/lib/minipay';
-import { findAddressByUsername } from '@/lib/username';
+
+type EmailMethod = 'link' | 'code' | 'number';
 
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -24,14 +25,25 @@ const XIcon = () => (
   </svg>
 );
 
+const WalletIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="5" width="20" height="14" rx="2"/>
+    <path d="M16 12h.01"/>
+    <path d="M2 10h20"/>
+  </svg>
+);
+
 export default function SignInPage() {
   const router = useRouter();
   const { isConnected } = useAccount();
   const { connect, connectors, isPending } = useConnect();
   const { mode, setMode } = useTheme();
 
-  const [usernameInput, setUsernameInput] = useState('');
-  const [usernameError, setUsernameError] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [emailMethod, setEmailMethod] = useState<EmailMethod>('link');
+  const [codeSent, setCodeSent] = useState(false);
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
 
   useEffect(() => {
     if (isMiniPay()) {
@@ -57,14 +69,28 @@ export default function SignInPage() {
     if (c) connect({ connector: c });
   };
 
-  const handleUsernameSignIn = () => {
-    const clean = usernameInput.replace(/^@/, '').trim();
-    if (!clean) return;
-    const address = findAddressByUsername(clean);
-    if (!address) { setUsernameError('Username not found — check spelling or sign up'); return; }
-    localStorage.setItem('proov_authenticated', 'true');
-    localStorage.setItem('proov_address', address);
-    router.push('/dashboard');
+  const inputValue = emailMethod === 'number' ? phone : email;
+  const hasInput = inputValue.trim().length > 0;
+
+  const handleSendEmail = () => {
+    if (!hasInput) return;
+    triggerConnect();
+    setCodeSent(true);
+  };
+
+  const handleOtpChange = (val: string, idx: number) => {
+    const next = [...otp];
+    next[idx] = val.slice(-1);
+    setOtp(next);
+    if (val && idx < 5) document.getElementById(`signin-otp-${idx + 1}`)?.focus();
+  };
+
+  const handleOtpPaste = (e: React.ClipboardEvent) => {
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (pasted.length === 6) {
+      setOtp(pasted.split(''));
+      document.getElementById('signin-otp-5')?.focus();
+    }
   };
 
   const MODES: { value: ColorMode; label: string }[] = [
@@ -88,10 +114,10 @@ export default function SignInPage() {
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 1.25rem 3rem', position: 'relative', zIndex: 1, background: 'var(--bg)' }}>
 
         {/* Logo */}
-        <div style={{ marginTop: '1.5rem', marginBottom: '1.5rem', textAlign: 'center' }}>
+        <div style={{ marginTop: '1.5rem', marginBottom: '1.25rem', textAlign: 'center' }}>
           <div style={{ width: 44, height: 44, borderRadius: 12, background: 'linear-gradient(135deg, var(--accent), var(--accent2, var(--accent)))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, color: '#fff', margin: '0 auto 10px' }}>P</div>
           <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-.5px', marginBottom: 4 }}>Welcome back</h2>
-          <p style={{ fontSize: 13, color: 'var(--text2)' }}>Pick up where you left off</p>
+          <p style={{ fontSize: 13, color: 'var(--text2)' }}>Good to have you back</p>
         </div>
 
         <div style={{ width: '100%', maxWidth: 400 }}>
@@ -115,46 +141,8 @@ export default function SignInPage() {
           {/* Card */}
           <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 20, padding: '1.5rem', marginBottom: '1rem' }}>
 
-            {/* Username sign-in */}
-            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10 }}>Sign in with username</p>
-            <div style={{ position: 'relative', marginBottom: 6 }}>
-              <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 14, fontWeight: 700, color: 'var(--accent)', zIndex: 1 }}>@</span>
-              <input
-                type="text"
-                placeholder="yourname"
-                value={usernameInput}
-                onChange={e => { setUsernameInput(e.target.value); setUsernameError(''); }}
-                onKeyDown={e => e.key === 'Enter' && handleUsernameSignIn()}
-                style={{ paddingLeft: 28 }}
-              />
-            </div>
-            {usernameError && (
-              <p style={{ fontSize: 11, color: '#f43f5e', marginBottom: 8 }}>{usernameError}</p>
-            )}
-            <button
-              onClick={handleUsernameSignIn}
-              disabled={!usernameInput.trim()}
-              style={{
-                width: '100%', padding: '10px', borderRadius: 12, border: 'none',
-                background: usernameInput.trim() ? 'var(--btn-primary-bg)' : 'var(--bg3)',
-                color: usernameInput.trim() ? 'var(--btn-primary-text)' : 'var(--text3)',
-                fontSize: 13, fontWeight: 600,
-                cursor: usernameInput.trim() ? 'pointer' : 'not-allowed',
-                fontFamily: 'inherit', marginBottom: 16, transition: 'all .15s',
-              }}
-            >
-              Sign in →
-            </button>
-
-            {/* Divider */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, fontSize: 11, color: 'var(--text3)' }}>
-              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-              or continue with
-              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-            </div>
-
             {/* Social */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
               <button onClick={triggerConnect} disabled={isPending} style={socialBtnStyle}
                 onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg3)')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
@@ -173,6 +161,126 @@ export default function SignInPage() {
                 🌐 More social options
               </button>
             </div>
+
+            {/* Email divider */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '0.875rem 0', fontSize: 11, color: 'var(--text3)' }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+              or with email
+              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            </div>
+
+            {!codeSent ? (
+              <>
+                {emailMethod === 'number' ? (
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                    placeholder="+1 (555) 000-0000"
+                    style={{ marginBottom: 10 }}
+                  />
+                ) : (
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    style={{ marginBottom: 10 }}
+                    onKeyDown={e => e.key === 'Enter' && handleSendEmail()}
+                  />
+                )}
+
+                {/* Method buttons — 3 options */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 12 }}>
+                  {(['link', 'code', 'number'] as EmailMethod[]).map(m => (
+                    <button key={m} onClick={() => setEmailMethod(m)} style={{
+                      padding: '7px 4px', borderRadius: 10, fontSize: 11, fontWeight: 500,
+                      cursor: 'pointer', fontFamily: 'inherit',
+                      border: `1.5px solid ${emailMethod === m ? 'var(--accent)' : 'var(--border)'}`,
+                      background: emailMethod === m ? 'var(--accent-bg)' : 'transparent',
+                      color: emailMethod === m ? 'var(--accent-text)' : 'var(--text3)',
+                      transition: 'all .15s',
+                    }}>
+                      {m === 'link' ? '✉️ Link' : m === 'code' ? '🔢 Code' : '📱 Number'}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={handleSendEmail}
+                  disabled={isPending || !hasInput}
+                  style={{
+                    width: '100%', padding: 12, borderRadius: 12, border: 'none',
+                    background: hasInput ? 'var(--btn-primary-bg)' : 'var(--bg3)',
+                    color: hasInput ? 'var(--btn-primary-text)' : 'var(--text3)',
+                    fontSize: 14, fontWeight: 600,
+                    cursor: hasInput ? 'pointer' : 'not-allowed',
+                    fontFamily: 'inherit', transition: 'all .15s',
+                  }}
+                >
+                  {isPending ? 'Connecting...' : emailMethod === 'link' ? 'Send magic link' : emailMethod === 'code' ? 'Send code' : 'Send SMS code'}
+                </button>
+              </>
+            ) : emailMethod === 'link' ? (
+              <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                <div style={{ fontSize: 36, marginBottom: 10 }}>📬</div>
+                <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>Check your inbox</p>
+                <p style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6 }}>We sent a link to {email}</p>
+                <button onClick={() => setCodeSent(false)} style={{ marginTop: 14, background: 'none', border: 'none', fontSize: 12, color: 'var(--accent-text)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Try a different method
+                </button>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: '1rem' }}>
+                  Enter the code sent to {emailMethod === 'number' ? phone : email}
+                </p>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: '1rem' }} onPaste={handleOtpPaste}>
+                  {otp.map((digit, i) => (
+                    <input
+                      key={i}
+                      id={`signin-otp-${i}`}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      onChange={e => handleOtpChange(e.target.value, i)}
+                      onKeyDown={e => {
+                        if (e.key === 'Backspace' && !digit && i > 0) {
+                          document.getElementById(`signin-otp-${i - 1}`)?.focus();
+                        }
+                      }}
+                      style={{
+                        width: 44, height: 52, textAlign: 'center', fontSize: 22,
+                        fontWeight: 700, padding: 0, borderRadius: 10,
+                        border: `2px solid ${digit ? 'var(--accent)' : 'var(--border2)'}`,
+                        background: 'var(--input-bg)', color: 'var(--text)',
+                      }}
+                    />
+                  ))}
+                </div>
+                <button onClick={() => setCodeSent(false)} style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--text3)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Resend code
+                </button>
+              </div>
+            )}
+
+            {/* Wallet divider */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '0.875rem 0', fontSize: 11, color: 'var(--text3)' }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+              or use wallet
+              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            </div>
+
+            {/* Wallet connect */}
+            <button onClick={triggerConnect} disabled={isPending}
+              style={{ ...socialBtnStyle, color: 'var(--text2)', fontSize: 13 }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg3)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              <WalletIcon />
+              Continue with Wallet
+            </button>
           </div>
 
           <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--text3)' }}>
