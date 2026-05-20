@@ -1,0 +1,713 @@
+{
+  "manifestVersion": "3.2",
+  "proxies": [
+    {
+      "address": "0xdac1162E05B6BfA9e192C95fc38512bE4169eBBF",
+      "txHash": "0x58a99aef6826982e050c361004edf73efa09d5c83eadb5c4014d1d76b4dfdfba",
+      "kind": "uups"
+    },
+    {
+      "address": "0x8f67A90563b102313dde309A6Cd9056a31311e76",
+      "txHash": "0xfc8f254e03a4f6112886f5e38d8a8aab4e6eee4d3205178d50e92d455ac2d7cc",
+      "kind": "uups"
+    },
+    {
+      "address": "0xFDd2796CFA3e94494C53F58479EF56f48EBE640f",
+      "txHash": "0xe3e4cbc3a568ecc8b7d9266dc520821088bc75b751fc730a05a3e5406ae61739",
+      "kind": "uups"
+    }
+  ],
+  "impls": {
+    "7348cbed4a585cdb63ddc858f40475bda36653b2a180b06cb493ba44bc68f3a2": {
+      "address": "0x454568f7Fd9bcbD456958C52Fa54A7b8F0384Cf4",
+      "txHash": "0x9579dff2d2aaa3d28134fe8937b45ec2abee7d74119614de8b274e5a1d50fd78",
+      "layout": {
+        "solcVersion": "0.8.28",
+        "storage": [
+          {
+            "label": "_habits",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_mapping(t_address,t_array(t_struct(Habit)2591_storage)dyn_storage)",
+            "contract": "ProovCore",
+            "src": "contracts/ProovCore.sol:41"
+          },
+          {
+            "label": "stats",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_mapping(t_address,t_struct(UserStats)2602_storage)",
+            "contract": "ProovCore",
+            "src": "contracts/ProovCore.sol:42"
+          },
+          {
+            "label": "dailyCompletions",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_mapping(t_address,t_mapping(t_uint256,t_uint256))",
+            "contract": "ProovCore",
+            "src": "contracts/ProovCore.sol:44"
+          },
+          {
+            "label": "dailyJournalHash",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_mapping(t_address,t_mapping(t_uint256,t_bytes32))",
+            "contract": "ProovCore",
+            "src": "contracts/ProovCore.sol:49"
+          },
+          {
+            "label": "_allUsers",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "ProovCore",
+            "src": "contracts/ProovCore.sol:52"
+          },
+          {
+            "label": "_isUser",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_mapping(t_address,t_bool)",
+            "contract": "ProovCore",
+            "src": "contracts/ProovCore.sol:52"
+          },
+          {
+            "label": "sessionManager",
+            "offset": 0,
+            "slot": "6",
+            "type": "t_address",
+            "contract": "ProovCore",
+            "src": "contracts/ProovCore.sol:53"
+          },
+          {
+            "label": "circleManager",
+            "offset": 0,
+            "slot": "7",
+            "type": "t_address",
+            "contract": "ProovCore",
+            "src": "contracts/ProovCore.sol:53"
+          },
+          {
+            "label": "STREAK_MILESTONES",
+            "offset": 0,
+            "slot": "8",
+            "type": "t_array(t_uint256)dyn_storage",
+            "contract": "ProovCore",
+            "src": "contracts/ProovCore.sol:54"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "9",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ProovCore",
+            "src": "contracts/ProovCore.sol:55"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)224_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)13_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_struct(Habit)2591_storage)dyn_storage": {
+            "label": "struct ProovCore.Habit[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_array(t_uint256)dyn_storage": {
+            "label": "uint256[]",
+            "numberOfBytes": "32"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_enum(Frequency)2574": {
+            "label": "enum ProovCore.Frequency",
+            "members": [
+              "DAILY",
+              "WEEKLY"
+            ],
+            "numberOfBytes": "1"
+          },
+          "t_enum(HabitType)2571": {
+            "label": "enum ProovCore.HabitType",
+            "members": [
+              "FOCUS",
+              "FITNESS",
+              "READING",
+              "HYDRATION",
+              "SLEEP",
+              "CUSTOM"
+            ],
+            "numberOfBytes": "1"
+          },
+          "t_mapping(t_address,t_array(t_struct(Habit)2591_storage)dyn_storage)": {
+            "label": "mapping(address => struct ProovCore.Habit[])",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_mapping(t_uint256,t_bytes32))": {
+            "label": "mapping(address => mapping(uint256 => bytes32))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_mapping(t_uint256,t_uint256))": {
+            "label": "mapping(address => mapping(uint256 => uint256))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_struct(UserStats)2602_storage)": {
+            "label": "mapping(address => struct ProovCore.UserStats)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_bytes32)": {
+            "label": "mapping(uint256 => bytes32)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_uint256)": {
+            "label": "mapping(uint256 => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(Habit)2591_storage": {
+            "label": "struct ProovCore.Habit",
+            "members": [
+              {
+                "label": "id",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "name",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "habitType",
+                "type": "t_enum(HabitType)2571",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "targetDuration",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "frequency",
+                "type": "t_enum(Frequency)2574",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "createdAt",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "5"
+              },
+              {
+                "label": "active",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "6"
+              }
+            ],
+            "numberOfBytes": "224"
+          },
+          "t_struct(UserStats)2602_storage": {
+            "label": "struct ProovCore.UserStats",
+            "members": [
+              {
+                "label": "currentStreak",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "longestStreak",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "totalCompletions",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "lastCompletionDay",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "journalCount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "4"
+              }
+            ],
+            "numberOfBytes": "160"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin/contracts/proxy/utils/Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts/proxy/utils/Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "051e9bfa21072b888ab1850a37459b504a503b08cabd8cd9717af4e89b87a932": {
+      "address": "0x54EB68e343C71B39D53Ee01be922761d8303825E",
+      "txHash": "0x493dc52ea77260345a63d0354d7f9937f2a062b2dd754d0e76e6f4842d1f1249",
+      "layout": {
+        "solcVersion": "0.8.28",
+        "storage": [
+          {
+            "label": "activeSession",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_mapping(t_address,t_struct(Session)3493_storage)",
+            "contract": "SessionManager",
+            "src": "contracts/SessionManager.sol:27"
+          },
+          {
+            "label": "sessionHistory",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_mapping(t_address,t_array(t_struct(Session)3493_storage)dyn_storage)",
+            "contract": "SessionManager",
+            "src": "contracts/SessionManager.sol:28"
+          },
+          {
+            "label": "proovCore",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_contract(IProovCore)3469",
+            "contract": "SessionManager",
+            "src": "contracts/SessionManager.sol:30"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "SessionManager",
+            "src": "contracts/SessionManager.sol:32"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)224_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)13_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_array(t_struct(Session)3493_storage)dyn_storage": {
+            "label": "struct SessionManager.Session[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_contract(IProovCore)3469": {
+            "label": "contract IProovCore",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_array(t_struct(Session)3493_storage)dyn_storage)": {
+            "label": "mapping(address => struct SessionManager.Session[])",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_struct(Session)3493_storage)": {
+            "label": "mapping(address => struct SessionManager.Session)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(Session)3493_storage": {
+            "label": "struct SessionManager.Session",
+            "members": [
+              {
+                "label": "habitId",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "startTimestamp",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "endTimestamp",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "duration",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "completed",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "active",
+                "type": "t_bool",
+                "offset": 1,
+                "slot": "4"
+              }
+            ],
+            "numberOfBytes": "160"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin/contracts/proxy/utils/Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts/proxy/utils/Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "7283418e67be3b5661e30f9c744565509867d5246f2db4b9199a0f20438f0343": {
+      "address": "0x746A59f4E12cF2F4Bdb76133dCF486CC93513DB2",
+      "txHash": "0x6f224df2990b104da7c532e52e574db5c1727c11ecde4754b8849640e3837af6",
+      "layout": {
+        "solcVersion": "0.8.28",
+        "storage": [
+          {
+            "label": "_circle",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_mapping(t_address,t_array(t_address)dyn_storage)",
+            "contract": "CircleManager",
+            "src": "contracts/CircleManager.sol:20"
+          },
+          {
+            "label": "connected",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_mapping(t_address,t_mapping(t_address,t_bool))",
+            "contract": "CircleManager",
+            "src": "contracts/CircleManager.sol:21"
+          },
+          {
+            "label": "_pendingRequests",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_mapping(t_address,t_array(t_address)dyn_storage)",
+            "contract": "CircleManager",
+            "src": "contracts/CircleManager.sol:22"
+          },
+          {
+            "label": "_hasPending",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_mapping(t_address,t_mapping(t_address,t_bool))",
+            "contract": "CircleManager",
+            "src": "contracts/CircleManager.sol:23"
+          },
+          {
+            "label": "witnesses",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_mapping(t_address,t_array(t_struct(Witness)1849_storage)dyn_storage)",
+            "contract": "CircleManager",
+            "src": "contracts/CircleManager.sol:24"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "CircleManager",
+            "src": "contracts/CircleManager.sol:26"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)224_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)13_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_struct(Witness)1849_storage)dyn_storage": {
+            "label": "struct CircleManager.Witness[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_mapping(t_address,t_array(t_address)dyn_storage)": {
+            "label": "mapping(address => address[])",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_array(t_struct(Witness)1849_storage)dyn_storage)": {
+            "label": "mapping(address => struct CircleManager.Witness[])",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_mapping(t_address,t_bool))": {
+            "label": "mapping(address => mapping(address => bool))",
+            "numberOfBytes": "32"
+          },
+          "t_struct(Witness)1849_storage": {
+            "label": "struct CircleManager.Witness",
+            "members": [
+              {
+                "label": "witness",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "habitId",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "timestamp",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin/contracts/proxy/utils/Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts/proxy/utils/Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
