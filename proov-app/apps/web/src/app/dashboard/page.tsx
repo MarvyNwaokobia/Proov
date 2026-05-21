@@ -63,11 +63,24 @@ export default function DashboardPage() {
   const [lbTop, setLbTop] = useState<{ name: string; streak: number }[]>([]);
   const [userRank, setUserRank] = useState(0);
   const [showWalkthrough, setShowWalkthrough] = useState(false);
+  const [isFirstVisit, setIsFirstVisit] = useState(false);
 
   useEffect(() => {
     const isAuth = localStorage.getItem('proov_authenticated') === 'true';
     if (!isAuth) router.replace('/');
   }, [router]);
+
+  // Walkthrough — standalone effect, runs once on mount after 1.2s
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const tutorialDone = localStorage.getItem('proov_tutorial_done');
+      const isNewUser = localStorage.getItem('proov_is_new_user') === 'true';
+      if (!tutorialDone && isNewUser) {
+        setShowWalkthrough(true);
+      }
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const addr = localStorage.getItem('proov_address') || '';
@@ -133,13 +146,13 @@ export default function DashboardPage() {
       try { setCheered(JSON.parse(cheeredRaw)); } catch {}
     }
 
-    // Show walkthrough for new users
-    const tutorialDone = localStorage.getItem('proov_tutorial_done');
-    const isNewUser = localStorage.getItem('proov_is_new_user');
-    if (!tutorialDone && isNewUser === 'true') {
-      const wt = setTimeout(() => setShowWalkthrough(true), 800);
-      setTimeout(() => clearTimeout(wt), 10000); // safety cleanup
+    // First-visit welcome message
+    const isNewUser = localStorage.getItem('proov_is_new_user') === 'true';
+    const hasVisited = localStorage.getItem('proov_has_visited') === 'true';
+    if (isNewUser && !hasVisited) {
+      setIsFirstVisit(true);
     }
+    localStorage.setItem('proov_has_visited', '1');
 
     // Goldsky leaderboard snapshot — only when authenticated
     const addr = localStorage.getItem('proov_address') || '';
@@ -228,9 +241,11 @@ export default function DashboardPage() {
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.875rem' }}>
           <div>
             <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>
-              {getGreeting()}, {displayName} 👋
+              {isFirstVisit ? 'Welcome to Proov 👋' : `${getGreeting()}, ${displayName} 👋`}
             </div>
-            <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 2 }}>{formatDate()}</div>
+            <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 2 }}>
+              {isFirstVisit ? "Let's build something worth keeping" : formatDate()}
+            </div>
           </div>
           <Link href="/settings" style={{ textDecoration: 'none', lineHeight: 1, marginTop: 2 }} title="Settings">
             <IconSettings2 size={20} stroke={1.8} color="var(--text3)" />

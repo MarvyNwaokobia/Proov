@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAccount, useConnect } from 'wagmi';
 import { useTheme } from '@/components/providers/ThemeProvider';
@@ -49,6 +49,15 @@ export default function SignInPage() {
   const [error, setError] = useState('');
   const [showWalletPicker, setShowWalletPicker] = useState(false);
 
+  // Username sign-in
+  const [showUsernameLogin, setShowUsernameLogin] = useState(false);
+  const [usernameInput, setUsernameInput] = useState('');
+  const [usernameFound, setUsernameFound] = useState<{ address: string; hint: string; cleanUsername: string } | null>(null);
+  const [usernameSearching, setUsernameSearching] = useState(false);
+  const [usernameError, setUsernameError] = useState('');
+  // Ref so the isConnected effect always reads the latest value without stale closure
+  const usernameFoundRef = useRef<{ address: string; hint: string; cleanUsername: string } | null>(null);
+
   useEffect(() => {
     if (isMiniPay()) {
       connectMiniPay().then(addr => {
@@ -62,6 +71,14 @@ export default function SignInPage() {
 
   useEffect(() => {
     if (!isConnected || !connectedAddress) return;
+
+    // If user came through username lookup, verify the connected address matches
+    const expected = usernameFoundRef.current;
+    if (expected && connectedAddress.toLowerCase() !== expected.address.toLowerCase()) {
+      setError(`This account does not match @${expected.cleanUsername}. Sign in with the correct account.`);
+      return;
+    }
+
     const emailVal = localStorage.getItem('proov_email') || '';
     resolveIdentity(connectedAddress, emailVal, 'google', 'web3auth');
 
@@ -80,6 +97,41 @@ export default function SignInPage() {
       router.push(getPostLoginRoute());
     });
   }, [isConnected, connectedAddress, router]);
+
+  const handleUsernameLookup = async () => {
+    const clean = usernameInput.replace(/^@/, '').toLowerCase().trim();
+    if (!clean) return;
+    setUsernameSearching(true);
+    setUsernameError('');
+    setUsernameFound(null);
+    usernameFoundRef.current = null;
+    try {
+      const { getAddressForUsername } = await import('@/lib/supabase');
+      const address = await getAddressForUsername(clean);
+      if (!address) {
+        setUsernameError(`@${clean} not found. Check the spelling or sign in with your original method.`);
+        return;
+      }
+      const identity = localStorage.getItem(`proov_identity_${address}`);
+      let methodHint = 'Sign in with the method you used when you joined';
+      if (identity) {
+        try {
+          const parsed = JSON.parse(identity);
+          if (parsed.signInMethod === 'google')  methodHint = 'Sign in with Google to continue';
+          if (parsed.signInMethod === 'twitter') methodHint = 'Sign in with Twitter to continue';
+          if (parsed.signInMethod === 'wallet')  methodHint = 'Connect your wallet to continue';
+          if (parsed.signInMethod === 'email')   methodHint = 'Sign in with your email to continue';
+        } catch {}
+      }
+      const found = { address, hint: methodHint, cleanUsername: clean };
+      setUsernameFound(found);
+      usernameFoundRef.current = found;
+    } catch {
+      setUsernameError('Could not search right now. Try signing in directly.');
+    } finally {
+      setUsernameSearching(false);
+    }
+  };
 
   const triggerConnect = async () => {
     // Wipe any cached session so Google always shows the account picker
@@ -212,6 +264,76 @@ export default function SignInPage() {
                 {m.label}
               </button>
             ))}
+          </div>
+
+          {/* Username sign-in — collapsible, for returning users */}
+          <div style={{ marginBottom: '1rem' }}>
+            <button
+              onClick={() => { setShowUsernameLogin(v => !v); setUsernameFound(null); usernameFoundRef.current = null; setUsernameError(''); setUsernameInput(''); }}
+              style={{
+                width: '100%', padding: '10px 14px', borderRadius: 12,
+                border: '1px solid var(--border)',
+                background: showUsernameLogin ? 'var(--accent-bg)' : 'transparent',
+                color: showUsernameLogin ? 'var(--accent-text)' : 'var(--text2)',
+                fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                transition: 'all .15s',
+              }}
+            >
+              <span>Sign in with username</span>
+              <span>{showUsernameLogin ? '↑' : '↓'}</span>
+            </button>
+
+            {showUsernameLogin && (
+              <div style={{ marginTop: 8, padding: '1rem', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14 }}>
+                <div style={{ position: 'relative', marginBottom: 8 }}>
+                  <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 15, fontWeight: 700, color: 'var(--accent)' }}>@</span>
+                  <input
+                    type="text" placeholder="yourname"
+                    value={usernameInput}
+                    onChange={e => { setUsernameInput(e.target.value); setUsernameFound(null); usernameFoundRef.current = null; setUsernameError(''); }}
+                    onKeyDown={e => e.key === 'Enter' && handleUsernameLookup()}
+                    style={{ paddingLeft: 28, fontSize: 14, fontWeight: 600 }}
+                    autoComplete="off"
+                  />
+                </div>
+
+                {usernameError && (
+                  <p style={{ fontSize: 12, color: '#f43f5e', marginBottom: 8, lineHeight: 1.5 }}>{usernameError}</p>
+                )}
+
+                {usernameFound && (
+                  <div style={{ padding: '10px 12px', borderRadius: 10, background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 14 }}>✓</span>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-text)' }}>Account found</div>
+                      <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 2 }}>{usernameFound.hint}</div>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  onClick={handleUsernameLookup}
+                  disabled={usernameSearching || !usernameInput.trim()}
+                  style={{
+                    width: '100%', padding: '9px', borderRadius: 10, border: 'none',
+                    background: usernameInput.trim() ? 'var(--btn-primary-bg)' : 'var(--bg3)',
+                    color: usernameInput.trim() ? 'var(--btn-primary-text)' : 'var(--text3)',
+                    fontSize: 13, fontWeight: 600,
+                    cursor: usernameInput.trim() ? 'pointer' : 'not-allowed',
+                    fontFamily: 'inherit', transition: 'all .15s',
+                  }}
+                >
+                  {usernameSearching ? 'Searching...' : 'Find my account'}
+                </button>
+
+                {usernameFound && (
+                  <p style={{ fontSize: 11, color: 'var(--text3)', textAlign: 'center', marginTop: 8, lineHeight: 1.5 }}>
+                    Use one of the sign-in options below to verify it's you.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Card */}

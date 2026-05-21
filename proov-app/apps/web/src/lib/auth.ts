@@ -99,20 +99,11 @@ export function getAddressByEmail(email: string): string | null {
 export function getPostLoginRoute(): string {
   if (typeof window === 'undefined') return '/dashboard';
 
-  const address = localStorage.getItem('proov_address') || '';
   const username = localStorage.getItem('proov_username');
+  if (!username) return '/username-setup';
 
-  const hasUsername = !!username || (() => {
-    try {
-      const raw = localStorage.getItem(`proov_username_${address.toLowerCase()}`);
-      return !!(raw && JSON.parse(raw).username);
-    } catch { return false; }
-  })();
-
-  if (!hasUsername) return '/username-setup';
-
-  const tutorialDone = localStorage.getItem('proov_tutorial_done');
-  if (!tutorialDone) return '/tutorial';
+  const onboardingDone = localStorage.getItem('proov_onboarding_done');
+  if (!onboardingDone) return '/onboarding';
 
   return '/dashboard';
 }
