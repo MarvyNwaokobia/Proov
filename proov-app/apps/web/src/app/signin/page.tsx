@@ -290,8 +290,8 @@ export default function SignInPage() {
         {/* Logo */}
         <div style={{ marginTop: '1.5rem', marginBottom: '1.25rem', textAlign: 'center' }}>
           <div style={{ width: 44, height: 44, borderRadius: 12, background: 'linear-gradient(135deg, var(--accent), var(--accent2, var(--accent)))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, color: '#fff', margin: '0 auto 10px' }}>P</div>
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-.5px', marginBottom: 4 }}>Welcome back</h2>
-          <p style={{ fontSize: 13, color: 'var(--text2)' }}>Good to have you back</p>
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-.5px', marginBottom: 4 }}>Sign in to Proov</h2>
+          <p style={{ fontSize: 13, color: 'var(--text2)' }}>Enter your details to continue</p>
         </div>
 
         <div style={{ width: '100%', maxWidth: 400 }}>
@@ -523,12 +523,23 @@ export default function SignInPage() {
             </button>
           </div>
 
-          <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--text3)' }}>
-            No account?{' '}
-            <Link href="/signup" style={{ color: 'var(--accent-text)', fontWeight: 600, textDecoration: 'none' }}>
+          <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+            <span style={{ fontSize: 13, color: 'var(--text3)' }}>No account? </span>
+            <Link
+              href="/signup"
+              style={{
+                fontSize: 13, fontWeight: 700,
+                color: 'var(--btn-primary-bg)',
+                textDecoration: 'none',
+                borderBottom: '2px solid var(--btn-primary-bg)',
+                transition: 'opacity 0.15s ease',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
+              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+            >
               Join free →
             </Link>
-          </p>
+          </div>
         </div>
       </div>
 

@@ -63,7 +63,6 @@ export default function DashboardPage() {
   const [lbTop, setLbTop] = useState<{ name: string; streak: number }[]>([]);
   const [userRank, setUserRank] = useState(0);
   const [showWalkthrough, setShowWalkthrough] = useState(false);
-  const [isFirstVisit, setIsFirstVisit] = useState(false);
 
   useEffect(() => {
     const isAuth = localStorage.getItem('proov_authenticated') === 'true';
@@ -146,14 +145,6 @@ export default function DashboardPage() {
       try { setCheered(JSON.parse(cheeredRaw)); } catch {}
     }
 
-    // First-visit welcome message
-    const isNewUser = localStorage.getItem('proov_is_new_user') === 'true';
-    const hasVisited = localStorage.getItem('proov_has_visited') === 'true';
-    if (isNewUser && !hasVisited) {
-      setIsFirstVisit(true);
-    }
-    localStorage.setItem('proov_has_visited', '1');
-
     // Goldsky leaderboard snapshot — only when authenticated
     const addr = localStorage.getItem('proov_address') || '';
     if (addr) {
@@ -221,7 +212,12 @@ export default function DashboardPage() {
     setTimeout(() => setToastVisible(false), 2200);
   };
 
-  const displayName = username || 'there';
+  const displayName = username
+    ? username.charAt(0).toUpperCase() + username.slice(1)
+    : 'there';
+
+  const greeting = `${getGreeting()}, ${displayName} 👋`;
+  const subtitle = formatDate();
 
   // Don't render until mounted to avoid hydration mismatch on date/greeting
   if (!mounted) return null;
@@ -241,10 +237,10 @@ export default function DashboardPage() {
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.875rem' }}>
           <div>
             <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>
-              {isFirstVisit ? 'Welcome to Proov 👋' : `${getGreeting()}, ${displayName} 👋`}
+              {greeting}
             </div>
             <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 2 }}>
-              {isFirstVisit ? "Let's build something worth keeping" : formatDate()}
+              {subtitle}
             </div>
           </div>
           <Link href="/settings" style={{ textDecoration: 'none', lineHeight: 1, marginTop: 2 }} title="Settings">

@@ -424,12 +424,23 @@ export default function SignUpPage() {
             </p>
           </div>
 
-          <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--text3)' }}>
-            Already have an account?{' '}
-            <Link href="/signin" style={{ color: 'var(--accent-text)', fontWeight: 600, textDecoration: 'none' }}>
+          <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+            <span style={{ fontSize: 13, color: 'var(--text3)' }}>Already have an account? </span>
+            <Link
+              href="/signin"
+              style={{
+                fontSize: 13, fontWeight: 700,
+                color: 'var(--btn-primary-bg)',
+                textDecoration: 'none',
+                borderBottom: '2px solid var(--btn-primary-bg)',
+                transition: 'opacity 0.15s ease',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
+              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+            >
               Sign in →
             </Link>
-          </p>
+          </div>
         </div>
       </div>
 
