@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import Link from 'next/link';
 import { getLeaderboard, getUserStats } from '@/lib/goldsky';
-import { getUsernameForAddress } from '@/lib/supabase';
+import { getUsernameForAddress, getUserHabits, getTodayCompletions, saveHabitCompletion, type Habit } from '@/lib/supabase';
 import { Walkthrough } from '@/components/shared/Walkthrough';
 import {
   IconFlame,
@@ -16,17 +16,6 @@ import {
   IconCheck,
   IconSettings2,
 } from '@tabler/icons-react';
-
-interface Habit {
-  id: string;
-  name: string;
-  emoji: string;
-  category: string;
-  hasTimer: boolean;
-  targetDuration?: number;
-  active?: boolean;
-  completedToday?: boolean;
-}
 
 interface CircleMember {
   address: string;
@@ -55,6 +44,7 @@ export default function DashboardPage() {
   const [currentStreak, setCurrentStreak] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
   const [habits, setHabits] = useState<Habit[]>([]);
+  const [completedToday, setCompletedToday] = useState<string[]>([]);
   const [circleMembers, setCircleMembers] = useState<CircleMember[]>([]);
   const [cheered, setCheered] = useState<Record<string, boolean>>({});
   const [toast, setToast] = useState('');
@@ -109,18 +99,19 @@ export default function DashboardPage() {
     setMounted(true);
     const today = new Date().toDateString();
 
-    // Habits
-    const habitsRaw = localStorage.getItem('proov_habits');
-    if (habitsRaw) {
-      try {
-        const all: Habit[] = JSON.parse(habitsRaw);
-        const completions: string[] = JSON.parse(localStorage.getItem(`proov_completions_${today}`) || '[]');
-        setHabits(
-          all
-            .filter(h => h.active !== false)
-            .map(h => ({ ...h, completedToday: completions.includes(h.id) }))
-        );
-      } catch {}
+    // Habits — load from Supabase, fall back to cache
+    const addr2 = localStorage.getItem('proov_address') || '';
+    if (addr2) {
+      Promise.all([getUserHabits(addr2), getTodayCompletions(addr2)])
+        .then(([userHabits, todayDone]) => {
+          setHabits(userHabits);
+          setCompletedToday(todayDone);
+          localStorage.setItem('proov_habits_cache', JSON.stringify(userHabits));
+        })
+        .catch(() => {
+          const cached = JSON.parse(localStorage.getItem('proov_habits_cache') || '[]');
+          setHabits(cached);
+        });
     }
 
     // Streak
@@ -160,26 +151,18 @@ export default function DashboardPage() {
     }
   }, [address]);
 
-  const completedCount = habits.filter(h => h.completedToday).length;
+  const completedCount = completedToday.length;
   const totalHabits = habits.length;
   const progressPercent = totalHabits > 0 ? (completedCount / totalHabits) * 100 : 0;
 
-  const handleToggleHabit = (habitId: string) => {
-    const today = new Date().toDateString();
-    const key = `proov_completions_${today}`;
-    const completions: string[] = JSON.parse(localStorage.getItem(key) || '[]');
-    const isNowDone = !completions.includes(habitId);
-
-    if (isNowDone) {
-      completions.push(habitId);
-      showToast('Saved ✓');
-    } else {
-      const idx = completions.indexOf(habitId);
-      if (idx > -1) completions.splice(idx, 1);
-    }
-    localStorage.setItem(key, JSON.stringify(completions));
-    setHabits(prev => prev.map(h => h.id === habitId ? { ...h, completedToday: isNowDone } : h));
-    updateStreak(completions.length > 0);
+  const handleToggleHabit = async (habitId: string) => {
+    if (completedToday.includes(habitId)) return;
+    const addr = localStorage.getItem('proov_address') || '';
+    setCompletedToday(prev => [...prev, habitId]);
+    showToast('Saved ✓');
+    const streak = parseInt(localStorage.getItem('proov_streak_count') || '0');
+    await saveHabitCompletion(habitId, addr, streak).catch(() => {});
+    updateStreak(true);
   };
 
   const updateStreak = (hasCompletion: boolean) => {
@@ -308,86 +291,33 @@ export default function DashboardPage() {
             </Link>
           </div>
         ) : (
-          /* 2-column grid — no horizontal scroll ever */
-          <div id="wt-habits-grid" style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: 10,
-            marginBottom: '1rem',
-            width: '100%',
-          }}>
-            {habits.map(habit => (
-              <div
-                key={habit.id}
-                className="card-interactive"
-                style={{
-                  background: 'var(--card-bg)',
-                  border: `1px solid ${habit.completedToday ? 'var(--accent-border)' : 'var(--card-border)'}`,
-                  borderRadius: 14,
-                  padding: '0.875rem',
-                  width: '100%',
-                  minWidth: 0,
-                  boxSizing: 'border-box',
-                }}
-              >
-                {/* Emoji + checkbox */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ fontSize: 20 }}>{habit.emoji || '✅'}</span>
-                  <button
-                    onClick={() => handleToggleHabit(habit.id)}
-                    style={{
-                      width: 22, height: 22, borderRadius: 6,
-                      border: `1.5px solid ${habit.completedToday ? 'var(--accent)' : 'var(--border2)'}`,
-                      background: habit.completedToday ? 'var(--accent)' : 'transparent',
-                      color: habit.completedToday ? '#fff' : 'transparent',
-                      fontSize: 11, fontWeight: 700, cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      transition: 'all .15s', flexShrink: 0,
-                    }}
-                  >
-                    <IconCheck size={12} stroke={2.5} color="#fff" />
-                  </button>
+          <div id="wt-habits-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: '1rem', width: '100%' }}>
+            {habits.map(habit => {
+              const isDone = completedToday.includes(habit.id);
+              return (
+                <div key={habit.id} style={{ background: 'var(--card-bg)', border: `1px solid ${isDone ? 'var(--accent-border)' : 'var(--card-border)'}`, borderRadius: 14, padding: '12px', opacity: isDone ? 0.7 : 1, transition: 'all 0.2s ease' }}>
+                  <div style={{ fontSize: 18, marginBottom: 4 }}>{habit.emoji}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{habit.name}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 10 }}>
+                    {habit.type === 'timed' ? `${habit.duration_minutes}m · ${habit.schedule}` : `Tap · ${habit.schedule}`}
+                  </div>
+                  {habit.type === 'timed' ? (
+                    <button onClick={() => router.push('/timer')} disabled={isDone} style={{ width: '100%', padding: '6px 0', borderRadius: 8, border: 'none', background: isDone ? 'var(--bg2)' : 'var(--btn-primary-bg)', color: isDone ? 'var(--text3)' : 'var(--btn-primary-text)', fontSize: 11, fontWeight: 600, cursor: isDone ? 'default' : 'pointer', fontFamily: 'inherit' }}>
+                      {isDone ? 'Done ✓' : '▶ Start'}
+                    </button>
+                  ) : (
+                    <button onClick={() => handleToggleHabit(habit.id)} style={{ width: '100%', padding: '6px 0', borderRadius: 8, border: '1.5px solid', borderColor: isDone ? 'var(--accent)' : 'var(--border2)', background: isDone ? 'var(--accent)' : 'transparent', color: isDone ? '#fff' : 'var(--text2)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s ease' }}>
+                      {isDone ? '✓ Done' : 'Mark done'}
+                    </button>
+                  )}
                 </div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {habit.name}
-                </div>
-                <div style={{ fontSize: 10, color: 'var(--text3)' }}>
-                  {habit.hasTimer && habit.targetDuration ? `⏱ ${habit.targetDuration} min` : 'Tap to complete'}
-                </div>
-                {habit.hasTimer && !habit.completedToday && (
-                  <Link
-                    href={`/timer?habitId=${habit.id}`}
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 4,
-                      marginTop: 7, padding: '3px 8px', borderRadius: 6,
-                      background: 'var(--accent-bg)', border: '1px solid var(--accent-border)',
-                      textDecoration: 'none',
-                    }}
-                    onClick={e => e.stopPropagation()}
-                  >
-                    <IconPlayerPlay size={10} stroke={2} color="var(--accent-text)" />
-                    <span style={{ fontSize: 9, color: 'var(--accent-text)', fontWeight: 600 }}>Start</span>
-                  </Link>
-                )}
-              </div>
-            ))}
+              );
+            })}
             {/* Add habit cell */}
-            <Link
-              id="wt-add-habit"
-              href="/habits"
-              style={{
-                background: 'transparent',
-                border: '1.5px dashed var(--border2)',
-                borderRadius: 14, padding: '0.875rem',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 11, color: 'var(--text3)', textDecoration: 'none',
-                minWidth: 0, transition: 'border .15s, color .15s',
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent)'; (e.currentTarget as HTMLElement).style.color = 'var(--accent-text)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border2)'; (e.currentTarget as HTMLElement).style.color = 'var(--text3)'; }}
-            >
-              <IconPlus size={14} stroke={2} color="var(--text3)" /> Add habit
-            </Link>
+            <button id="wt-add-habit" onClick={() => router.push('/habits')} style={{ border: '1.5px dashed var(--border2)', borderRadius: 14, padding: '12px', background: 'transparent', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 100 }}>
+              <span style={{ fontSize: 20, color: 'var(--text3)' }}>+</span>
+              <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'inherit' }}>Add habit</span>
+            </button>
           </div>
         )}
 

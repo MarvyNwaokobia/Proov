@@ -96,6 +96,91 @@ export async function getAddressForUsername(username: string): Promise<string | 
   return data?.address || null;
 }
 
+// ── HABIT FUNCTIONS ──────────────────────────────────────────────────────────
+
+export interface Habit {
+  id: string;
+  user_address: string;
+  name: string;
+  emoji: string;
+  category: string;
+  type: 'checkbox' | 'timed';
+  duration_minutes: number;
+  schedule: string;
+  visibility: 'private' | 'circle' | 'custom' | 'public';
+  visible_to: string[];
+  active: boolean;
+  created_at: string;
+}
+
+export async function saveHabit(habit: Omit<Habit, 'id' | 'created_at'>): Promise<Habit | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('habits')
+    .insert(habit)
+    .select()
+    .single();
+  if (error) { console.error('saveHabit error:', error); return null; }
+  return data;
+}
+
+export async function getUserHabits(userAddress: string): Promise<Habit[]> {
+  if (!supabase || !userAddress) return [];
+  const { data, error } = await supabase
+    .from('habits')
+    .select('*')
+    .eq('user_address', userAddress.toLowerCase())
+    .eq('active', true)
+    .order('created_at', { ascending: true });
+  if (error) { console.error('getUserHabits error:', error); return []; }
+  return data || [];
+}
+
+export async function deactivateHabit(habitId: string): Promise<void> {
+  if (!supabase) return;
+  await supabase
+    .from('habits')
+    .update({ active: false })
+    .eq('id', habitId);
+}
+
+export async function saveHabitCompletion(
+  habitId: string,
+  userAddress: string,
+  streakAtTime: number
+): Promise<void> {
+  if (!supabase) return;
+  await supabase.from('habit_completions').insert({
+    habit_id: habitId,
+    user_address: userAddress.toLowerCase(),
+    streak_at_time: streakAtTime,
+  });
+}
+
+export async function getTodayCompletions(userAddress: string): Promise<string[]> {
+  if (!supabase || !userAddress) return [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const { data } = await supabase
+    .from('habit_completions')
+    .select('habit_id')
+    .eq('user_address', userAddress.toLowerCase())
+    .gte('completed_at', today.toISOString());
+  return (data || []).map((d: any) => d.habit_id);
+}
+
+export async function updateHabitVisibility(
+  habitId: string,
+  visibility: string,
+  visibleTo: string[]
+): Promise<void> {
+  if (!supabase) return;
+  await supabase
+    .from('habits')
+    .update({ visibility, visible_to: visibleTo })
+    .eq('id', habitId);
+}
+
 /**
  * Update a username for an existing address.
  */
