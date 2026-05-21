@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAccount, useConnect } from 'wagmi';
 import { useTheme } from '@/components/providers/ThemeProvider';
@@ -52,11 +52,8 @@ export default function SignInPage() {
   // Username sign-in
   const [showUsernameLogin, setShowUsernameLogin] = useState(false);
   const [usernameInput, setUsernameInput] = useState('');
-  const [usernameFound, setUsernameFound] = useState<{ address: string; hint: string; cleanUsername: string } | null>(null);
   const [usernameSearching, setUsernameSearching] = useState(false);
   const [usernameError, setUsernameError] = useState('');
-  // Ref so the isConnected effect always reads the latest value without stale closure
-  const usernameFoundRef = useRef<{ address: string; hint: string; cleanUsername: string } | null>(null);
 
   useEffect(() => {
     if (isMiniPay()) {
@@ -71,13 +68,6 @@ export default function SignInPage() {
 
   useEffect(() => {
     if (!isConnected || !connectedAddress) return;
-
-    // If user came through username lookup, verify the connected address matches
-    const expected = usernameFoundRef.current;
-    if (expected && connectedAddress.toLowerCase() !== expected.address.toLowerCase()) {
-      setError(`This account does not match @${expected.cleanUsername}. Sign in with the correct account.`);
-      return;
-    }
 
     const emailVal = localStorage.getItem('proov_email') || '';
     resolveIdentity(connectedAddress, emailVal, 'google', 'web3auth');
@@ -101,33 +91,31 @@ export default function SignInPage() {
   const handleUsernameLookup = async () => {
     const clean = usernameInput.replace(/^@/, '').toLowerCase().trim();
     if (!clean) return;
+
     setUsernameSearching(true);
     setUsernameError('');
-    setUsernameFound(null);
-    usernameFoundRef.current = null;
+
     try {
       const { getAddressForUsername } = await import('@/lib/supabase');
       const address = await getAddressForUsername(clean);
+
       if (!address) {
-        setUsernameError(`@${clean} not found. Check the spelling or sign in with your original method.`);
+        setUsernameError(`@${clean} not found. Check the spelling, or sign up for free.`);
         return;
       }
-      const identity = localStorage.getItem(`proov_identity_${address}`);
-      let methodHint = 'Sign in with the method you used when you joined';
-      if (identity) {
-        try {
-          const parsed = JSON.parse(identity);
-          if (parsed.signInMethod === 'google')  methodHint = 'Sign in with Google to continue';
-          if (parsed.signInMethod === 'twitter') methodHint = 'Sign in with Twitter to continue';
-          if (parsed.signInMethod === 'wallet')  methodHint = 'Connect your wallet to continue';
-          if (parsed.signInMethod === 'email')   methodHint = 'Sign in with your email to continue';
-        } catch {}
-      }
-      const found = { address, hint: methodHint, cleanUsername: clean };
-      setUsernameFound(found);
-      usernameFoundRef.current = found;
+
+      // Account found — restore session and go straight to dashboard
+      localStorage.setItem('proov_authenticated', 'true');
+      localStorage.setItem('proov_address', address);
+      localStorage.setItem('proov_username', clean);
+      localStorage.setItem('proov_onboarding_done', '1');
+      localStorage.setItem('proov_tutorial_done', '1');
+
+      // Go to dashboard immediately — no extra step
+      router.push('/dashboard');
+
     } catch {
-      setUsernameError('Could not search right now. Try signing in directly.');
+      setUsernameError('Could not sign in right now. Try using Google or your wallet instead.');
     } finally {
       setUsernameSearching(false);
     }
@@ -269,7 +257,7 @@ export default function SignInPage() {
           {/* Username sign-in — collapsible, for returning users */}
           <div style={{ marginBottom: '1rem' }}>
             <button
-              onClick={() => { setShowUsernameLogin(v => !v); setUsernameFound(null); usernameFoundRef.current = null; setUsernameError(''); setUsernameInput(''); }}
+              onClick={() => { setShowUsernameLogin(v => !v); setUsernameError(''); setUsernameInput(''); }}
               style={{
                 width: '100%', padding: '10px 14px', borderRadius: 12,
                 border: '1px solid var(--border)',
@@ -291,7 +279,7 @@ export default function SignInPage() {
                   <input
                     type="text" placeholder="yourname"
                     value={usernameInput}
-                    onChange={e => { setUsernameInput(e.target.value); setUsernameFound(null); usernameFoundRef.current = null; setUsernameError(''); }}
+                    onChange={e => { setUsernameInput(e.target.value); setUsernameError(''); }}
                     onKeyDown={e => e.key === 'Enter' && handleUsernameLookup()}
                     style={{ paddingLeft: 28, fontSize: 14, fontWeight: 600 }}
                     autoComplete="off"
@@ -299,17 +287,17 @@ export default function SignInPage() {
                 </div>
 
                 {usernameError && (
-                  <p style={{ fontSize: 12, color: '#f43f5e', marginBottom: 8, lineHeight: 1.5 }}>{usernameError}</p>
-                )}
-
-                {usernameFound && (
-                  <div style={{ padding: '10px 12px', borderRadius: 10, background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 14 }}>✓</span>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-text)' }}>Account found</div>
-                      <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 2 }}>{usernameFound.hint}</div>
-                    </div>
-                  </div>
+                  <p style={{ fontSize: 12, color: '#f43f5e', marginBottom: 8, lineHeight: 1.6 }}>
+                    {usernameError.includes('sign up') ? (
+                      <>
+                        @{usernameInput.replace('@', '')} not found. Check the spelling, or{' '}
+                        <Link href="/signup" style={{ color: '#f43f5e', fontWeight: 700 }}>
+                          sign up for free
+                        </Link>
+                        .
+                      </>
+                    ) : usernameError}
+                  </p>
                 )}
 
                 <button
@@ -324,14 +312,8 @@ export default function SignInPage() {
                     fontFamily: 'inherit', transition: 'all .15s',
                   }}
                 >
-                  {usernameSearching ? 'Searching...' : 'Find my account'}
+                  {usernameSearching ? 'Signing in...' : 'Sign in'}
                 </button>
-
-                {usernameFound && (
-                  <p style={{ fontSize: 11, color: 'var(--text3)', textAlign: 'center', marginTop: 8, lineHeight: 1.5 }}>
-                    Use one of the sign-in options below to verify it's you.
-                  </p>
-                )}
               </div>
             )}
           </div>
