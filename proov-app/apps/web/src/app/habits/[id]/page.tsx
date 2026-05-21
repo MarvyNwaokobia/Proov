@@ -3,12 +3,14 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { getUserHabits, getTodayCompletions, saveHabitCompletion, type Habit } from '@/lib/supabase';
 import { IconArrowLeft, IconChevronRight } from '@tabler/icons-react';
+import { useProovTx } from '@/hooks/useProovTx';
 
 export default function HabitDetailPage() {
   const { id } = useParams();
   const router = useRouter();
   const [habit, setHabit] = useState<Habit | null>(null);
   const [isDoneToday, setIsDoneToday] = useState(false);
+  const proovTx = useProovTx();
 
   useEffect(() => {
     const address = localStorage.getItem('proov_address') || '';
@@ -23,6 +25,7 @@ export default function HabitDetailPage() {
     const address = localStorage.getItem('proov_address') || '';
     const streak = parseInt(localStorage.getItem('proov_streak_count') || '0');
     await saveHabitCompletion(habitId, address, streak).catch(() => {});
+    proovTx.completeHabit((habit as any)?.on_chain_id || 0);
     setIsDoneToday(true);
   };
 

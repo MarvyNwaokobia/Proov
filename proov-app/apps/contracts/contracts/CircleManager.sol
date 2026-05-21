@@ -111,6 +111,11 @@ contract CircleManager is Initializable, UUPSUpgradeable, OwnableUpgradeable, Re
         emit CheerSent(msg.sender, to, block.timestamp);
     }
 
+    function sendCheer(address to) external nonReentrant {
+        require(connected[msg.sender][to], "CircleManager: not in circle");
+        emit CheerSent(msg.sender, to, block.timestamp);
+    }
+
     function notifyStreakBroken(address user) external {
         address[] memory circle = _circle[user];
         emit StreakBrokenNotified(user, circle);

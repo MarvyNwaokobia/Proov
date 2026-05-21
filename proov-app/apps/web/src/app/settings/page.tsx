@@ -7,6 +7,7 @@ import { ThemeToggle } from '@/components/shared/ThemeToggle';
 import { validateUsername, isUsernameTaken, registerUsername } from '@/lib/username';
 import { setIdentityUsername } from '@/lib/auth';
 import { updateUsername as updateSupabaseUsername } from '@/lib/supabase';
+import { useProovTx } from '@/hooks/useProovTx';
 import {
   IconTrophy,
   IconChevronRight,
@@ -17,6 +18,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const { disconnect } = useDisconnect();
 
+  const proovTx = useProovTx();
   const [username, setUsername] = useState('');
   const [editingUsername, setEditingUsername] = useState(false);
   const [newUsername, setNewUsername] = useState('');
@@ -80,6 +82,7 @@ export default function SettingsPage() {
     localStorage.setItem('proov_username', clean);
     setIdentityUsername(address, clean);
 
+    proovTx.editUsername(clean);
     setUsername(clean);
     setEditingUsername(false);
     setNewUsername('');

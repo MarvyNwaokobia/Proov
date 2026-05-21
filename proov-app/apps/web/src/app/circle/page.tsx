@@ -12,6 +12,7 @@ import {
   getUsernamesForAddresses,
   type CircleRequest,
 } from "@/lib/supabase";
+import { useProovTx } from "@/hooks/useProovTx";
 
 export default function CirclePage() {
   const router = useRouter();
@@ -32,6 +33,7 @@ export default function CirclePage() {
   const [toast, setToast] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
   const [cheeredMap, setCheeredMap] = useState<Record<string, boolean>>({});
+  const proovTx = useProovTx();
 
   const myAddress = typeof window !== 'undefined'
     ? (localStorage.getItem('proov_address') || '').toLowerCase()
@@ -120,6 +122,7 @@ export default function CirclePage() {
   const handleConfirmInvite = async () => {
     if (!resolvedAddress) return;
     await sendCircleRequest(myAddress, resolvedAddress).catch(() => {});
+    proovTx.sendCircleRequest(resolvedAddress as `0x${string}`);
     setInviteInput('');
     setResolvedAddress('');
     setResolvedUsername('');
@@ -128,8 +131,9 @@ export default function CirclePage() {
     loadCircleData();
   };
 
-  const handleAccept = async (requestId: string) => {
+  const handleAccept = async (requestId: string, fromAddress?: string) => {
     await respondToCircleRequest(requestId, 'accepted').catch(() => {});
+    if (fromAddress) proovTx.acceptCircleRequest(fromAddress as `0x${string}`);
     showToast('Connected ✓');
     loadCircleData();
   };
@@ -143,6 +147,7 @@ export default function CirclePage() {
     const today = new Date().toDateString();
     localStorage.setItem(`proov_cheered_${addr}_${today}`, '1');
     setCheeredMap(m => ({ ...m, [addr]: true }));
+    proovTx.sendCheer(addr as `0x${string}`);
     showToast('Cheer sent 🌸');
   };
 
@@ -217,7 +222,7 @@ export default function CirclePage() {
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>@{username}</div>
                     <div style={{ fontSize: 11, color: 'var(--text3)' }}>wants to join your circle</div>
                   </div>
-                  <button onClick={() => handleAccept(req.id)} style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Accept</button>
+                  <button onClick={() => handleAccept(req.id, req.from_address)} style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Accept</button>
                   <button onClick={() => handleDecline(req.id)} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text3)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
                 </div>
               );

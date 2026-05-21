@@ -53,10 +53,13 @@ contract ProovCore is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reentr
     event HabitCreated(address indexed user, uint256 indexed habitId, string name, uint256 timestamp);
     event HabitCompleted(address indexed user, uint256 indexed habitId, uint256 streak, uint256 timestamp);
     event HabitDeactivated(address indexed user, uint256 habitId);
+    event HabitEdited(address indexed user, uint256 indexed habitId, string name, uint256 timestamp);
     event StreakUpdated(address indexed user, uint256 newStreak, uint256 longestStreak, uint256 timestamp);
     event StreakBroken(address indexed user, uint256 oldStreak);
     event MilestoneReached(address indexed user, uint256 milestone);
     event JournalLogged(address indexed user, uint256 day, bytes32 contentHash);
+    event UsernameSet(address indexed user, string username, uint256 timestamp);
+    event VisibilityUpdated(address indexed user, string visibilitySetting, uint256 timestamp);
 
     // ── Modifiers ──────────────────────────────────────────────
     modifier onlyAuthorized() {
@@ -112,7 +115,7 @@ contract ProovCore is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reentr
     function completeHabit(
         address user,
         uint256 habitId,
-        bytes32 verificationHash
+        bytes32 /* verificationHash */
     ) external nonReentrant onlyAuthorized {
         require(habitId < _habits[user].length, "ProovCore: habit not found");
         require(_habits[user][habitId].active, "ProovCore: habit inactive");
@@ -127,7 +130,7 @@ contract ProovCore is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reentr
     // Called directly by user for fitness/manual habits after AI verification
     function selfCompleteHabit(
         uint256 habitId,
-        bytes32 verificationHash // hash of AI verification response
+        bytes32 /* verificationHash */
     ) external nonReentrant {
         require(habitId < _habits[msg.sender].length, "ProovCore: habit not found");
         require(_habits[msg.sender][habitId].active, "ProovCore: habit inactive");
@@ -144,6 +147,82 @@ contract ProovCore is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reentr
         require(_habits[msg.sender][habitId].active, "ProovCore: habit not active");
         _habits[msg.sender][habitId].active = false;
         emit HabitDeactivated(msg.sender, habitId);
+    }
+
+    // ── New user-facing overloads (string-based API) ───────────
+
+    function createHabit(
+        string calldata name,
+        string calldata /* category */,
+        bool /* isTimed */,
+        uint256 durationSeconds
+    ) external nonReentrant returns (uint256) {
+        _registerUser(msg.sender);
+        uint256 id = _habits[msg.sender].length;
+        _habits[msg.sender].push(Habit({
+            id: id,
+            name: name,
+            habitType: HabitType.CUSTOM,
+            targetDuration: durationSeconds,
+            frequency: Frequency.DAILY,
+            createdAt: block.timestamp,
+            active: true
+        }));
+        emit HabitCreated(msg.sender, id, name, block.timestamp);
+        return id;
+    }
+
+    function completeHabit(uint256 habitId) external nonReentrant {
+        require(habitId < _habits[msg.sender].length, "ProovCore: habit not found");
+        require(_habits[msg.sender][habitId].active, "ProovCore: habit inactive");
+        uint256 today = block.timestamp / 86400;
+        dailyCompletions[msg.sender][today]++;
+        _updateStreak(msg.sender, today);
+        emit HabitCompleted(msg.sender, habitId, stats[msg.sender].currentStreak, block.timestamp);
+    }
+
+    function removeHabit(uint256 habitId) external nonReentrant {
+        require(habitId < _habits[msg.sender].length, "ProovCore: habit not found");
+        require(_habits[msg.sender][habitId].active, "ProovCore: habit not active");
+        _habits[msg.sender][habitId].active = false;
+        emit HabitDeactivated(msg.sender, habitId);
+    }
+
+    function editHabit(
+        uint256 habitId,
+        string calldata name,
+        string calldata /* category */,
+        bool /* isTimed */,
+        uint256 durationSeconds
+    ) external nonReentrant {
+        require(habitId < _habits[msg.sender].length, "ProovCore: habit not found");
+        require(_habits[msg.sender][habitId].active, "ProovCore: habit inactive");
+        _habits[msg.sender][habitId].name = name;
+        _habits[msg.sender][habitId].targetDuration = durationSeconds;
+        emit HabitEdited(msg.sender, habitId, name, block.timestamp);
+    }
+
+    function recordStreakIncrement(uint256 newStreakCount) external {
+        _registerUser(msg.sender);
+        if (newStreakCount > stats[msg.sender].currentStreak) {
+            stats[msg.sender].currentStreak = newStreakCount;
+            if (newStreakCount > stats[msg.sender].longestStreak) {
+                stats[msg.sender].longestStreak = newStreakCount;
+            }
+            emit StreakUpdated(msg.sender, newStreakCount, stats[msg.sender].longestStreak, block.timestamp);
+        }
+    }
+
+    function setUsername(string calldata username) external {
+        emit UsernameSet(msg.sender, username, block.timestamp);
+    }
+
+    function editUsername(string calldata newUsername) external {
+        emit UsernameSet(msg.sender, newUsername, block.timestamp);
+    }
+
+    function updateVisibility(string calldata visibilitySetting) external {
+        emit VisibilityUpdated(msg.sender, visibilitySetting, block.timestamp);
     }
 
     // ── Journal ────────────────────────────────────────────────

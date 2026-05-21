@@ -1,8 +1,8 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useAccount, useWriteContract } from 'wagmi';
-import { withCeloFee } from '@/lib/constants';
+import { useAccount } from 'wagmi';
+import { useProovTx } from '@/hooks/useProovTx';
 import {
   IconBolt,
   IconArrowLeft,
@@ -19,11 +19,6 @@ type TimerView = 'pick' | 'setup' | 'running' | 'done';
 
 const STOPS = [5, 10, 15, 20, 25, 30, 45, 60, 90, 120, 180, 240];
 const CIRC = 2 * Math.PI * 84;
-
-const SESSION_ABI = [
-  { name: 'startSession', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'habitId', type: 'uint256' }], outputs: [] },
-  { name: 'endSession',   type: 'function', stateMutability: 'nonpayable', inputs: [], outputs: [] },
-] as const;
 
 function snapToStop(val: number) {
   return STOPS.reduce((p, c) => Math.abs(c - val) < Math.abs(p - val) ? c : p);
@@ -46,7 +41,7 @@ function fmtTime(secs: number) {
 export default function GrindTimerPage() {
   const searchParams = useSearchParams();
   const { isConnected } = useAccount();
-  const { writeContract } = useWriteContract();
+  const proovTx = useProovTx();
 
   const [view, setView] = useState<TimerView>('pick');
   const [timedHabits, setTimedHabits] = useState<Habit[]>([]);
@@ -198,15 +193,8 @@ export default function GrindTimerPage() {
       } catch {}
 
       // Silent background endSession
-      if (isConnected && process.env.NEXT_PUBLIC_SESSION_MANAGER_ADDRESS) {
-        try {
-          writeContract(withCeloFee({
-            address: process.env.NEXT_PUBLIC_SESSION_MANAGER_ADDRESS as `0x${string}`,
-            abi: SESSION_ABI,
-            functionName: 'endSession' as const,
-            args: [] as [],
-          }));
-        } catch {}
+      if (isConnected) {
+        proovTx.endSession(0, true);
       }
     }
   }, [view, selectedHabit, duration, isConnected]);
@@ -267,15 +255,10 @@ export default function GrindTimerPage() {
       sessionId: newSessionId,
     }));
 
-    if (isConnected && process.env.NEXT_PUBLIC_SESSION_MANAGER_ADDRESS && !isCustom && selectedHabit) {
-      try {
-        writeContract(withCeloFee({
-          address: process.env.NEXT_PUBLIC_SESSION_MANAGER_ADDRESS as `0x${string}`,
-          abi: SESSION_ABI,
-          functionName: 'startSession' as const,
-          args: [BigInt(selectedHabit.id)] as [bigint],
-        }));
-      } catch {}
+    if (isConnected && !isCustom && selectedHabit) {
+      proovTx.startSession((selectedHabit as any)?.on_chain_id || 0, duration);
+    } else if (isConnected && isCustom) {
+      proovTx.startCustomSession(customLabel || `${duration}m session`, duration);
     }
   };
 
@@ -284,17 +267,19 @@ export default function GrindTimerPage() {
     const streak = parseInt(localStorage.getItem('proov_streak_count') || '0');
 
     if (!isCustom && selectedHabit) {
-      // Save habit completion to Supabase
       await saveHabitCompletion(selectedHabit.id, address, streak).catch(() => {});
+      if (isConnected) {
+        proovTx.completeHabit((selectedHabit as any)?.on_chain_id || 0);
+        proovTx.endSession(0, true);
+      }
     }
 
     if (isCustom && sessionId) {
-      // Mark custom session completed in Supabase
       await updateTimerSession(sessionId, {
         ended_at: new Date().toISOString(),
         completed: true,
       }).catch(() => {});
-      // Refresh history
+      if (isConnected) proovTx.endCustomSession(0, true);
       getCustomSessionHistory(address).then(setCustomHistory).catch(() => {});
     }
 
@@ -311,6 +296,10 @@ export default function GrindTimerPage() {
   const cancelTimer = () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     localStorage.removeItem('proov_active_timer');
+    if (isConnected) {
+      if (isCustom) proovTx.endCustomSession(0, false);
+      else proovTx.cancelSession(0);
+    }
     setView('pick');
   };
 

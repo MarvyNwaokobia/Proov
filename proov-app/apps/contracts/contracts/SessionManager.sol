@@ -36,6 +36,8 @@ contract SessionManager is Initializable, UUPSUpgradeable, OwnableUpgradeable, R
     event SessionCompleted(address indexed user, uint256 indexed habitId, uint256 duration);
     event SessionEnded(address indexed user, uint256 indexed habitId, uint256 duration, uint256 timestamp);
     event SessionAbandoned(address indexed user, uint256 indexed habitId, uint256 duration);
+    event CustomSessionStarted(address indexed user, string label, uint256 startTimestamp);
+    event CustomSessionEnded(address indexed user, uint256 duration, bool completed);
 
     // ── UUPS ───────────────────────────────────────────────────
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -116,6 +118,79 @@ contract SessionManager is Initializable, UUPSUpgradeable, OwnableUpgradeable, R
 
     function getHistory(address user) external view returns (Session[] memory) {
         return sessionHistory[user];
+    }
+
+    // ── New overloads with extended params ─────────────────────
+
+    function startSession(uint256 habitId, uint256 /* durationSeconds */) external nonReentrant returns (uint256) {
+        require(!activeSession[msg.sender].active, "SessionManager: session already active");
+        activeSession[msg.sender] = Session({
+            habitId: habitId,
+            startTimestamp: block.timestamp,
+            endTimestamp: 0,
+            duration: 0,
+            completed: false,
+            active: true
+        });
+        emit SessionStarted(msg.sender, habitId, block.timestamp);
+        return sessionHistory[msg.sender].length;
+    }
+
+    function endSession(uint256 /* sessionId */, bool completed) external nonReentrant {
+        Session storage s = activeSession[msg.sender];
+        require(s.active, "SessionManager: no active session");
+        uint256 duration = block.timestamp - s.startTimestamp;
+        s.endTimestamp = block.timestamp;
+        s.duration = duration;
+        s.active = false;
+        s.completed = completed;
+        if (completed) {
+            proovCore.completeHabit(msg.sender, s.habitId, bytes32(0));
+            emit SessionCompleted(msg.sender, s.habitId, duration);
+        }
+        emit SessionEnded(msg.sender, s.habitId, duration, block.timestamp);
+        sessionHistory[msg.sender].push(s);
+        delete activeSession[msg.sender];
+    }
+
+    function cancelSession(uint256 /* sessionId */) external nonReentrant {
+        Session storage s = activeSession[msg.sender];
+        require(s.active, "SessionManager: no active session");
+        uint256 duration = block.timestamp - s.startTimestamp;
+        s.endTimestamp = block.timestamp;
+        s.duration = duration;
+        s.active = false;
+        s.completed = false;
+        sessionHistory[msg.sender].push(s);
+        delete activeSession[msg.sender];
+        emit SessionAbandoned(msg.sender, s.habitId, duration);
+    }
+
+    function startCustomSession(string calldata label, uint256 /* durationSeconds */) external nonReentrant returns (uint256) {
+        require(!activeSession[msg.sender].active, "SessionManager: session already active");
+        activeSession[msg.sender] = Session({
+            habitId: type(uint256).max,
+            startTimestamp: block.timestamp,
+            endTimestamp: 0,
+            duration: 0,
+            completed: false,
+            active: true
+        });
+        emit CustomSessionStarted(msg.sender, label, block.timestamp);
+        return sessionHistory[msg.sender].length;
+    }
+
+    function endCustomSession(uint256 /* sessionId */, bool completed) external nonReentrant {
+        Session storage s = activeSession[msg.sender];
+        require(s.active, "SessionManager: no active session");
+        uint256 duration = block.timestamp - s.startTimestamp;
+        s.endTimestamp = block.timestamp;
+        s.duration = duration;
+        s.active = false;
+        s.completed = completed;
+        emit CustomSessionEnded(msg.sender, duration, completed);
+        sessionHistory[msg.sender].push(s);
+        delete activeSession[msg.sender];
     }
 
     receive() external payable { revert("SessionManager: no ETH accepted"); }

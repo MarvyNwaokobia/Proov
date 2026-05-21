@@ -9,6 +9,7 @@ import {
   getUserHabits, saveHabit, deactivateHabit as supabaseDeactivate,
   getTodayCompletions, saveHabitCompletion, type Habit,
 } from "@/lib/supabase";
+import { useProovTx } from "@/hooks/useProovTx";
 import { HABIT_CATEGORIES, getCategoryById, Frequency } from "@/lib/constants";
 import { HABIT_TEMPLATES, ARCHETYPE_LABELS, type Archetype } from "@/lib/habitTemplates";
 
@@ -378,6 +379,7 @@ export default function HabitsPage() {
   const [prefill, setPrefill] = useState<{ name: string; categoryId: string; duration: number } | undefined>();
   const [catFilter, setCatFilter] = useState("All");
   const [suggestionCategory, setSuggestionCategory] = useState('Focus');
+  const proovTx = useProovTx();
 
   // ── Load from Supabase ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -420,6 +422,7 @@ export default function HabitsPage() {
       active: true,
     });
     if (saved) {
+      proovTx.createHabit(data.name, data.catId, data.hasTimer, data.hasTimer ? data.duration : 0);
       setHabits(prev => [...prev, saved]);
       const cached = JSON.parse(localStorage.getItem('proov_habits_cache') || '[]');
       localStorage.setItem('proov_habits_cache', JSON.stringify([...cached, saved]));
@@ -432,7 +435,9 @@ export default function HabitsPage() {
 
   // ── Remove habit ────────────────────────────────────────────────────────────
   const handleRemove = async (habitId: string) => {
+    const habit = habits.find(h => h.id === habitId);
     await supabaseDeactivate(habitId);
+    proovTx.removeHabit((habit as any)?.on_chain_id || 0);
     setHabits(prev => prev.filter(h => h.id !== habitId));
     const cached = JSON.parse(localStorage.getItem('proov_habits_cache') || '[]');
     localStorage.setItem('proov_habits_cache', JSON.stringify(cached.filter((h: any) => h.id !== habitId)));
@@ -482,6 +487,7 @@ export default function HabitsPage() {
       active: true,
     });
     if (saved) {
+      proovTx.createHabit(s.name, suggestionCategory.toLowerCase(), s.type === 'timed', s.duration || 0);
       setHabits(prev => [...prev, saved]);
       const cached = JSON.parse(localStorage.getItem('proov_habits_cache') || '[]');
       localStorage.setItem('proov_habits_cache', JSON.stringify([...cached, saved]));

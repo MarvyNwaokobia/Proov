@@ -5,6 +5,7 @@ import { useAccount } from 'wagmi';
 import Link from 'next/link';
 import { getLeaderboard, getUserStats } from '@/lib/goldsky';
 import { getUsernameForAddress, getUserHabits, getTodayCompletions, saveHabitCompletion, type Habit } from '@/lib/supabase';
+import { useProovTx } from '@/hooks/useProovTx';
 import { Walkthrough } from '@/components/shared/Walkthrough';
 import {
   IconFlame,
@@ -54,6 +55,7 @@ export default function DashboardPage() {
   const [userRank, setUserRank] = useState(0);
   const [showWalkthrough, setShowWalkthrough] = useState(false);
   const [streakFlipped, setStreakFlipped] = useState(false);
+  const proovTx = useProovTx();
 
   useEffect(() => {
     const isAuth = localStorage.getItem('proov_authenticated') === 'true';
@@ -172,11 +174,20 @@ export default function DashboardPage() {
   const handleToggleHabit = async (habitId: string) => {
     if (completedToday.includes(habitId)) return;
     const addr = localStorage.getItem('proov_address') || '';
-    setCompletedToday(prev => [...prev, habitId]);
+    const newCompleted = [...completedToday, habitId];
+    setCompletedToday(newCompleted);
     showToast('Saved ✓');
     const streak = parseInt(localStorage.getItem('proov_streak_count') || '0');
     await saveHabitCompletion(habitId, addr, streak).catch(() => {});
+    const habit = habits.find(h => h.id === habitId);
+    proovTx.completeHabit((habit as any)?.on_chain_id || 0);
     updateStreak(true);
+    // Record streak on-chain when all habits are done
+    const allDone = habits.every(h => newCompleted.includes(h.id));
+    if (allDone && habits.length > 0) {
+      proovTx.recordStreakIncrement(currentStreak + 1);
+      showToast(`🔥 ${currentStreak + 1} day streak!`);
+    }
   };
 
   const updateStreak = (hasCompletion: boolean) => {
