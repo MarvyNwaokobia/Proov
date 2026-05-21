@@ -9,21 +9,16 @@ import {
   IconArrowLeft,
   IconClock,
 } from '@tabler/icons-react';
-
-interface Habit {
-  id: string;
-  name: string;
-  emoji: string;
-  hasTimer: boolean;
-  targetDuration?: number;
-  category?: string;
-  active?: boolean;
-}
+import {
+  getUserHabits, saveHabitCompletion,
+  saveTimerSession, updateTimerSession, getCustomSessionHistory,
+  type Habit, type TimerSession,
+} from '@/lib/supabase';
 
 type TimerView = 'pick' | 'setup' | 'running' | 'done';
 
 const STOPS = [5, 10, 15, 20, 25, 30, 45, 60, 90, 120, 180, 240];
-const CIRC = 2 * Math.PI * 54;
+const CIRC = 2 * Math.PI * 90;
 
 const SESSION_ABI = [
   { name: 'startSession', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'habitId', type: 'uint256' }], outputs: [] },
@@ -54,8 +49,12 @@ export default function GrindTimerPage() {
   const { writeContract } = useWriteContract();
 
   const [view, setView] = useState<TimerView>('pick');
-  const [habits, setHabits] = useState<Habit[]>([]);
+  const [timedHabits, setTimedHabits] = useState<Habit[]>([]);
   const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
+  const [sessionHabitName, setSessionHabitName] = useState('');
+  const [sessionDuration, setSessionDuration] = useState(0);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [customHistory, setCustomHistory] = useState<TimerSession[]>([]);
   const [isCustom, setIsCustom] = useState(false);
   const [customLabel, setCustomLabel] = useState('');
   const [search, setSearch] = useState('');
@@ -102,34 +101,41 @@ export default function GrindTimerPage() {
     };
   }, [view]); // re-attach when view changes (slider mounts/unmounts)
 
-  // Load habits + restore active timer
+  // Load habits + restore active timer + load custom session history
   useEffect(() => {
-    const raw = localStorage.getItem('proov_habits');
-    if (raw) {
-      try {
-        const all: Habit[] = JSON.parse(raw);
-        setHabits(all.filter(h => h.active !== false && h.hasTimer));
-      } catch {}
-    }
+    const address = localStorage.getItem('proov_address') || '';
 
-    const habitId = searchParams.get('habitId');
-    if (habitId && raw) {
-      try {
-        const all: Habit[] = JSON.parse(raw);
-        const found = all.find(h => h.id === habitId);
-        if (found) {
-          setSelectedHabit(found);
-          const d = found.targetDuration || 25;
-          setDuration(d); setSliderDisplay(d);
-          setView('setup');
+    // Load timed habits from Supabase
+    if (address) {
+      getUserHabits(address).then(all => {
+        const timed = all.filter(h => h.type === 'timed');
+        setTimedHabits(timed);
+
+        // Deep-link: pre-select habit by id from URL
+        const habitId = searchParams.get('habitId');
+        if (habitId) {
+          const found = timed.find(h => h.id === habitId);
+          if (found) {
+            setSelectedHabit(found);
+            const d = found.duration_minutes || 25;
+            setDuration(d); setSliderDisplay(d);
+            setView('setup');
+          }
         }
-      } catch {}
+      }).catch(() => {
+        const cached = JSON.parse(localStorage.getItem('proov_habits_cache') || '[]');
+        setTimedHabits(cached.filter((h: any) => h.type === 'timed'));
+      });
+
+      // Load custom session history
+      getCustomSessionHistory(address).then(setCustomHistory).catch(() => {});
     }
 
+    // Restore active timer if still running
     const saved = localStorage.getItem('proov_active_timer');
     if (saved) {
       try {
-        const { habitId: hId, startedAt, duration: d, isCustom: ic, customLabel: cl } = JSON.parse(saved);
+        const { habitId: hId, startedAt, duration: d, isCustom: ic, customLabel: cl, sessionId: sid } = JSON.parse(saved);
         const elapsed = Math.floor((Date.now() - startedAt) / 1000);
         const total = d * 60;
         if (elapsed < total) {
@@ -137,11 +143,13 @@ export default function GrindTimerPage() {
           setDuration(d); setSliderDisplay(d);
           setIsCustom(ic || false);
           setCustomLabel(cl || '');
+          setSessionDuration(d);
+          if (sid) setSessionId(sid);
           setView('running');
-          if (hId && raw) {
-            const all: Habit[] = JSON.parse(raw);
-            const found = all.find(h => h.id === hId);
-            if (found) setSelectedHabit(found);
+          if (hId) {
+            const cached = JSON.parse(localStorage.getItem('proov_habits_cache') || '[]');
+            const found = (cached as Habit[]).find(h => h.id === hId);
+            if (found) { setSelectedHabit(found); setSessionHabitName(found.name); }
           }
         } else {
           localStorage.removeItem('proov_active_timer');
@@ -224,17 +232,41 @@ export default function GrindTimerPage() {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [view]);
 
-  const startTimer = () => {
+  const startTimer = async () => {
     const now = Date.now();
+    // Capture for completion message (Fix 4)
+    setSessionHabitName(selectedHabit?.name || '');
+    setSessionDuration(duration);
     setSecondsLeft(duration * 60);
     setView('running');
+
+    let newSessionId: string | null = null;
+
+    // Save custom session to Supabase (Fix 5)
+    if (isCustom) {
+      const address = localStorage.getItem('proov_address') || '';
+      const saved = await saveTimerSession({
+        user_address: address.toLowerCase(),
+        habit_id: null,
+        label: customLabel || null,
+        duration_minutes: duration,
+        started_at: new Date(now).toISOString(),
+        ended_at: null,
+        is_custom: true,
+        completed: false,
+      }).catch(() => null);
+      if (saved) { newSessionId = saved.id; setSessionId(saved.id); }
+    }
+
     localStorage.setItem('proov_active_timer', JSON.stringify({
       habitId: selectedHabit?.id || null,
       startedAt: now,
       duration,
       isCustom,
       customLabel,
+      sessionId: newSessionId,
     }));
+
     if (isConnected && process.env.NEXT_PUBLIC_SESSION_MANAGER_ADDRESS && !isCustom && selectedHabit) {
       try {
         writeContract(withCeloFee({
@@ -247,22 +279,33 @@ export default function GrindTimerPage() {
     }
   };
 
-  const confirmDone = () => {
+  const confirmDone = async () => {
+    const address = localStorage.getItem('proov_address') || '';
+    const streak = parseInt(localStorage.getItem('proov_streak_count') || '0');
+
     if (!isCustom && selectedHabit) {
-      const today = new Date().toDateString();
-      const key = `proov_completions_${today}`;
-      const completions: string[] = JSON.parse(localStorage.getItem(key) || '[]');
-      if (!completions.includes(selectedHabit.id)) {
-        completions.push(selectedHabit.id);
-        localStorage.setItem(key, JSON.stringify(completions));
-      }
+      // Save habit completion to Supabase
+      await saveHabitCompletion(selectedHabit.id, address, streak).catch(() => {});
     }
-    // endSession already fired silently when timer completed
+
+    if (isCustom && sessionId) {
+      // Mark custom session completed in Supabase
+      await updateTimerSession(sessionId, {
+        ended_at: new Date().toISOString(),
+        completed: true,
+      }).catch(() => {});
+      // Refresh history
+      getCustomSessionHistory(address).then(setCustomHistory).catch(() => {});
+    }
+
     setView('pick');
     setSelectedHabit(null);
     setIsCustom(false);
     setCustomLabel('');
     setSecondsLeft(0);
+    setSessionId(null);
+    setSessionHabitName('');
+    setSessionDuration(0);
   };
 
   const cancelTimer = () => {
@@ -279,13 +322,13 @@ export default function GrindTimerPage() {
   const isRunning = view === 'running';
   const isDone = view === 'done';
 
-  const filteredHabits = habits.filter(h =>
+  const filteredHabits = timedHabits.filter(h =>
     h.name.toLowerCase().includes(search.toLowerCase())
   );
 
   const selectHabit = (habit: Habit) => {
     setSelectedHabit(habit);
-    const d = habit.targetDuration || 25;
+    const d = habit.duration_minutes || 25;
     setDuration(d);
     setSliderDisplay(d);
     setView('setup');
@@ -310,11 +353,11 @@ export default function GrindTimerPage() {
 
         {/* Timer ring — always visible */}
         <div style={{ display: 'flex', justifyContent: 'center', padding: '1.25rem 0 1rem' }}>
-          <div style={{ position: 'relative', width: 160, height: 160 }}>
+          <div style={{ position: 'relative', width: 220, height: 220 }}>
             {/* Pulse glow when running */}
             {(isRunning || isDone) && (
               <div style={{
-                position: 'absolute', inset: -16, borderRadius: '50%',
+                position: 'absolute', inset: -24, borderRadius: '50%',
                 background: 'radial-gradient(circle, var(--accent-bg), transparent 65%)',
                 animation: 'timerPulse 2.5s ease-in-out infinite', pointerEvents: 'none',
               }} />
@@ -326,17 +369,17 @@ export default function GrindTimerPage() {
               }
             `}</style>
 
-            <svg width="160" height="160" style={{ transform: 'rotate(-90deg)', position: 'relative', zIndex: 1 }}>
+            <svg width="220" height="220" style={{ transform: 'rotate(-90deg)', position: 'relative', zIndex: 1 }}>
               {/* Track */}
-              <circle cx="80" cy="80" r="54" fill="none" stroke="var(--border2)" strokeWidth="8" />
+              <circle cx="110" cy="110" r="90" fill="none" stroke="var(--border2)" strokeWidth="8" />
               {/* Glow layer */}
               {(isRunning || isDone) && (
-                <circle cx="80" cy="80" r="54" fill="none" stroke="var(--accent)" strokeWidth="14"
+                <circle cx="110" cy="110" r="90" fill="none" stroke="var(--accent)" strokeWidth="14"
                   strokeLinecap="round" strokeDasharray={CIRC} strokeDashoffset={strokeDashoffset}
                   opacity="0.2" style={{ filter: 'blur(4px)', transition: 'stroke-dashoffset 1s linear' }} />
               )}
               {/* Progress ring */}
-              <circle cx="80" cy="80" r="54" fill="none" stroke="var(--accent)" strokeWidth="8"
+              <circle cx="110" cy="110" r="90" fill="none" stroke="var(--accent)" strokeWidth="10"
                 strokeLinecap="round" strokeDasharray={CIRC} strokeDashoffset={strokeDashoffset}
                 style={{ transition: 'stroke-dashoffset 1s linear' }} />
             </svg>
@@ -369,15 +412,17 @@ export default function GrindTimerPage() {
 
         {/* DONE */}
         {isDone && (
-          <div style={{ background: 'var(--success-bg)', border: '1px solid var(--success)', borderRadius: 16, padding: '1.25rem', textAlign: 'center', marginBottom: '1.25rem' }}>
-            <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--success-text)', marginBottom: 6 }}>
-              {isCustom
-                ? `${fmtDur(duration)} complete!`
-                : `${selectedHabit?.emoji} ${selectedHabit?.name} done!`}
-            </p>
-            {!isCustom && <p style={{ fontSize: 12, color: 'var(--text2)', marginBottom: '1rem' }}>Tap to save your streak</p>}
-            <button onClick={confirmDone} style={{ padding: '11px 28px', borderRadius: 12, border: 'none', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 14px var(--btn-primary-shadow)' }}>
-              {isCustom ? 'Nice work ✓. Session saved' : 'Mark complete'}
+          <div style={{ textAlign: 'center', padding: '1.5rem', background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', borderRadius: 16, marginTop: '1rem', marginBottom: '1.25rem' }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
+              {sessionHabitName
+                ? `${sessionHabitName} · ${sessionDuration < 60 ? `${sessionDuration}m` : `${sessionDuration / 60}h`} done`
+                : `${sessionDuration < 60 ? `${sessionDuration}m` : `${sessionDuration / 60}h`} session complete`}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: '1rem' }}>
+              {sessionHabitName ? "Keep showing up. That's the whole game." : 'Good work. Every session counts.'}
+            </div>
+            <button onClick={confirmDone} style={{ padding: '10px 24px', borderRadius: 12, border: 'none', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Mark complete
             </button>
           </div>
         )}
@@ -398,7 +443,7 @@ export default function GrindTimerPage() {
 
             {filteredHabits.length === 0 && (
               <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text3)', fontSize: 13 }}>
-                {habits.length === 0 ? (
+                {timedHabits.length === 0 ? (
                   <>
                     <div style={{ fontSize: 24, marginBottom: 8 }}>✅</div>
                     <p style={{ marginBottom: 8 }}>No timed habits yet</p>
@@ -421,7 +466,7 @@ export default function GrindTimerPage() {
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{habit.name}</div>
                     <div style={{ fontSize: 10, color: 'var(--text3)' }}>
-                      {habit.targetDuration ? `Target: ${fmtDur(habit.targetDuration)}` : ''}
+                      {habit.duration_minutes ? `Target: ${fmtDur(habit.duration_minutes)}` : ''}
                       {habit.category ? ` · ${habit.category}` : ''}
                     </div>
                   </div>
@@ -449,6 +494,57 @@ export default function GrindTimerPage() {
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><IconClock size={16} stroke={1.8} /> Custom session</span>
               </button>
             </div>
+
+            {/* Custom session history */}
+            {customHistory.length > 0 && (
+              <div style={{ marginTop: '1.5rem' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '0.75rem' }}>
+                  Recent sessions
+                </div>
+                {customHistory.map(session => {
+                  const dur = session.duration_minutes;
+                  const label = session.label || (dur < 60 ? `${dur}m session` : `${dur / 60}h session`);
+                  const date = new Date(session.started_at).toLocaleDateString('en', { month: 'short', day: 'numeric' });
+                  return (
+                    <div key={session.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--card-bg)', marginBottom: 8 }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{label}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text3)' }}>{date}</div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          onClick={() => {
+                            setDuration(session.duration_minutes);
+                            setSliderDisplay(session.duration_minutes);
+                            setCustomLabel(session.label || '');
+                            setIsCustom(true);
+                            setView('setup');
+                          }}
+                          style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text2)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => {
+                            setDuration(session.duration_minutes);
+                            setSliderDisplay(session.duration_minutes);
+                            setCustomLabel(session.label || '');
+                            setIsCustom(true);
+                            setSessionHabitName('');
+                            setSessionDuration(session.duration_minutes);
+                            setSecondsLeft(session.duration_minutes * 60);
+                            setView('running');
+                          }}
+                          style={{ padding: '5px 10px', borderRadius: 8, border: 'none', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                        >
+                          Redo
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -468,8 +564,8 @@ export default function GrindTimerPage() {
                 <span style={{ fontSize: 22 }}>{selectedHabit.emoji}</span>
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent-text)' }}>{selectedHabit.name}</div>
-                  {selectedHabit.targetDuration && (
-                    <div style={{ fontSize: 10, color: 'var(--text3)' }}>Target: {fmtDur(selectedHabit.targetDuration)}</div>
+                  {selectedHabit.duration_minutes > 0 && (
+                    <div style={{ fontSize: 10, color: 'var(--text3)' }}>Target: {fmtDur(selectedHabit.duration_minutes)}</div>
                   )}
                 </div>
               </div>
@@ -539,24 +635,6 @@ export default function GrindTimerPage() {
                     background: var(--btn-primary-bg); cursor: pointer; border: none;
                   }
                 `}</style>
-                {/* Stop labels */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-                  {STOPS.map(s => (
-                    <button
-                      key={s}
-                      onClick={() => { setSliderDisplay(s); setDuration(s); }}
-                      style={{
-                        fontSize: 8, padding: '2px 1px', background: 'none', border: 'none',
-                        cursor: 'pointer', fontFamily: 'inherit',
-                        color: sliderDisplay === s ? 'var(--accent-text)' : 'var(--text3)',
-                        fontWeight: sliderDisplay === s ? 700 : 400,
-                        transition: 'color .1s',
-                      }}
-                    >
-                      {s < 60 ? `${s}m` : `${s / 60}h`}
-                    </button>
-                  ))}
-                </div>
               </div>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: '1.25rem' }}>
