@@ -181,6 +181,49 @@ export async function updateHabitVisibility(
     .eq('id', habitId);
 }
 
+// ── TIMER SESSION FUNCTIONS ───────────────────────────────────────────────────
+
+export interface TimerSession {
+  id: string;
+  user_address: string;
+  habit_id: string | null;
+  label: string | null;
+  duration_minutes: number;
+  started_at: string;
+  ended_at: string | null;
+  is_custom: boolean;
+  completed: boolean;
+}
+
+export async function saveTimerSession(session: Omit<TimerSession, 'id'>): Promise<TimerSession | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('timer_sessions')
+    .insert(session)
+    .select()
+    .single();
+  if (error) { console.error('saveTimerSession error:', error); return null; }
+  return data;
+}
+
+export async function updateTimerSession(id: string, updates: Partial<TimerSession>): Promise<void> {
+  if (!supabase) return;
+  await supabase.from('timer_sessions').update(updates).eq('id', id);
+}
+
+export async function getCustomSessionHistory(userAddress: string): Promise<TimerSession[]> {
+  if (!supabase || !userAddress) return [];
+  const { data } = await supabase
+    .from('timer_sessions')
+    .select('*')
+    .eq('user_address', userAddress.toLowerCase())
+    .eq('is_custom', true)
+    .eq('completed', true)
+    .order('started_at', { ascending: false })
+    .limit(10);
+  return data || [];
+}
+
 /**
  * Update a username for an existing address.
  */
