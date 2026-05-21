@@ -122,74 +122,66 @@ export default function SignInPage() {
     if (c) connect({ connector: c });
   };
 
-  const finishWalletLogin = async (address: string) => {
-    const { getUsernameForAddress } = await import('@/lib/supabase');
-    const existingUsername = await getUsernameForAddress(address);
-    localStorage.setItem('proov_authenticated', 'true');
-    localStorage.setItem('proov_address', address);
-    if (existingUsername) {
-      localStorage.setItem('proov_username', existingUsername);
-      localStorage.setItem('proov_onboarding_done', '1');
-      localStorage.setItem('proov_tutorial_done', '1');
-      router.push('/dashboard');
-    } else {
-      localStorage.setItem('proov_is_new_user', 'true');
-      router.push('/username-setup');
-    }
-  };
-
-  const handleSpecificWallet = async (wallet: 'metamask' | 'valora' | 'coinbase' | 'walletconnect') => {
+  const handleSpecificWallet = async (
+    wallet: 'metamask' | 'valora' | 'coinbase' | 'walletconnect'
+  ) => {
     setLoading(true);
     setError('');
+
     try {
       let address = '';
 
-      if (wallet === 'metamask') {
+      if (wallet === 'metamask' || wallet === 'coinbase') {
         const eth = (window as any).ethereum;
-        if (eth && eth.isMetaMask) {
-          const accounts = await eth.request({ method: 'eth_requestAccounts' });
-          address = accounts[0];
-        } else if (eth && eth.providers) {
-          const mm = eth.providers.find((p: any) => p.isMetaMask);
-          if (mm) {
-            const accounts = await mm.request({ method: 'eth_requestAccounts' });
-            address = accounts[0];
-          } else {
+
+        if (!eth) {
+          if (wallet === 'metamask') {
             window.open('https://metamask.io/download/', '_blank');
-            setError('MetaMask not installed. Install it and try again.');
-            setLoading(false);
-            return;
+            setError('MetaMask not found. Install it and try again.');
+          } else {
+            window.open('https://www.coinbase.com/wallet/downloads', '_blank');
+            setError('Coinbase Wallet not found. Install it and try again.');
           }
-        } else {
-          window.open('https://metamask.io/download/', '_blank');
-          setError('MetaMask not installed. Install it and try again.');
           setLoading(false);
           return;
         }
-      }
 
-      else if (wallet === 'coinbase') {
-        const eth = (window as any).ethereum;
-        if (eth && eth.isCoinbaseWallet) {
-          const accounts = await eth.request({ method: 'eth_requestAccounts' });
-          address = accounts[0];
-        } else if (eth && eth.providers) {
-          const cb = eth.providers.find((p: any) => p.isCoinbaseWallet);
-          if (cb) {
-            const accounts = await cb.request({ method: 'eth_requestAccounts' });
-            address = accounts[0];
+        const providers: any[] = eth.providers || [];
+        let targetProvider: any = null;
+
+        if (providers.length > 0) {
+          if (wallet === 'metamask') {
+            // Coinbase spoofs isMetaMask — real MetaMask won't have isCoinbaseWallet
+            targetProvider =
+              providers.find((p: any) => p.isMetaMask && !p.isCoinbaseWallet) ||
+              providers.find((p: any) => p.isMetaMask);
           } else {
-            const accounts = await eth.request({ method: 'eth_requestAccounts' });
-            address = accounts[0];
+            targetProvider =
+              providers.find((p: any) => p.isCoinbaseWallet) ||
+              providers.find((p: any) => p.isCoinbaseBrowser);
           }
-        } else if (eth) {
-          const accounts = await eth.request({ method: 'eth_requestAccounts' });
-          address = accounts[0];
         } else {
-          window.open('https://www.coinbase.com/wallet/downloads', '_blank');
-          setError('Coinbase Wallet not found.');
+          targetProvider = eth;
+        }
+
+        if (!targetProvider) {
+          if (wallet === 'metamask') {
+            window.open('https://metamask.io/download/', '_blank');
+            setError('MetaMask not found. Install it or switch your default wallet.');
+          } else {
+            window.open('https://www.coinbase.com/wallet/downloads', '_blank');
+            setError('Coinbase Wallet not found.');
+          }
           setLoading(false);
           return;
+        }
+
+        try {
+          const accounts = await targetProvider.request({ method: 'eth_requestAccounts' });
+          address = accounts[0];
+        } catch (e: any) {
+          if (e?.code === 4001) { setError(''); setLoading(false); return; }
+          throw e;
         }
       }
 
@@ -197,18 +189,12 @@ export default function SignInPage() {
         const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
         if (isMobile) {
           window.location.href = 'celo://wallet';
-          setTimeout(() => {
-            const c = connectors[1] ?? connectors[0];
-            if (c) connect({ connector: c });
-            setLoading(false);
-          }, 2000);
-          return;
-        } else {
-          const c = connectors[1] ?? connectors[0];
-          if (c) connect({ connector: c });
-          setLoading(false);
-          return;
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
+        const c = connectors[1] ?? connectors[0];
+        if (c) connect({ connector: c });
+        setLoading(false);
+        return;
       }
 
       else if (wallet === 'walletconnect') {
@@ -224,10 +210,26 @@ export default function SignInPage() {
         return;
       }
 
-      await finishWalletLogin(address);
+      const { getUsernameForAddress } = await import('@/lib/supabase');
+      const existingUsername = await getUsernameForAddress(address);
+
+      localStorage.setItem('proov_authenticated', 'true');
+      localStorage.setItem('proov_address', address);
+
+      if (existingUsername) {
+        localStorage.setItem('proov_username', existingUsername);
+        localStorage.setItem('proov_onboarding_done', '1');
+        localStorage.setItem('proov_tutorial_done', '1');
+        router.push('/dashboard');
+      } else {
+        localStorage.setItem('proov_is_new_user', 'true');
+        router.push('/username-setup');
+      }
 
     } catch (e: any) {
-      if (e?.code === 4001) { setError(''); } else { setError(e?.message || 'Wallet connection failed.'); }
+      if (e?.code !== 4001) {
+        setError(e?.message || 'Wallet connection failed.');
+      }
     } finally {
       setLoading(false);
     }
