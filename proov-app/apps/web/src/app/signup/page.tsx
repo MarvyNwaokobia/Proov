@@ -47,6 +47,7 @@ export default function SignUpPage() {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showWalletPicker, setShowWalletPicker] = useState(false);
 
   useEffect(() => {
     if (isMiniPay()) {
@@ -91,10 +92,11 @@ export default function SignUpPage() {
     if (c) connect({ connector: c });
   };
 
-  const handleWalletConnect = async () => {
+  const handleSpecificWallet = async (wallet: 'metamask' | 'valora' | 'coinbase' | 'walletconnect') => {
     setLoading(true);
     setError('');
     try {
+      // MiniPay auto-connect takes priority regardless of chosen wallet
       const { isMiniPay } = await import('@/lib/minipay');
       if (isMiniPay()) {
         const accounts = await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
@@ -105,35 +107,41 @@ export default function SignUpPage() {
         return;
       }
 
-      if (typeof window !== 'undefined' && (window as any).ethereum) {
-        try {
+      let address = '';
+
+      if (wallet === 'metamask' || wallet === 'coinbase') {
+        if (typeof window !== 'undefined' && (window as any).ethereum) {
           const accounts = await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
-          if (accounts?.[0]) {
-            const addr = accounts[0];
-            const { getUsernameForAddress } = await import('@/lib/supabase');
-            const existing = await getUsernameForAddress(addr).catch(() => null);
-            localStorage.setItem('proov_authenticated', 'true');
-            localStorage.setItem('proov_address', addr);
-            if (existing) {
-              localStorage.setItem('proov_username', existing);
-              localStorage.setItem('proov_tutorial_done', '1');
-              router.push('/dashboard');
-            } else {
-              localStorage.setItem('proov_is_new_user', 'true');
-              router.push('/username-setup');
-            }
-            return;
-          }
-        } catch (walletErr: any) {
-          if (walletErr.code === 4001) { setError('Connection cancelled.'); setLoading(false); return; }
+          address = accounts[0];
+        } else {
+          setError('No wallet found. Install MetaMask at metamask.io');
+          setLoading(false);
+          return;
         }
+      } else {
+        // Valora / WalletConnect — fall back to wagmi injected connector
+        const c = connectors[1] ?? connectors[0];
+        if (c) connect({ connector: c });
+        setLoading(false);
+        return;
       }
 
-      // No injected wallet — fall back to wagmi connector[1] (injected shimDisconnect)
-      const c = connectors[1] ?? connectors[0];
-      if (c) connect({ connector: c });
+      if (!address) { setError('Could not get wallet address. Try again.'); setLoading(false); return; }
+
+      const { getUsernameForAddress } = await import('@/lib/supabase');
+      const existing = await getUsernameForAddress(address).catch(() => null);
+      localStorage.setItem('proov_authenticated', 'true');
+      localStorage.setItem('proov_address', address);
+      if (existing) {
+        localStorage.setItem('proov_username', existing);
+        localStorage.setItem('proov_tutorial_done', '1');
+        router.push('/dashboard');
+      } else {
+        localStorage.setItem('proov_is_new_user', 'true');
+        router.push('/username-setup');
+      }
     } catch (e: any) {
-      setError(e?.message || 'Wallet connection failed.');
+      if (e?.code === 4001) { setError(''); } else { setError(e?.message || 'Wallet connection failed.'); }
     } finally {
       setLoading(false);
     }
@@ -343,13 +351,13 @@ export default function SignUpPage() {
             </div>
 
             {/* Wallet connect */}
-            <button onClick={handleWalletConnect} disabled={loading || isPending}
+            <button onClick={() => setShowWalletPicker(true)} disabled={loading || isPending}
               style={{ ...socialBtnStyle, color: 'var(--text2)', fontSize: 13 }}
               onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg3)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
               <WalletIcon />
-              {loading ? 'Connecting…' : 'Continue with Wallet'}
+              Continue with Wallet
             </button>
 
             <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text3)', marginTop: '1rem' }}>
@@ -368,6 +376,45 @@ export default function SignUpPage() {
           </p>
         </div>
       </div>
+
+      {/* Wallet picker modal */}
+      {showWalletPicker && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 200, padding: '0 1rem 1rem' }}
+          onClick={() => setShowWalletPicker(false)}
+        >
+          <div
+            style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 20, padding: '1.5rem', width: '100%', maxWidth: 400 }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>Connect a wallet</div>
+            <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: '1.25rem' }}>Choose how you want to connect</div>
+
+            {[
+              { id: 'metamask' as const,      label: 'MetaMask',        icon: <img src="https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg" width={28} height={28} alt="MetaMask" /> },
+              { id: 'valora' as const,         label: 'Valora',          icon: <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg, #35D07F, #FBCC5C)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: '#fff' }}>V</div> },
+              { id: 'coinbase' as const,       label: 'Coinbase Wallet', icon: <div style={{ width: 28, height: 28, borderRadius: 8, background: '#0052FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#fff' }}>CB</div> },
+              { id: 'walletconnect' as const,  label: 'Other wallets',   icon: <div style={{ width: 28, height: 28, borderRadius: 8, background: '#3B99FC', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#fff' }}>WC</div> },
+            ].map(({ id, label, icon }) => (
+              <button key={id}
+                onClick={() => { setShowWalletPicker(false); handleSpecificWallet(id); }}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '12px 14px', borderRadius: 12, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text)', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 8, transition: 'all .15s' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg3)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                {icon}{label}
+              </button>
+            ))}
+
+            <button
+              onClick={() => setShowWalletPicker(false)}
+              style={{ width: '100%', padding: 10, borderRadius: 12, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text3)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
