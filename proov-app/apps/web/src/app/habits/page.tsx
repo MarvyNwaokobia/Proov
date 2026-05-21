@@ -2,8 +2,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  IconBrain, IconRun, IconYoga, IconBook, IconSalad, IconPalette, IconMoon,
-  IconClock, IconCheck, type Icon as TablerIcon,
+  IconBrain, IconRun, IconYoga, IconBook, IconSalad, IconPalette,
+  IconArrowLeft, type Icon as TablerIcon,
 } from '@tabler/icons-react';
 import {
   getUserHabits, saveHabit, deactivateHabit as supabaseDeactivate,
@@ -74,7 +74,6 @@ const CATEGORY_FILTERS: FilterEntry[] = [
   { value: "learning",     label: "Learning",  Icon: IconBook    },
   { value: "nutrition",    label: "Nutrition", Icon: IconSalad   },
   { value: "creative",     label: "Creative",  Icon: IconPalette },
-  { value: "sleep",        label: "Sleep",     Icon: IconMoon    },
 ];
 
 // ── DurationPicker ────────────────────────────────────────────────────────────
@@ -309,7 +308,9 @@ function TemplatesTab({ onUseTemplate }: { onUseTemplate: (t: typeof HABIT_TEMPL
   if (selected) {
     return (
       <div>
-        <button onClick={() => setSelected(null)} style={{ background: "none", border: "none", color: "var(--text3)", fontSize: 12, cursor: "pointer", fontFamily: "inherit", marginBottom: 14 }}>← Back</button>
+        <button onClick={() => setSelected(null)} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'var(--accent-text)', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', marginBottom: 16, padding: 0 }}>
+          <IconArrowLeft size={16} stroke={2.5} /> Back
+        </button>
         <div style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", borderRadius: 16, padding: "1.25rem", marginBottom: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
             <span style={{ fontSize: 28 }}>{selected.emoji}</span>
@@ -372,7 +373,7 @@ export default function HabitsPage() {
   const [toast, setToast] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<"all" | "templates">("all");
+  const [activeTab, setActiveTab] = useState<"my" | "all" | "templates">("my");
   const [showForm, setShowForm] = useState(false);
   const [prefill, setPrefill] = useState<{ name: string; categoryId: string; duration: number } | undefined>();
   const [catFilter, setCatFilter] = useState("All");
@@ -459,7 +460,7 @@ export default function HabitsPage() {
       const cached = JSON.parse(localStorage.getItem('proov_habits_cache') || '[]');
       localStorage.setItem('proov_habits_cache', JSON.stringify([...cached, ...saved]));
       showToast(`✓ ${saved.length} habits added`);
-      setActiveTab('all');
+      setActiveTab('my');
     }
     setIsSaving(false);
   };
@@ -546,17 +547,26 @@ export default function HabitsPage() {
 
         {/* Tab switcher */}
         {!showForm && (
-          <div style={{ display: "flex", gap: 4, marginBottom: 14 }}>
-            {(["all", "templates"] as const).map(tab => (
-              <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: "6px 14px", borderRadius: 14, fontSize: 11, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", border: `1px solid ${activeTab === tab ? "var(--accent)" : "var(--border)"}`, background: activeTab === tab ? "var(--accent-bg)" : "transparent", color: activeTab === tab ? "var(--accent-text)" : "var(--text3)" }}>
-                {tab === "all" ? "All habits" : "Templates"}
+          <div style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 12, padding: 4, gap: 3, marginBottom: 14 }}>
+            {([['my', 'My habits'], ['all', 'All habits'], ['templates', 'Templates']] as const).map(([tab, label]) => (
+              <button key={tab} onClick={() => setActiveTab(tab)} style={{
+                flex: 1, textAlign: 'center', padding: '7px 0',
+                borderRadius: 9, border: 'none', cursor: 'pointer',
+                fontFamily: 'inherit', fontSize: 12,
+                background: activeTab === tab ? 'var(--card-bg)' : 'transparent',
+                color: activeTab === tab ? 'var(--text)' : 'var(--text3)',
+                fontWeight: activeTab === tab ? 700 : 500,
+                boxShadow: activeTab === tab ? '0 1px 3px rgba(0,0,0,0.07)' : 'none',
+                transition: 'all 0.2s',
+              }}>
+                {label}
               </button>
             ))}
           </div>
         )}
 
-        {/* All habits tab */}
-        {activeTab === "all" && !showForm && (
+        {/* All habits / My habits tab */}
+        {(activeTab === "my" || activeTab === "all") && !showForm && (
           <>
             {/* Category filter */}
             <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 6, marginBottom: 12 }}>
@@ -578,34 +588,52 @@ export default function HabitsPage() {
                 <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: "var(--text3)", marginBottom: 8 }}>
                   Active · {filteredHabits.length}
                 </p>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: "1rem" }}>
+                <div style={{ marginBottom: "1rem" }}>
                   {filteredHabits.map(habit => {
-                    const cat = getCategoryById(habit.category);
                     const isDone = completedToday.includes(habit.id);
                     return (
-                      <div key={habit.id} style={{ background: "var(--card-bg)", border: `1px solid ${cat ? cat.color + "50" : "var(--card-border)"}`, borderRadius: 14, padding: ".875rem", display: "flex", flexDirection: "column", gap: 5, opacity: isDone ? 0.7 : 1 }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                          <span style={{ fontSize: 20 }}>{habit.emoji}</span>
-                          <span style={{ fontSize: 10, color: "var(--text3)" }}>{habit.visibility === "private" ? "🔒" : "👥"}</span>
+                      <div
+                        key={habit.id}
+                        style={{
+                          background: 'var(--card-bg)',
+                          border: '1px solid var(--border)',
+                          borderRadius: 14, padding: '12px 14px',
+                          marginBottom: 8,
+                          display: 'flex', gap: 12, alignItems: 'center',
+                          cursor: 'pointer', transition: 'border-color 0.15s',
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent-border)')}
+                        onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}>
+                        <span style={{ fontSize: 24 }}>{habit.emoji}</span>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{habit.name}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2, fontWeight: 600 }}>
+                            {habit.type === 'timed' ? `${habit.duration_minutes} min` : 'Tap'} · {habit.schedule} · {habit.category}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700, marginTop: 3 }}>
+                            🔥 {isDone ? '✓ Done today' : `${0} day streak`}
+                          </div>
                         </div>
-                        <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{habit.name}</p>
-                        <p style={{ fontSize: 10, color: "var(--text3)", margin: 0, display: "flex", alignItems: "center", gap: 3 }}>
-                          {habit.type === 'timed' ? <><IconClock size={12} stroke={1.8} />{habit.duration_minutes} min</> : <><IconCheck size={11} stroke={2.5} />Tap</>}
-                          {' · '}{habit.schedule}
-                        </p>
-                        <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
-                          {habit.type === 'checkbox' && !isDone && (
-                            <button onClick={() => handleToggleCompletion(habit.id)} style={{ flex: 1, padding: "4px 0", borderRadius: 6, border: "1px solid var(--accent-border)", background: "var(--accent-bg)", color: "var(--accent-text)", fontSize: 9, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-                              ✓ Done
-                            </button>
-                          )}
-                          {isDone && (
-                            <span style={{ flex: 1, textAlign: "center", fontSize: 9, color: "var(--accent-text)", fontWeight: 600, padding: "4px 0" }}>✓ Completed</span>
-                          )}
-                          <button onClick={() => handleRemove(habit.id)} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--text3)", fontSize: 9, cursor: "pointer", fontFamily: "inherit" }}>
-                            Remove
-                          </button>
-                        </div>
+                        <button
+                          onClick={e => { e.stopPropagation(); handleRemove(habit.id); }}
+                          style={{
+                            padding: '6px 12px', borderRadius: 9,
+                            border: '2px solid #f43f5e',
+                            background: 'transparent', color: '#f43f5e',
+                            fontSize: 12, fontWeight: 800,
+                            cursor: 'pointer', fontFamily: 'inherit',
+                            transition: 'all 0.15s',
+                          }}
+                          onMouseEnter={e => {
+                            (e.currentTarget as HTMLElement).style.background = '#f43f5e';
+                            (e.currentTarget as HTMLElement).style.color = '#fff';
+                          }}
+                          onMouseLeave={e => {
+                            (e.currentTarget as HTMLElement).style.background = 'transparent';
+                            (e.currentTarget as HTMLElement).style.color = '#f43f5e';
+                          }}>
+                          Remove
+                        </button>
                       </div>
                     );
                   })}
@@ -648,7 +676,7 @@ export default function HabitsPage() {
                       <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</div>
                       <div style={{ fontSize: 10, color: 'var(--text3)' }}>{s.type === 'timed' ? `${s.duration}m · Timed` : 'Checkbox'}</div>
                     </div>
-                    <span style={{ fontSize: 16, color: 'var(--accent-text)', flexShrink: 0 }}>+</span>
+                    <span style={{ fontSize: 22, color: 'var(--accent-text)', fontWeight: 900, lineHeight: 1, flexShrink: 0, transition: 'transform 0.15s' }}>+</span>
                   </button>
                 ))}
                 {filteredSuggestions.length === 0 && (
@@ -662,7 +690,7 @@ export default function HabitsPage() {
         )}
 
         {/* Templates tab */}
-        {activeTab === "templates" && !showForm && (
+        {activeTab === 'templates' && !showForm && (
           <TemplatesTab onUseTemplate={handleUseTemplate} />
         )}
 

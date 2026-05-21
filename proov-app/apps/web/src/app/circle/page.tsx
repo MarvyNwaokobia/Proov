@@ -203,8 +203,8 @@ export default function CirclePage() {
         {/* SECTION 1: Incoming requests */}
         {received.length > 0 && (
           <div style={{ marginBottom: '1.5rem' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--accent-text)', marginBottom: '0.75rem' }}>
-              {received.length} circle request{received.length > 1 ? 's' : ''}
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--accent-text)', margin: '14px 0 8px' }}>
+              {received.length} circle request{received.length !== 1 ? 's' : ''}
             </div>
             {received.map(req => {
               const username = usernameMap[req.from_address] || req.from_address.slice(0, 8);
@@ -227,7 +227,7 @@ export default function CirclePage() {
 
         {/* SECTION 2: Your circle (accepted) */}
         <div style={{ marginBottom: '1.5rem' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '0.75rem' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text3)', margin: '14px 0 8px' }}>
             Your circle · {accepted.length}
           </div>
           {loading ? (
@@ -266,7 +266,7 @@ export default function CirclePage() {
         {/* SECTION 3: Pending sent requests */}
         {sent.length > 0 && (
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '0.75rem' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text3)', margin: '14px 0 8px' }}>
               Pending · {sent.length}
             </div>
             {sent.map(req => {

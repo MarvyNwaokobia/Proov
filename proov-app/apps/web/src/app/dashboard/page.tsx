@@ -53,6 +53,7 @@ export default function DashboardPage() {
   const [lbTop, setLbTop] = useState<{ name: string; streak: number }[]>([]);
   const [userRank, setUserRank] = useState(0);
   const [showWalkthrough, setShowWalkthrough] = useState(false);
+  const [streakFlipped, setStreakFlipped] = useState(false);
 
   useEffect(() => {
     const isAuth = localStorage.getItem('proov_authenticated') === 'true';
@@ -154,6 +155,19 @@ export default function DashboardPage() {
   const completedCount = completedToday.length;
   const totalHabits = habits.length;
   const progressPercent = totalHabits > 0 ? (completedCount / totalHabits) * 100 : 0;
+  const totalCompletionDays = currentStreak;
+
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - 6 + i);
+    const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+    const isToday = i === 6;
+    return {
+      label: dayNames[d.getDay()],
+      completed: isToday ? completedToday.length > 0 : false,
+      isToday,
+    };
+  });
 
   const handleToggleHabit = async (habitId: string) => {
     if (completedToday.includes(habitId)) return;
@@ -219,7 +233,7 @@ export default function DashboardPage() {
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.875rem' }}>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>
               {greeting}
             </div>
             <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 2 }}>
@@ -231,45 +245,89 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        {/* Streak card */}
-        <div id="wt-streak-card" style={{
-          background: 'linear-gradient(135deg, var(--accent, #059669), var(--accent2, #047857))',
-          borderRadius: 16,
-          padding: '1rem',
-          marginBottom: '1rem',
-          position: 'relative',
-          overflow: 'hidden',
-          color: '#ffffff',
-        }}>
-          <div style={{ position: 'absolute', right: -20, top: -20, width: 90, height: 90, borderRadius: '50%', background: 'rgba(255,255,255,.08)', pointerEvents: 'none' }} />
-          <div style={{ position: 'relative', zIndex: 1 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'rgba(255,255,255,.65)', marginBottom: 4 }}>
-              Current streak
-            </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
-              <span style={{ fontSize: 36, fontWeight: 800, color: '#fff', letterSpacing: -2, lineHeight: 1 }}>
-                {currentStreak}
-              </span>
-              <span style={{ fontSize: 13, color: 'rgba(255,255,255,.75)', display: 'flex', alignItems: 'center', gap: 3 }}>days <IconFlame size={16} stroke={1.8} color="rgba(255,255,255,.8)" /></span>
-              <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-                <div style={{ fontSize: 9, color: 'rgba(255,255,255,.5)' }}>Best</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>{longestStreak}</div>
+        {/* Streak card — flippable */}
+        {!streakFlipped ? (
+          <div
+            id="wt-streak-card"
+            onClick={() => setStreakFlipped(true)}
+            style={{
+              background: 'var(--btn-primary-bg)',
+              borderRadius: 16, padding: 16,
+              marginBottom: 14, color: '#fff',
+              cursor: 'pointer',
+              transition: 'filter 0.2s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.filter = 'brightness(1.06)')}
+            onMouseLeave={e => (e.currentTarget.style.filter = 'brightness(1)')}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>
+                  Current streak
+                </div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                  <span style={{ fontSize: 38, fontWeight: 900, letterSpacing: -2, lineHeight: 1 }}>{currentStreak}</span>
+                  <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)' }}>days 🔥</span>
+                </div>
+              </div>
+              <div style={{ textAlign: 'right', fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>
+                Best
+                <div style={{ fontSize: 20, fontWeight: 800, color: '#fff' }}>{longestStreak}</div>
               </div>
             </div>
-            {/* Progress bar */}
-            <div style={{ background: 'rgba(255,255,255,.2)', borderRadius: 20, height: 4, marginBottom: 5 }}>
-              <div style={{
-                background: '#fff', borderRadius: 20, height: 4,
-                width: `${progressPercent}%`, transition: 'width .4s ease',
-              }} />
+            <div style={{ height: 3, background: 'rgba(255,255,255,0.2)', borderRadius: 2, marginTop: 12 }}>
+              <div style={{ height: '100%', background: 'rgba(255,255,255,0.85)', borderRadius: 2, width: `${progressPercent}%`, transition: 'width .4s ease' }} />
             </div>
-            <div style={{ fontSize: 9, color: 'rgba(255,255,255,.6)' }}>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 6 }}>
               {totalHabits === 0
                 ? 'Add a habit to start your streak'
-                : `${completedCount} of ${totalHabits} habits done today`}
+                : `${completedCount} of ${totalHabits} habits done today · tap for details`}
             </div>
           </div>
-        </div>
+        ) : (
+          <div
+            onClick={() => setStreakFlipped(false)}
+            style={{
+              background: 'var(--card-bg)',
+              border: '1px solid var(--border)',
+              borderRadius: 16, padding: 16,
+              marginBottom: 14, cursor: 'pointer',
+            }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text3)', marginBottom: 12 }}>
+              Streak details · tap to flip back
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+              {[
+                { num: currentStreak, label: 'Current', color: 'var(--accent-text)' },
+                { num: longestStreak, label: 'All-time best', color: 'var(--text)' },
+                { num: totalCompletionDays, label: 'Total days', color: 'var(--text)' },
+              ].map(s => (
+                <div key={s.label} style={{
+                  flex: 1, background: 'var(--bg2)', borderRadius: 12, padding: 10, textAlign: 'center',
+                }}>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: s.color }}>{s.num}</div>
+                  <div style={{ fontSize: 9, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 600 }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 5 }}>
+              {last7Days.map((day, i) => (
+                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                  <div style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600 }}>{day.label}</div>
+                  <div style={{
+                    width: 30, height: 30, borderRadius: 8,
+                    background: day.completed ? 'var(--btn-primary-bg)' : day.isToday ? 'transparent' : 'var(--bg2)',
+                    border: day.isToday ? '2px solid var(--accent-border)' : day.completed ? 'none' : '1px solid var(--border)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 13, fontWeight: 700,
+                    color: day.completed ? '#fff' : day.isToday ? 'var(--accent-text)' : 'var(--text3)',
+                  }}>
+                    {day.completed ? '✓' : day.isToday ? '•' : ''}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Today's habits */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -314,9 +372,9 @@ export default function DashboardPage() {
               );
             })}
             {/* Add habit cell */}
-            <button id="wt-add-habit" onClick={() => router.push('/habits')} style={{ border: '1.5px dashed var(--border2)', borderRadius: 14, padding: '12px', background: 'transparent', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 100 }}>
-              <span style={{ fontSize: 20, color: 'var(--text3)' }}>+</span>
-              <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'inherit' }}>Add habit</span>
+            <button id="wt-add-habit" onClick={() => router.push('/habits')} style={{ border: '2px dashed var(--border2)', borderRadius: 14, padding: '12px', background: 'transparent', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 100 }}>
+              <IconPlus size={22} stroke={1.5} color="var(--text3)" />
+              <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'inherit', marginTop: 4 }}>Add habit</span>
             </button>
           </div>
         )}
@@ -432,36 +490,28 @@ export default function DashboardPage() {
         </div>
 
         {/* Quick actions */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, paddingBottom: '1rem' }}>
-          <Link
-            href="/timer"
+        <div style={{ display: 'flex', gap: 10, marginTop: 14, paddingBottom: '1rem' }}>
+          <button
+            onClick={() => router.push('/timer')}
             style={{
-              padding: '13px', borderRadius: 14, border: 'none',
-              background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)',
-              fontSize: 13, fontWeight: 700, textDecoration: 'none', textAlign: 'center',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              boxShadow: '0 4px 14px var(--btn-primary-shadow)',
-              transition: 'transform .15s',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')}
-            onMouseLeave={e => (e.currentTarget.style.transform = '')}
-          >
-            <IconBolt size={16} stroke={2} /> Start session
-          </Link>
-          <Link
-            href="/habits"
+              flex: 1, padding: '11px 0', borderRadius: 12,
+              background: 'var(--btn-primary-bg)', border: 'none',
+              color: 'var(--btn-primary-text)', fontSize: 12, fontWeight: 700,
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}>
+            ⚡ Start session
+          </button>
+          <button
+            onClick={() => router.push('/habits')}
             style={{
-              padding: '13px', borderRadius: 14,
-              border: '1px solid var(--border2)', background: 'transparent',
-              color: 'var(--text2)', fontSize: 13, fontWeight: 500,
-              textDecoration: 'none', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              transition: 'all .15s',
-            }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent)'; (e.currentTarget as HTMLElement).style.color = 'var(--text)'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border2)'; (e.currentTarget as HTMLElement).style.color = 'var(--text2)'; }}
-          >
-            <IconPlus size={16} stroke={2} /> New habit
-          </Link>
+              flex: 1, padding: '11px 0', borderRadius: 12,
+              background: 'transparent',
+              border: '2px solid var(--accent-border)',
+              color: 'var(--accent-text)', fontSize: 12, fontWeight: 700,
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}>
+            + New habit
+          </button>
         </div>
 
       </div>

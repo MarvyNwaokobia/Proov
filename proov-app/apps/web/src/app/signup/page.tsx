@@ -225,115 +225,6 @@ export default function SignUpPage() {
     }
   };
 
-  const tabRowStyle: React.CSSProperties = {
-    display: 'flex',
-    background: 'var(--bg2)',
-    borderRadius: 10,
-    padding: 3,
-    marginBottom: '1.25rem',
-  };
-
-  const tabStyle = (active: boolean): React.CSSProperties => ({
-    flex: 1,
-    textAlign: 'center',
-    padding: '7px 0',
-    fontSize: 13,
-    fontWeight: active ? 600 : 500,
-    borderRadius: 8,
-    color: active ? 'var(--text)' : 'var(--text3)',
-    background: active ? 'var(--card-bg)' : 'transparent',
-    cursor: 'pointer',
-    boxShadow: active ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-    transition: 'all 0.15s ease',
-    border: 'none',
-    fontFamily: 'inherit',
-  });
-
-  const socialCardStyle: React.CSSProperties = {
-    background: 'var(--bg2)',
-    border: '1px solid var(--border)',
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 10,
-  };
-
-  const socialBtnStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '10px 14px',
-    borderRadius: 10,
-    border: '1px solid var(--border2)',
-    background: 'var(--card-bg)',
-    color: 'var(--text)',
-    fontSize: 14,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 7,
-    cursor: 'pointer',
-    fontFamily: 'inherit',
-    transition: 'background 0.15s',
-    boxSizing: 'border-box' as const,
-  };
-
-  const moreToggleStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '9px 14px',
-    borderRadius: 10,
-    border: '1px solid var(--border)',
-    background: 'var(--bg3)',
-    color: 'var(--text2)',
-    fontSize: 13,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    cursor: 'pointer',
-    fontFamily: 'inherit',
-    boxSizing: 'border-box' as const,
-  };
-
-  const chipRowStyle: React.CSSProperties = {
-    display: 'flex',
-    gap: 6,
-    marginTop: 8,
-  };
-
-  const chipStyle: React.CSSProperties = {
-    flex: 1,
-    padding: '7px 6px',
-    borderRadius: 8,
-    border: '1px solid var(--border)',
-    background: 'var(--card-bg)',
-    fontSize: 11,
-    color: 'var(--text2)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    cursor: 'pointer',
-    fontFamily: 'inherit',
-  };
-
-  const walletBtnStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '11px 14px',
-    borderRadius: 12,
-    border: '1.5px solid var(--accent)',
-    background: 'transparent',
-    color: 'var(--accent-text)',
-    fontSize: 14,
-    fontWeight: 600,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 9,
-    cursor: 'pointer',
-    fontFamily: 'inherit',
-    boxSizing: 'border-box' as const,
-    transition: 'all 0.15s ease',
-    marginBottom: 10,
-  };
-
   const footerLinkStyle: React.CSSProperties = {
     color: 'var(--accent-text)',
     fontWeight: 700,
@@ -351,7 +242,14 @@ export default function SignUpPage() {
 
         {/* Logo */}
         <div style={{ marginTop: '1.5rem', marginBottom: '1.25rem', textAlign: 'center' }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: 'linear-gradient(135deg, var(--accent), var(--accent2, var(--accent)))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, color: '#fff', margin: '0 auto 10px' }}>P</div>
+          <div style={{
+            width: 44, height: 44, borderRadius: 13,
+            background: 'var(--btn-primary-bg)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 12px',
+          }}>
+            <span style={{ fontSize: 22, fontWeight: 800, color: '#fff' }}>P</span>
+          </div>
           <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-.5px', marginBottom: 4 }}>Welcome to Proov</h2>
           <p style={{ fontSize: 13, color: 'var(--text2)' }}>Take accountability for your habits</p>
         </div>
@@ -359,77 +257,156 @@ export default function SignUpPage() {
         <div style={{ width: '100%', maxWidth: 400 }}>
 
           {/* Tab switcher */}
-          <div style={tabRowStyle}>
-            <button style={tabStyle(false)} onClick={() => router.push('/signin')}>Sign in</button>
-            <button style={tabStyle(true)}>Join free</button>
+          <div style={{
+            display: 'flex', background: 'var(--bg2)',
+            borderRadius: 12, padding: 4, gap: 4, marginBottom: 18,
+          }}>
+            <button
+              onClick={() => router.push('/signin')}
+              style={{
+                flex: 1, textAlign: 'center', padding: '9px 0',
+                borderRadius: 9, border: 'none', cursor: 'pointer',
+                fontFamily: 'inherit', fontSize: 13, transition: 'all 0.2s',
+                background: 'transparent',
+                color: 'var(--text3)',
+                fontWeight: 500,
+                boxShadow: 'none',
+              }}>
+              Sign in
+            </button>
+            <button
+              style={{
+                flex: 1, textAlign: 'center', padding: '9px 0',
+                borderRadius: 9, border: 'none', cursor: 'pointer',
+                fontFamily: 'inherit', fontSize: 13, transition: 'all 0.2s',
+                background: 'var(--card-bg)',
+                color: 'var(--text)',
+                fontWeight: 700,
+                boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
+              }}>
+              Join free
+            </button>
           </div>
 
           {/* Social card */}
-          <div style={socialCardStyle}>
+          <div style={{
+            background: 'var(--bg2)',
+            border: '1px solid var(--border)',
+            borderRadius: 16, padding: 12, marginBottom: 12,
+          }}>
             {error && <p style={{ fontSize: 12, color: '#f43f5e', marginBottom: 8 }}>{error}</p>}
 
             <button
-              style={socialBtnStyle}
               onClick={triggerConnect}
               disabled={isPending}
+              style={{
+                width: '100%', padding: '11px 14px', borderRadius: 11,
+                border: '1px solid var(--border)', background: 'var(--card-bg)',
+                color: 'var(--text)', fontSize: 13, fontWeight: 500,
+                display: 'flex', alignItems: 'center', gap: 11,
+                cursor: 'pointer', fontFamily: 'inherit', marginBottom: 8,
+                transition: 'background 0.15s', boxSizing: 'border-box' as const,
+              }}
               onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg3)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'var(--card-bg)')}
-            >
+              onMouseLeave={e => (e.currentTarget.style.background = 'var(--card-bg)')}>
               <GoogleIcon />
               Join with Google
             </button>
 
             <button
-              style={socialBtnStyle}
               onClick={triggerConnect}
               disabled={isPending}
+              style={{
+                width: '100%', padding: '11px 14px', borderRadius: 11,
+                border: '1px solid var(--border)', background: 'var(--card-bg)',
+                color: 'var(--text)', fontSize: 13, fontWeight: 500,
+                display: 'flex', alignItems: 'center', gap: 11,
+                cursor: 'pointer', fontFamily: 'inherit', marginBottom: 0,
+                transition: 'background 0.15s', boxSizing: 'border-box' as const,
+              }}
               onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg3)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'var(--card-bg)')}
-            >
+              onMouseLeave={e => (e.currentTarget.style.background = 'var(--card-bg)')}>
               <XIcon />
               Join with Twitter
             </button>
 
             <button
-              style={moreToggleStyle}
               onClick={() => setShowMoreSocial(v => !v)}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-                <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
-              </svg>
-              More social options
-              <span style={{ marginLeft: 'auto', fontSize: 11 }}>{showMoreSocial ? '↑' : '↓'}</span>
+              style={{
+                width: '100%', padding: '9px 14px', borderRadius: 11,
+                border: 'none', background: 'transparent',
+                color: 'var(--text3)', fontSize: 12,
+                display: 'flex', alignItems: 'center',
+                justifyContent: 'center', gap: 6,
+                cursor: 'pointer', fontFamily: 'inherit',
+                transition: 'color 0.15s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--text2)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text3)')}>
+              More options
+              <span style={{
+                fontSize: 10,
+                display: 'inline-block',
+                transition: 'transform 0.2s ease',
+                transform: showMoreSocial ? 'rotate(180deg)' : 'rotate(0deg)',
+              }}>▾</span>
             </button>
 
             {showMoreSocial && (
-              <div style={chipRowStyle}>
-                <button style={chipStyle} onClick={triggerConnect}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                  Facebook
-                </button>
-                <button style={chipStyle} onClick={triggerConnect}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="#5865F2"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
-                  Discord
-                </button>
-                <button style={chipStyle} onClick={triggerConnect}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="#FF4500"><path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z"/></svg>
-                  Reddit
-                </button>
+              <div style={{
+                display: 'flex', gap: 7,
+                padding: '7px 3px 2px',
+                justifyContent: 'center',
+                flexWrap: 'wrap' as const,
+              }}>
+                {[
+                  { label: 'Facebook', color: '#1877F2' },
+                  { label: 'Discord', color: '#5865F2' },
+                  { label: 'Reddit', color: '#FF4500' },
+                ].map(s => (
+                  <button
+                    key={s.label}
+                    onClick={() => triggerConnect()}
+                    style={{
+                      padding: '6px 14px', borderRadius: 20,
+                      border: '1px solid var(--border)',
+                      background: 'var(--card-bg)',
+                      color: 'var(--text2)', fontSize: 12, fontWeight: 500,
+                      cursor: 'pointer', fontFamily: 'inherit',
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      transition: 'all 0.15s ease',
+                    }}
+                    onMouseEnter={e => {
+                      (e.currentTarget as HTMLElement).style.borderColor = s.color;
+                      (e.currentTarget as HTMLElement).style.color = s.color;
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
+                      (e.currentTarget as HTMLElement).style.color = 'var(--text2)';
+                    }}>
+                    {s.label}
+                  </button>
+                ))}
               </div>
             )}
           </div>
 
           {/* Email section */}
           {!codeSent ? (
-            <div style={{ marginBottom: 10 }}>
+            <div style={{ marginBottom: 12 }}>
               {emailMethod === 'number' ? (
                 <input
                   type="tel"
                   value={phone}
                   onChange={e => setPhone(e.target.value)}
                   placeholder="+1 (555) 000-0000"
-                  style={{ marginBottom: 8, width: '100%', boxSizing: 'border-box' }}
+                  style={{
+                    width: '100%', padding: '11px 14px',
+                    borderRadius: 12, border: '1px solid var(--border)',
+                    background: 'var(--bg2)', color: 'var(--text)', fontSize: 13,
+                    marginBottom: 8, boxSizing: 'border-box' as const,
+                    outline: 'none', fontFamily: 'inherit',
+                  }}
                 />
               ) : (
                 <input
@@ -437,8 +414,14 @@ export default function SignUpPage() {
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="your@email.com"
-                  style={{ marginBottom: 8, width: '100%', boxSizing: 'border-box' }}
                   onKeyDown={e => e.key === 'Enter' && handleSendEmail()}
+                  style={{
+                    width: '100%', padding: '11px 14px',
+                    borderRadius: 12, border: '1px solid var(--border)',
+                    background: 'var(--bg2)', color: 'var(--text)', fontSize: 13,
+                    marginBottom: 8, boxSizing: 'border-box' as const,
+                    outline: 'none', fontFamily: 'inherit',
+                  }}
                 />
               )}
 
@@ -467,14 +450,14 @@ export default function SignUpPage() {
                   fontSize: 14, fontWeight: 600,
                   cursor: hasInput ? 'pointer' : 'not-allowed',
                   fontFamily: 'inherit', transition: 'all .15s',
-                  marginBottom: 10,
+                  marginBottom: 0,
                 }}
               >
                 {isPending ? 'Connecting...' : emailMethod === 'link' ? 'Send magic link' : emailMethod === 'code' ? 'Send code' : 'Send SMS code'}
               </button>
             </div>
           ) : emailMethod === 'link' ? (
-            <div style={{ textAlign: 'center', padding: '1rem 0', marginBottom: 10 }}>
+            <div style={{ textAlign: 'center', padding: '1rem 0', marginBottom: 12 }}>
               <div style={{ fontSize: 36, marginBottom: 10 }}>📬</div>
               <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>Check your inbox</p>
               <p style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6 }}>We sent a link to {email}</p>
@@ -483,7 +466,7 @@ export default function SignUpPage() {
               </button>
             </div>
           ) : (
-            <div style={{ textAlign: 'center', marginBottom: 10 }}>
+            <div style={{ textAlign: 'center', marginBottom: 12 }}>
               <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: '1rem' }}>
                 Enter the code sent to {emailMethod === 'number' ? phone : email}
               </p>
@@ -519,18 +502,35 @@ export default function SignUpPage() {
 
           {/* Wallet button */}
           <button
-            style={walletBtnStyle}
             onClick={() => setShowWalletPicker(true)}
             disabled={loading || isPending}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent-bg)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-          >
+            style={{
+              width: '100%', padding: 13, borderRadius: 13,
+              border: '2px solid var(--accent-border)',
+              background: 'transparent',
+              color: 'var(--accent-text)',
+              fontSize: 14, fontWeight: 700,
+              display: 'flex', alignItems: 'center',
+              justifyContent: 'center', gap: 10,
+              cursor: 'pointer', fontFamily: 'inherit',
+              marginTop: 10,
+              transition: 'all 0.2s cubic-bezier(.34,1.56,.64,1)',
+              boxSizing: 'border-box' as const,
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLElement).style.background = 'var(--accent-bg)';
+              (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLElement).style.background = 'transparent';
+              (e.currentTarget as HTMLElement).style.transform = '';
+            }}>
             <WalletIcon />
             Continue with Wallet
           </button>
 
           {/* Footer */}
-          <div style={{ textAlign: 'center', marginTop: '0.25rem' }}>
+          <div style={{ textAlign: 'center', marginTop: '0.75rem' }}>
             <p style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 8 }}>
               By joining you agree to our{' '}
               <a href="/terms" style={{ color: 'var(--accent-text)', textDecoration: 'none' }}>Terms</a>
