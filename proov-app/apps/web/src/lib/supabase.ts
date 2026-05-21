@@ -181,6 +181,72 @@ export async function updateHabitVisibility(
     .eq('id', habitId);
 }
 
+// ── CIRCLE FUNCTIONS ──────────────────────────────────────────────────────────
+
+export interface CircleRequest {
+  id: string;
+  from_address: string;
+  to_address: string;
+  status: 'pending' | 'accepted' | 'declined';
+  created_at: string;
+}
+
+export async function sendCircleRequest(
+  fromAddress: string,
+  toAddress: string
+): Promise<void> {
+  if (!supabase) return;
+  await supabase.from('circle_requests').upsert({
+    from_address: fromAddress.toLowerCase(),
+    to_address: toAddress.toLowerCase(),
+    status: 'pending',
+  }, { onConflict: 'from_address,to_address' });
+}
+
+export async function getCircleRequests(userAddress: string): Promise<{
+  sent: CircleRequest[];
+  received: CircleRequest[];
+  accepted: CircleRequest[];
+}> {
+  if (!supabase || !userAddress) return { sent: [], received: [], accepted: [] };
+  const addr = userAddress.toLowerCase();
+  const { data } = await supabase
+    .from('circle_requests')
+    .select('*')
+    .or(`from_address.eq.${addr},to_address.eq.${addr}`)
+    .order('created_at', { ascending: false });
+  const all: CircleRequest[] = data || [];
+  return {
+    sent:     all.filter(r => r.from_address === addr && r.status === 'pending'),
+    received: all.filter(r => r.to_address === addr   && r.status === 'pending'),
+    accepted: all.filter(r => r.status === 'accepted' && (r.from_address === addr || r.to_address === addr)),
+  };
+}
+
+export async function respondToCircleRequest(
+  requestId: string,
+  response: 'accepted' | 'declined'
+): Promise<void> {
+  if (!supabase) return;
+  await supabase
+    .from('circle_requests')
+    .update({ status: response })
+    .eq('id', requestId);
+}
+
+export async function getUsernamesForAddresses(
+  addresses: string[]
+): Promise<Record<string, string>> {
+  if (!supabase || addresses.length === 0) return {};
+  const { data } = await supabase
+    .from('profiles')
+    .select('address, username')
+    .in('address', addresses.map(a => a.toLowerCase()));
+  const map: Record<string, string> = {};
+  (data || []).forEach((p: any) => { map[p.address] = p.username; });
+  return map;
+}
+
 // ── TIMER SESSION FUNCTIONS ───────────────────────────────────────────────────
 
 export interface TimerSession {
