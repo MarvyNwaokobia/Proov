@@ -55,12 +55,37 @@ export default function DashboardPage() {
   const [userRank, setUserRank] = useState(0);
   const [showWalkthrough, setShowWalkthrough] = useState(false);
   const [streakFlipped, setStreakFlipped] = useState(false);
+  const [canClaimFuel, setCanClaimFuel] = useState(false);
+  const [claimingFuel, setClaimingFuel] = useState(false);
+  const [celoBalance, setCeloBalance] = useState(0);
+  const [secondsUntilClaim, setSecondsUntilClaim] = useState(0);
   const proovTx = useProovTx();
 
   useEffect(() => {
     const isAuth = localStorage.getItem('proov_authenticated') === 'true';
     if (!isAuth) router.replace('/');
   }, [router]);
+
+  // Fuel faucet status
+  useEffect(() => {
+    const addr = localStorage.getItem('proov_address') || '';
+    if (!addr) return;
+
+    const checkFuel = async () => {
+      const { checkCanClaim, getUserCeloBalance } = await import('@/lib/fuel');
+      const [claimStatus, balance] = await Promise.all([
+        checkCanClaim(addr),
+        getUserCeloBalance(addr),
+      ]);
+      setCanClaimFuel(claimStatus.canClaim);
+      setSecondsUntilClaim(claimStatus.secondsLeft);
+      setCeloBalance(balance);
+    };
+
+    checkFuel();
+    const interval = setInterval(checkFuel, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Walkthrough — standalone effect, runs once on mount after 1.2s
   useEffect(() => {
@@ -220,6 +245,27 @@ export default function DashboardPage() {
     setTimeout(() => setToastVisible(false), 2200);
   };
 
+  const handleClaimFuel = async () => {
+    if (!canClaimFuel || claimingFuel) return;
+    setClaimingFuel(true);
+
+    const { claimFuel, getUserCeloBalance } = await import('@/lib/fuel');
+    const result = await claimFuel();
+
+    if (result.success) {
+      showToast('⚡ Fuel claimed! 0.2 CELO added to your wallet');
+      setCanClaimFuel(false);
+      setSecondsUntilClaim(86400);
+      const addr = localStorage.getItem('proov_address') || '';
+      const newBalance = await getUserCeloBalance(addr);
+      setCeloBalance(newBalance);
+    } else {
+      showToast(result.error || 'Could not claim fuel');
+    }
+
+    setClaimingFuel(false);
+  };
+
   const displayName = username
     ? username.charAt(0).toUpperCase() + username.slice(1)
     : 'there';
@@ -242,19 +288,106 @@ export default function DashboardPage() {
       <div className="page-wrap" style={{ paddingTop: 18 }}>
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.875rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
           <div>
             <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>
               {greeting}
             </div>
-            <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 2 }}>
+            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>
               {subtitle}
             </div>
           </div>
-          <Link href="/settings" style={{ textDecoration: 'none', lineHeight: 1, marginTop: 2 }} title="Settings">
-            <IconSettings2 size={20} stroke={1.8} color="var(--text3)" />
-          </Link>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {canClaimFuel ? (
+              <button
+                onClick={handleClaimFuel}
+                disabled={claimingFuel}
+                style={{
+                  padding: '6px 12px', borderRadius: 20,
+                  background: 'linear-gradient(135deg, #f59e0b, #ef4444)',
+                  border: 'none', color: '#fff',
+                  fontSize: 11, fontWeight: 700,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  boxShadow: '0 2px 8px rgba(239,68,68,0.3)',
+                  animation: 'pulse 2s ease-in-out infinite',
+                }}>
+                {claimingFuel ? '...' : '⚡ Claim fuel'}
+              </button>
+            ) : celoBalance < 0.05 && celoBalance > 0 ? (
+              <button
+                onClick={() => showToast('Come back tomorrow to claim your daily fuel')}
+                style={{
+                  padding: '6px 12px', borderRadius: 20,
+                  background: 'rgba(239,68,68,0.1)',
+                  border: '1px solid rgba(239,68,68,0.3)',
+                  color: '#ef4444', fontSize: 11, fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  display: 'flex', alignItems: 'center', gap: 5,
+                }}>
+                ⚠️ Low fuel
+              </button>
+            ) : celoBalance > 0 ? (
+              <div style={{
+                padding: '6px 12px', borderRadius: 20,
+                background: 'var(--bg2)', border: '1px solid var(--border)',
+                color: 'var(--text3)', fontSize: 11,
+                display: 'flex', alignItems: 'center', gap: 5,
+              }}>
+                ⚡ {celoBalance.toFixed(3)} CELO
+              </div>
+            ) : null}
+
+            <button onClick={() => router.push('/settings')} style={{
+              background: 'transparent', border: 'none',
+              color: 'var(--text3)', cursor: 'pointer', padding: 4,
+            }}>
+              <IconSettings2 size={20} stroke={1.8} />
+            </button>
+          </div>
         </div>
+
+        {/* Low fuel banner */}
+        {celoBalance < 0.02 && celoBalance > 0 && (
+          <div style={{
+            background: 'rgba(239,68,68,0.08)',
+            border: '1px solid rgba(239,68,68,0.2)',
+            borderRadius: 12, padding: '10px 14px',
+            marginBottom: 12,
+            display: 'flex', alignItems: 'center', gap: 10,
+          }}>
+            <span style={{ fontSize: 18 }}>⚡</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#ef4444' }}>Fuel running low</div>
+              <div style={{ fontSize: 11, color: 'var(--text3)' }}>
+                {canClaimFuel ? 'Claim your daily fuel now' : 'Fuel available tomorrow'}
+              </div>
+            </div>
+            {canClaimFuel && (
+              <button onClick={handleClaimFuel} style={{
+                padding: '6px 12px', borderRadius: 9, border: 'none',
+                background: '#ef4444', color: '#fff',
+                fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+              }}>Claim</button>
+            )}
+          </div>
+        )}
+
+        {celoBalance === 0 && !canClaimFuel && mounted && (
+          <div style={{
+            background: 'rgba(239,68,68,0.1)',
+            border: '1px solid rgba(239,68,68,0.3)',
+            borderRadius: 12, padding: '10px 14px', marginBottom: 12,
+            display: 'flex', alignItems: 'center', gap: 10,
+          }}>
+            <span style={{ fontSize: 18 }}>🔋</span>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#ef4444' }}>No fuel left</div>
+              <div style={{ fontSize: 11, color: 'var(--text3)' }}>Come back tomorrow to claim your daily fuel</div>
+            </div>
+          </div>
+        )}
 
         {/* Streak card — flippable */}
         {!streakFlipped ? (

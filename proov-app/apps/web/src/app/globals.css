@@ -406,6 +406,7 @@ html[data-theme="golden"] .gradient-text {
 @keyframes aurora  { 0%{transform:translate(-20%,-20%) rotate(0deg)   scale(1)}   33%{transform:translate(10%,5%)   rotate(120deg)  scale(1.1)} 66%{transform:translate(-5%,15%)  rotate(240deg)  scale(.95)} 100%{transform:translate(-20%,-20%) rotate(360deg) scale(1)} }
 @keyframes aurora2 { 0%{transform:translate(20%,20%)  rotate(0deg)    scale(1.1)} 33%{transform:translate(-10%,-5%) rotate(-120deg) scale(1)}   66%{transform:translate(5%,-15%)  rotate(-240deg) scale(1.05)} 100%{transform:translate(20%,20%) rotate(-360deg) scale(1.1)} }
 @keyframes pulse-glow { 0%,100%{opacity:.6} 50%{opacity:1} }
+@keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.04)} }
 @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
 
 .animate-aurora       { animation: aurora  18s ease-in-out infinite; }
