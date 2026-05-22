@@ -1,9 +1,9 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { IconArrowRight, IconX } from '@tabler/icons-react';
+import { IconX, IconArrowRight } from '@tabler/icons-react';
 
 interface WalkthroughStep {
-  targetId: string;
+  id: string;
   title: string;
   description: string;
   position: 'top' | 'bottom';
@@ -11,46 +11,44 @@ interface WalkthroughStep {
 
 const STEPS: WalkthroughStep[] = [
   {
-    targetId: 'wt-streak-card',
-    title: 'Your streak',
-    description: 'Every day you complete a habit, this number grows. Miss a day and it resets. Keep it alive.',
+    id: 'wt-greeting',
+    title: 'Good to have you here 👋',
+    description: 'This is your dashboard. Everything you need to show up daily lives right here.',
     position: 'bottom',
   },
   {
-    targetId: 'wt-habits-grid',
-    title: 'Your habits',
-    description: "These are your daily habits. Tap the checkbox when you finish one. That's your proof.",
+    id: 'wt-streak-card',
+    title: 'Your streak 🔥',
+    description: 'Complete all your habits every day to build your streak. Tap the card to see your detailed history.',
     position: 'bottom',
   },
   {
-    targetId: 'wt-add-habit',
-    title: 'Add a habit',
-    description: 'Start here. Create your first habit and give yourself something to show up for every day.',
+    id: 'wt-habits-grid',
+    title: "Today's habits",
+    description: 'Tick checkbox habits or start a timer for timed ones. Complete them all to grow your streak.',
     position: 'top',
   },
   {
-    targetId: 'wt-nav-grind',
-    title: 'Grind Timer',
-    description: 'Working on something? Start a timer. It tracks your session time.',
+    id: 'wt-circle',
+    title: 'Your circle 👥',
+    description: 'Invite people who will hold you accountable. You can cheer each other on every day.',
     position: 'top',
   },
   {
-    targetId: 'wt-nav-circle',
-    title: 'Your circle',
-    description: 'Add people who will hold you accountable. They see your habits. You see theirs.',
-    position: 'top',
+    id: 'wt-fuel',
+    title: 'Claim your fuel ⚡',
+    description: 'Claim free CELO daily to power your activity in the app. Come back every day to refuel.',
+    position: 'bottom',
   },
   {
-    targetId: 'wt-leaderboard',
-    title: 'Leaderboard',
-    description: 'Your rank is earned by showing up daily. The longer your streak, the higher you climb.',
+    id: 'wt-add-habit',
+    title: 'Build your stack',
+    description: 'Add habits that matter to you. Mix timed sessions with checkbox habits for a complete routine.',
     position: 'top',
   },
 ];
 
-interface Rect {
-  top: number; left: number; width: number; height: number;
-}
+interface Rect { top: number; left: number; width: number; height: number; }
 
 interface WalkthroughProps {
   onComplete: () => void;
@@ -64,20 +62,18 @@ export function Walkthrough({ onComplete }: WalkthroughProps) {
   const current = STEPS[step];
   const isLast = step === STEPS.length - 1;
 
-  // Set window size on mount
   useEffect(() => {
     setWindowSize({ w: window.innerWidth, h: window.innerHeight });
-    const handleResize = () => setWindowSize({ w: window.innerWidth, h: window.innerHeight });
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const onResize = () => setWindowSize({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // Measure target element whenever step changes
   useEffect(() => {
     if (windowSize.w === 0) return;
     setRect(null);
 
-    const el = document.getElementById(current.targetId);
+    const el = document.querySelector(`[data-wt="${current.id}"]`);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       const t = setTimeout(() => {
@@ -86,12 +82,12 @@ export function Walkthrough({ onComplete }: WalkthroughProps) {
       }, 400);
       return () => clearTimeout(t);
     } else {
-      // Element not found — use a centred fallback so the tooltip still shows
       setRect({ top: windowSize.h * 0.3, left: windowSize.w * 0.1, width: windowSize.w * 0.8, height: 80 });
     }
-  }, [step, current.targetId, windowSize.w, windowSize.h]);
+  }, [step, current.id, windowSize.w, windowSize.h]);
 
   const handleComplete = useCallback(() => {
+    localStorage.setItem('proov_walkthrough_done', '1');
     localStorage.setItem('proov_tutorial_done', '1');
     localStorage.removeItem('proov_is_new_user');
     onComplete();
@@ -117,13 +113,12 @@ export function Walkthrough({ onComplete }: WalkthroughProps) {
   const spotH = rect ? rect.height + PAD * 2 : 0;
   const centerX = rect ? rect.left + rect.width / 2 : windowSize.w / 2;
 
-  let tooltipTop = 0;
   const tooltipLeft = Math.min(Math.max(centerX - TOOLTIP_W / 2, 16), windowSize.w - TOOLTIP_W - 16);
-
+  let tooltipTop = 0;
   if (current.position === 'bottom' && rect) {
     tooltipTop = spotY + spotH + 16;
   } else if (rect) {
-    tooltipTop = Math.max(spotY - 168, 80);
+    tooltipTop = Math.max(spotY - 180, 80);
   } else {
     tooltipTop = windowSize.h / 2 - 60;
   }
@@ -131,7 +126,7 @@ export function Walkthrough({ onComplete }: WalkthroughProps) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 9000 }}>
 
-      {/* Overlay with spotlight cutout — unique mask ID per step prevents SVG caching bug */}
+      {/* Dark overlay with spotlight cutout */}
       <svg
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', cursor: 'default' }}
         onClick={handleComplete}
@@ -225,7 +220,7 @@ export function Walkthrough({ onComplete }: WalkthroughProps) {
                 padding: '6px 10px', borderRadius: 8,
               }}
             >
-              Skip
+              Skip tour
             </button>
             <button
               onClick={handleNext}
@@ -237,7 +232,7 @@ export function Walkthrough({ onComplete }: WalkthroughProps) {
                 boxShadow: '0 3px 10px var(--btn-primary-shadow)',
               }}
             >
-              {isLast ? 'Done ✓' : 'Next'}
+              {isLast ? "Let's go 🚀" : 'Next'}
               {!isLast && <IconArrowRight size={14} stroke={2.5} />}
             </button>
           </div>

@@ -88,12 +88,14 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Walkthrough — standalone effect, runs once on mount after 1.2s
+  // Walkthrough — show once for new users, never for returning users
   useEffect(() => {
     const timer = setTimeout(() => {
-      const tutorialDone = localStorage.getItem('proov_tutorial_done');
+      const alreadyDone =
+        localStorage.getItem('proov_walkthrough_done') ||
+        localStorage.getItem('proov_tutorial_done');
       const isNewUser = localStorage.getItem('proov_is_new_user') === 'true';
-      if (!tutorialDone && isNewUser) {
+      if (!alreadyDone && isNewUser) {
         setShowWalkthrough(true);
       }
     }, 1200);
@@ -302,7 +304,7 @@ export default function DashboardPage() {
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
-          <div>
+          <div data-wt="wt-greeting">
             <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>
               {greeting}
             </div>
@@ -311,7 +313,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div data-wt="wt-fuel" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {canClaimFuel ? (
               <button
                 onClick={handleClaimFuel}
@@ -406,6 +408,7 @@ export default function DashboardPage() {
         {!streakFlipped ? (
           <div
             id="wt-streak-card"
+            data-wt="wt-streak-card"
             onClick={() => setStreakFlipped(true)}
             style={{
               background: 'var(--btn-primary-bg)',
@@ -506,7 +509,7 @@ export default function DashboardPage() {
             </Link>
           </div>
         ) : (
-          <div id="wt-habits-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: '1rem', width: '100%' }}>
+          <div id="wt-habits-grid" data-wt="wt-habits-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: '1rem', width: '100%' }}>
             {habits.map(habit => {
               const isDone = completedToday.includes(habit.id);
               return (
@@ -529,7 +532,7 @@ export default function DashboardPage() {
               );
             })}
             {/* Add habit cell */}
-            <button id="wt-add-habit" onClick={() => router.push('/habits')} style={{ border: '2px dashed var(--border2)', borderRadius: 14, padding: '12px', background: 'transparent', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 100 }}>
+            <button id="wt-add-habit" data-wt="wt-add-habit" onClick={() => router.push('/habits')} style={{ border: '2px dashed var(--border2)', borderRadius: 14, padding: '12px', background: 'transparent', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 100 }}>
               <IconPlus size={22} stroke={1.5} color="var(--text3)" />
               <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'inherit', marginTop: 4 }}>Add habit</span>
             </button>
@@ -543,7 +546,7 @@ export default function DashboardPage() {
         </div>
 
         {circleMembers.length === 0 ? (
-          <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14, padding: '1.25rem', textAlign: 'center', marginBottom: '1rem' }}>
+          <div data-wt="wt-circle" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14, padding: '1.25rem', textAlign: 'center', marginBottom: '1rem' }}>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>
               <IconUsers size={28} stroke={1.5} color="var(--accent)" />
             </div>
@@ -556,7 +559,7 @@ export default function DashboardPage() {
             </Link>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(circleMembers.length, 3)}, 1fr)`, gap: 8, marginBottom: '1rem' }}>
+          <div data-wt="wt-circle" style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(circleMembers.length, 3)}, 1fr)`, gap: 8, marginBottom: '1rem' }}>
             {circleMembers.slice(0, 3).map(member => {
               const canCheer = !!member.completedHabitToday && !cheered[member.address];
               const alreadyCheered = cheered[member.address];
