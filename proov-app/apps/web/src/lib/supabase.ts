@@ -310,3 +310,129 @@ export async function updateUsername(
   }
   return { success: true };
 }
+
+// ── STREAK FUNCTIONS ─────────────────────────────────────────────────────────
+
+export async function getStreakData(userAddress: string): Promise<{
+  currentStreak: number;
+  longestStreak: number;
+  lastCompletionDate: string | null;
+}> {
+  if (!supabase || !userAddress) return { currentStreak: 0, longestStreak: 0, lastCompletionDate: null };
+
+  const { data } = await supabase
+    .from('streaks')
+    .select('current_streak, longest_streak, last_completion_date')
+    .eq('user_address', userAddress.toLowerCase())
+    .single();
+
+  if (!data) return { currentStreak: 0, longestStreak: 0, lastCompletionDate: null };
+
+  return {
+    currentStreak: data.current_streak,
+    longestStreak: data.longest_streak,
+    lastCompletionDate: data.last_completion_date,
+  };
+}
+
+export async function updateDailyStreak(userAddress: string): Promise<number> {
+  if (!supabase || !userAddress) return 0;
+
+  const addr = userAddress.toLowerCase();
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+  const { data: existing } = await supabase
+    .from('streaks')
+    .select('*')
+    .eq('user_address', addr)
+    .single();
+
+  if (!existing) {
+    await supabase.from('streaks').insert({
+      user_address: addr,
+      current_streak: 1,
+      longest_streak: 1,
+      last_completion_date: today,
+    });
+    return 1;
+  }
+
+  const lastDate = existing.last_completion_date;
+
+  if (lastDate === today) {
+    return existing.current_streak;
+  }
+
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+  let newStreak: number;
+  if (lastDate === yesterdayStr) {
+    newStreak = existing.current_streak + 1;
+  } else {
+    // Check 24h grace period
+    const lastDateTime = new Date(lastDate + 'T23:59:59');
+    const hoursSince = (Date.now() - lastDateTime.getTime()) / (1000 * 60 * 60);
+    newStreak = hoursSince <= 24 ? existing.current_streak + 1 : 1;
+  }
+
+  const newLongest = Math.max(newStreak, existing.longest_streak);
+
+  await supabase.from('streaks').update({
+    current_streak: newStreak,
+    longest_streak: newLongest,
+    last_completion_date: today,
+    updated_at: new Date().toISOString(),
+  }).eq('user_address', addr);
+
+  return newStreak;
+}
+
+export async function getHabitStreak(habitId: string, userAddress: string): Promise<number> {
+  if (!supabase) return 0;
+
+  const { data } = await supabase
+    .from('habit_completions')
+    .select('completed_at')
+    .eq('habit_id', habitId)
+    .eq('user_address', userAddress.toLowerCase())
+    .order('completed_at', { ascending: false })
+    .limit(100);
+
+  if (!data || data.length === 0) return 0;
+
+  const dates = new Set(data.map((c: any) => c.completed_at.split('T')[0]));
+  const sortedDates = Array.from(dates).sort().reverse();
+
+  let streak = 0;
+  let checkDate = new Date();
+
+  for (const dateStr of sortedDates) {
+    const d = new Date(dateStr + 'T12:00:00');
+    const diff = Math.floor((checkDate.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+    if (diff <= 1) {
+      streak++;
+      checkDate = d;
+    } else {
+      break;
+    }
+  }
+
+  return streak;
+}
+
+export async function getAllHabitStreaks(
+  habitIds: string[],
+  userAddress: string
+): Promise<Record<string, number>> {
+  if (!supabase || habitIds.length === 0) return {};
+
+  const streakMap: Record<string, number> = {};
+  await Promise.all(
+    habitIds.map(async id => {
+      streakMap[id] = await getHabitStreak(id, userAddress);
+    })
+  );
+  return streakMap;
+}

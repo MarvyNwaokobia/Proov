@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import Link from 'next/link';
 import { getLeaderboard, getUserStats } from '@/lib/goldsky';
-import { getUsernameForAddress, getUserHabits, getTodayCompletions, saveHabitCompletion, type Habit } from '@/lib/supabase';
+import { getUsernameForAddress, getUserHabits, getTodayCompletions, saveHabitCompletion, getStreakData, updateDailyStreak, getAllHabitStreaks, type Habit } from '@/lib/supabase';
 import { useProovTx } from '@/hooks/useProovTx';
 import { Walkthrough } from '@/components/shared/Walkthrough';
 import {
@@ -55,6 +55,7 @@ export default function DashboardPage() {
   const [userRank, setUserRank] = useState(0);
   const [showWalkthrough, setShowWalkthrough] = useState(false);
   const [streakFlipped, setStreakFlipped] = useState(false);
+  const [habitStreaks, setHabitStreaks] = useState<Record<string, number>>({});
   const [canClaimFuel, setCanClaimFuel] = useState(false);
   const [claimingFuel, setClaimingFuel] = useState(false);
   const [celoBalance, setCeloBalance] = useState(0);
@@ -123,6 +124,25 @@ export default function DashboardPage() {
     });
   }, []);
 
+  // Load daily streak from Supabase (authoritative, cross-device)
+  useEffect(() => {
+    const addr = localStorage.getItem('proov_address') || '';
+    if (!addr) return;
+    getStreakData(addr).then(data => {
+      if (data.currentStreak > 0 || data.longestStreak > 0) {
+        setCurrentStreak(data.currentStreak);
+        setLongestStreak(data.longestStreak);
+      }
+    }).catch(() => {});
+  }, []);
+
+  // Load per-habit streaks whenever habits array changes
+  useEffect(() => {
+    const addr = localStorage.getItem('proov_address') || '';
+    if (!addr || habits.length === 0) return;
+    getAllHabitStreaks(habits.map(h => h.id), addr).then(setHabitStreaks).catch(() => {});
+  }, [habits]);
+
   useEffect(() => {
     setMounted(true);
     const today = new Date().toDateString();
@@ -142,13 +162,13 @@ export default function DashboardPage() {
         });
     }
 
-    // Streak
+    // Streak — localStorage as fast initial value; Supabase effect above will override
     const streakRaw = localStorage.getItem('proov_streak_global');
     if (streakRaw) {
       try {
         const s = JSON.parse(streakRaw);
-        setCurrentStreak(s.current || 0);
-        setLongestStreak(s.longest || 0);
+        setCurrentStreak(prev => prev || s.current || 0);
+        setLongestStreak(prev => prev || s.longest || 0);
       } catch {}
     }
 
@@ -186,13 +206,14 @@ export default function DashboardPage() {
 
   const last7Days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
-    d.setDate(d.getDate() - 6 + i);
-    const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+    d.setDate(d.getDate() - (6 - i));
+    const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
     const isToday = i === 6;
     return {
       label: dayNames[d.getDay()],
-      completed: isToday ? completedToday.length > 0 : false,
+      dateStr: d.toISOString().split('T')[0],
       isToday,
+      completed: isToday ? completedToday.length > 0 : false,
     };
   });
 
@@ -200,34 +221,26 @@ export default function DashboardPage() {
     if (completedToday.includes(habitId)) return;
     const addr = localStorage.getItem('proov_address') || '';
     const newCompleted = [...completedToday, habitId];
+
     setCompletedToday(newCompleted);
+    // Optimistically bump this habit's streak in the UI
+    setHabitStreaks(prev => ({ ...prev, [habitId]: (prev[habitId] || 0) + 1 }));
     showToast('Saved ✓');
-    const streak = parseInt(localStorage.getItem('proov_streak_count') || '0');
-    await saveHabitCompletion(habitId, addr, streak).catch(() => {});
+
+    await saveHabitCompletion(habitId, addr, currentStreak).catch(() => {});
+
     const habit = habits.find(h => h.id === habitId);
     proovTx.completeHabit((habit as any)?.on_chain_id || 0);
-    updateStreak(true);
-    // Record streak on-chain when all habits are done
+
+    // Increment daily streak when ALL habits are done
     const allDone = habits.every(h => newCompleted.includes(h.id));
     if (allDone && habits.length > 0) {
-      proovTx.recordStreakIncrement(currentStreak + 1);
-      showToast(`🔥 ${currentStreak + 1} day streak!`);
+      const newStreak = await updateDailyStreak(addr).catch(() => currentStreak + 1);
+      setCurrentStreak(newStreak);
+      setLongestStreak(prev => Math.max(prev, newStreak));
+      proovTx.recordStreakIncrement(newStreak);
+      showToast(`🔥 ${newStreak} day streak!`);
     }
-  };
-
-  const updateStreak = (hasCompletion: boolean) => {
-    if (!hasCompletion) return;
-    const today = new Date().toDateString();
-    const yesterday = new Date(Date.now() - 86400000).toDateString();
-    const raw = localStorage.getItem('proov_streak_global');
-    const streak = raw ? JSON.parse(raw) : { current: 0, longest: 0, lastDate: '' };
-    if (streak.lastDate === today) return;
-    streak.current = streak.lastDate === yesterday ? streak.current + 1 : 1;
-    streak.lastDate = today;
-    if (streak.current > streak.longest) streak.longest = streak.current;
-    localStorage.setItem('proov_streak_global', JSON.stringify(streak));
-    setCurrentStreak(streak.current);
-    setLongestStreak(streak.longest);
   };
 
   const handleCheer = (memberAddress: string) => {

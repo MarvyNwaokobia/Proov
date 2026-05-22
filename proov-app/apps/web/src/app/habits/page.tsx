@@ -7,7 +7,7 @@ import {
 } from '@tabler/icons-react';
 import {
   getUserHabits, saveHabit, deactivateHabit as supabaseDeactivate,
-  getTodayCompletions, saveHabitCompletion, type Habit,
+  getTodayCompletions, saveHabitCompletion, getAllHabitStreaks, type Habit,
 } from "@/lib/supabase";
 import { useProovTx } from "@/hooks/useProovTx";
 import { HABIT_CATEGORIES, getCategoryById, Frequency } from "@/lib/constants";
@@ -379,6 +379,7 @@ export default function HabitsPage() {
   const [prefill, setPrefill] = useState<{ name: string; categoryId: string; duration: number } | undefined>();
   const [catFilter, setCatFilter] = useState("All");
   const [suggestionCategory, setSuggestionCategory] = useState('Focus');
+  const [habitStreaks, setHabitStreaks] = useState<Record<string, number>>({});
   const proovTx = useProovTx();
 
   // ── Load from Supabase ──────────────────────────────────────────────────────
@@ -398,6 +399,13 @@ export default function HabitsPage() {
         setLoading(false);
       });
   }, []);
+
+  // Load per-habit streaks whenever the habits list changes
+  useEffect(() => {
+    const address = localStorage.getItem('proov_address') || '';
+    if (!address || habits.length === 0) return;
+    getAllHabitStreaks(habits.map(h => h.id), address).then(setHabitStreaks).catch(() => {});
+  }, [habits]);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -617,7 +625,7 @@ export default function HabitsPage() {
                             {habit.type === 'timed' ? `${habit.duration_minutes} min` : 'Tap'} · {habit.schedule} · {habit.category}
                           </div>
                           <div style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700, marginTop: 3 }}>
-                            🔥 {isDone ? '✓ Done today' : `${0} day streak`}
+                            🔥 {isDone ? '✓ Done today' : `${habitStreaks[habit.id] || 0} day streak`}
                           </div>
                         </div>
                         <button
