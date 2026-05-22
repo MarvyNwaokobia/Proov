@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react'; // useRef kept for intervalRef + glowRef
 import { useSearchParams } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import { useProovTx } from '@/hooks/useProovTx';
@@ -17,12 +17,7 @@ import {
 
 type TimerView = 'pick' | 'setup' | 'running' | 'done';
 
-const STOPS = [5, 10, 15, 20, 25, 30, 45, 60, 90, 120, 180, 240];
 const CIRC = 2 * Math.PI * 84;
-
-function snapToStop(val: number) {
-  return STOPS.reduce((p, c) => Math.abs(c - val) < Math.abs(p - val) ? c : p);
-}
 
 function fmtDur(mins: number) {
   if (mins < 60) return `${mins} min`;
@@ -54,12 +49,7 @@ export default function GrindTimerPage() {
   const [customLabel, setCustomLabel] = useState('');
   const [search, setSearch] = useState('');
 
-  // sliderDisplay: live raw value shown while dragging
-  // duration: snapped value committed on release
-  const [sliderDisplay, setSliderDisplay] = useState(25);
   const [duration, setDuration] = useState(25);
-  const [durationMode, setDurationMode] = useState<'slider' | 'manual'>('slider');
-  const sliderRef = useRef<HTMLInputElement>(null);
 
   const [secondsLeft, setSecondsLeft] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -78,24 +68,6 @@ export default function GrindTimerPage() {
     return () => window.removeEventListener('mousemove', onMouseMove);
   }, [onMouseMove]);
 
-  // Snap-on-release: native mouseup/touchend so live value shows between stops
-  useEffect(() => {
-    const el = sliderRef.current;
-    if (!el) return;
-    const doSnap = () => {
-      const raw = parseInt(el.value);
-      const snapped = snapToStop(raw);
-      setDuration(snapped);
-      setSliderDisplay(snapped);
-    };
-    el.addEventListener('mouseup', doSnap);
-    el.addEventListener('touchend', doSnap);
-    return () => {
-      el.removeEventListener('mouseup', doSnap);
-      el.removeEventListener('touchend', doSnap);
-    };
-  }, [view]); // re-attach when view changes (slider mounts/unmounts)
-
   // Load habits + restore active timer + load custom session history
   useEffect(() => {
     const address = localStorage.getItem('proov_address') || '';
@@ -112,8 +84,7 @@ export default function GrindTimerPage() {
           const found = timed.find(h => h.id === habitId);
           if (found) {
             setSelectedHabit(found);
-            const d = found.duration_minutes || 25;
-            setDuration(d); setSliderDisplay(d);
+            setDuration(found.duration_minutes || 25);
             setView('setup');
           }
         }
@@ -135,7 +106,7 @@ export default function GrindTimerPage() {
         const total = d * 60;
         if (elapsed < total) {
           setSecondsLeft(total - elapsed);
-          setDuration(d); setSliderDisplay(d);
+          setDuration(d);
           setIsCustom(ic || false);
           setCustomLabel(cl || '');
           setSessionDuration(d);
@@ -317,9 +288,7 @@ export default function GrindTimerPage() {
 
   const selectHabit = (habit: Habit) => {
     setSelectedHabit(habit);
-    const d = habit.duration_minutes || 25;
-    setDuration(d);
-    setSliderDisplay(d);
+    setDuration(habit.duration_minutes || 25);
     setView('setup');
   };
 
@@ -516,7 +485,6 @@ export default function GrindTimerPage() {
                         <button
                           onClick={() => {
                             setDuration(session.duration_minutes);
-                            setSliderDisplay(session.duration_minutes);
                             setCustomLabel(session.label || '');
                             setIsCustom(true);
                             setView('setup');
@@ -528,7 +496,6 @@ export default function GrindTimerPage() {
                         <button
                           onClick={() => {
                             setDuration(session.duration_minutes);
-                            setSliderDisplay(session.duration_minutes);
                             setCustomLabel(session.label || '');
                             setIsCustom(true);
                             setSessionHabitName('');
@@ -587,77 +554,21 @@ export default function GrindTimerPage() {
               </div>
             )}
 
-            {/* Duration mode toggle */}
-            <div style={{ display: 'flex', gap: 6, marginBottom: '1rem' }}>
-              {(['slider', 'manual'] as const).map(m => (
-                <button key={m} onClick={() => setDurationMode(m)} style={{
-                  padding: '6px 14px', borderRadius: 20, fontSize: 11, fontWeight: 500,
-                  cursor: 'pointer', fontFamily: 'inherit',
-                  border: `1px solid ${durationMode === m ? 'var(--accent)' : 'var(--border)'}`,
-                  background: durationMode === m ? 'var(--accent-bg)' : 'transparent',
-                  color: durationMode === m ? 'var(--accent-text)' : 'var(--text3)',
-                  transition: 'all .15s',
-                }}>
-                  {m === 'slider' ? '⟷ Slider' : '✎ Manual'}
-                </button>
-              ))}
+            {/* Duration — plain slider, label always matches */}
+            <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text)',
+              textAlign: 'center', marginBottom: 12, letterSpacing: -1 }}>
+              {duration < 60 ? `${duration} min` : `${duration / 60}h`}
             </div>
 
-            {/* Live duration display — updates every frame while dragging */}
-            <div style={{ textAlign: 'center', fontSize: 28, fontWeight: 800, color: 'var(--text)', letterSpacing: -1.5, marginBottom: '0.875rem' }}>
-              {fmtDur(sliderDisplay)}
-            </div>
-
-            {durationMode === 'slider' ? (
-              <div style={{ marginBottom: '1.25rem' }}>
-                {/* The slider: onChange = live display only; native mouseup/touchend = snap */}
-                <input
-                  ref={sliderRef}
-                  type="range"
-                  min={1}
-                  max={240}
-                  value={sliderDisplay}
-                  onChange={e => setSliderDisplay(parseInt(e.target.value))}
-                  style={{
-                    WebkitAppearance: 'none', width: '100%', height: 4, borderRadius: 2,
-                    background: `linear-gradient(to right, var(--accent) ${(sliderDisplay / 240) * 100}%, var(--border2) ${(sliderDisplay / 240) * 100}%)`,
-                    outline: 'none', cursor: 'pointer',
-                  }}
-                />
-                <style>{`
-                  input[type='range']::-webkit-slider-thumb {
-                    -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%;
-                    background: var(--btn-primary-bg); cursor: pointer;
-                    box-shadow: 0 2px 8px var(--btn-primary-shadow); transition: transform .15s;
-                  }
-                  input[type='range']::-webkit-slider-thumb:hover { transform: scale(1.2); }
-                  input[type='range']::-moz-range-thumb {
-                    width: 20px; height: 20px; border-radius: 50%;
-                    background: var(--btn-primary-bg); cursor: pointer; border: none;
-                  }
-                `}</style>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: '1.25rem' }}>
-                <button
-                  onClick={() => { const n = Math.max(1, sliderDisplay - 5); setSliderDisplay(n); setDuration(n); }}
-                  style={{ width: 38, height: 38, borderRadius: '50%', border: '1px solid var(--border2)', background: 'transparent', color: 'var(--text)', fontSize: 20, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >−</button>
-                <input
-                  type="number"
-                  value={sliderDisplay}
-                  min={1}
-                  max={480}
-                  onChange={e => { const n = Math.min(480, Math.max(1, parseInt(e.target.value) || 1)); setSliderDisplay(n); setDuration(n); }}
-                  style={{ width: 80, textAlign: 'center', fontSize: 24, fontWeight: 700, padding: '8px 4px' }}
-                />
-                <span style={{ fontSize: 13, color: 'var(--text2)' }}>min</span>
-                <button
-                  onClick={() => { const n = Math.min(480, sliderDisplay + 5); setSliderDisplay(n); setDuration(n); }}
-                  style={{ width: 38, height: 38, borderRadius: '50%', border: '1px solid var(--border2)', background: 'transparent', color: 'var(--text)', fontSize: 20, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >+</button>
-              </div>
-            )}
+            <input
+              type="range"
+              min={1}
+              max={240}
+              step={1}
+              value={duration}
+              onChange={e => setDuration(parseInt(e.target.value))}
+              style={{ width: '100%', marginBottom: 16, accentColor: 'var(--accent)' }}
+            />
 
             <button
               onClick={startTimer}
@@ -674,7 +585,7 @@ export default function GrindTimerPage() {
               onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')}
               onMouseLeave={e => (e.currentTarget.style.transform = '')}
             >
-              Start {fmtDur(duration)} session
+              Start {duration < 60 ? `${duration} min` : `${duration / 60}h`} session
             </button>
           </div>
         )}

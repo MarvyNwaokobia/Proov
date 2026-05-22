@@ -311,6 +311,17 @@ export async function updateUsername(
   return { success: true };
 }
 
+export async function updateHabit(
+  habitId: string,
+  updates: { name?: string; duration_minutes?: number; visibility?: string }
+): Promise<void> {
+  if (!supabase) return;
+  await supabase
+    .from('habits')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', habitId);
+}
+
 // ── STREAK FUNCTIONS ─────────────────────────────────────────────────────────
 
 export async function getStreakData(userAddress: string): Promise<{

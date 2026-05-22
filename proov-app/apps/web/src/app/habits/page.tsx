@@ -608,6 +608,7 @@ export default function HabitsPage() {
                     return (
                       <div
                         key={habit.id}
+                        onClick={() => router.push(`/habits/${habit.id}`)}
                         style={{
                           background: 'var(--card-bg)',
                           border: '1px solid var(--border)',
