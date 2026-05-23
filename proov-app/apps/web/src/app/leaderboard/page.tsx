@@ -86,8 +86,12 @@ function PodiumCol({ entry, cfg, isMe }: {
 
 export default function LeaderboardPage() {
   const router = useRouter();
-  const { address, isConnected, status } = useAccount();
-  useEffect(() => { if (status === 'disconnected') router.push("/"); }, [status, router]);
+  const { address } = useAccount();
+  const [authed, setAuthed] = useState<boolean | null>(null);
+  useEffect(() => {
+    const addr = localStorage.getItem('proov_address');
+    if (!addr) { router.push('/'); setAuthed(false); } else { setAuthed(true); }
+  }, [router]);
 
   const [tab, setTab] = useState<'global' | 'circle'>('global');
 
@@ -157,7 +161,7 @@ export default function LeaderboardPage() {
     ? [{ entry: top3[1], cfg: PODIUM[0] }, { entry: top3[0], cfg: PODIUM[1] }, { entry: top3[2], cfg: PODIUM[2] }]
     : [];
 
-  if (!isConnected) return null;
+  if (authed === null || authed === false) return null;
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', paddingBottom: 160 }}>
