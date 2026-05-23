@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   IconBrain, IconRun, IconYoga, IconBook, IconSalad, IconPalette,
-  IconArrowLeft, type Icon as TablerIcon,
+  IconArrowLeft, IconFlame, IconClock, IconCheck,
+  type Icon as TablerIcon,
 } from '@tabler/icons-react';
 import {
   getUserHabits, saveHabit, deactivateHabit as supabaseDeactivate,
@@ -200,9 +201,14 @@ function CreateForm({ onSave, isSaving, onCancel, prefill }: {
         <div>
           <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 12 }}>How do you complete it?</p>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: hasTimer ? 18 : 0 }}>
-            {[{ id: true, emoji: "⏱", title: "Timed habit", desc: "Set a duration." }, { id: false, emoji: "✅", title: "Tap to complete", desc: "No timer needed." }].map(opt => (
+            {([
+              { id: true,  Icon: IconClock, title: "Timed habit",      desc: "Set a duration." },
+              { id: false, Icon: IconCheck, title: "Tap to complete",  desc: "No timer needed." },
+            ] as const).map(opt => (
               <button key={String(opt.id)} onClick={() => setHasTimer(opt.id)} style={{ padding: "1rem .875rem", borderRadius: 14, cursor: "pointer", fontFamily: "inherit", textAlign: "center", border: `1px solid ${hasTimer === opt.id ? "var(--accent)" : "var(--border)"}`, background: hasTimer === opt.id ? "var(--accent-bg)" : "transparent" }}>
-                <div style={{ fontSize: 28, marginBottom: 6 }}>{opt.emoji}</div>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>
+                  <opt.Icon size={28} stroke={1.5} color={hasTimer === opt.id ? "var(--accent-text)" : "var(--text3)"} />
+                </div>
                 <p style={{ fontSize: 11, fontWeight: 600, color: hasTimer === opt.id ? "var(--accent-text)" : "var(--text)", marginBottom: 3 }}>{opt.title}</p>
                 <p style={{ fontSize: 9, color: "var(--text3)" }}>{opt.desc}</p>
               </button>
@@ -270,9 +276,9 @@ function CreateForm({ onSave, isSaving, onCancel, prefill }: {
               </div>
             </div>
             {[
-              ["Type", hasTimer ? `⏱ ${fmtDur(duration)}` : "✅ Tap to complete"],
-              ["Schedule", frequency === Frequency.DAILY ? "📅 Daily" : "📆 Weekly"],
-              ["Visible to", privacy === 'private' ? "🔒 Private" : "👥 Circle"],
+              ["Type", hasTimer ? `Timer · ${fmtDur(duration)}` : "Tap to complete"],
+              ["Schedule", frequency === Frequency.DAILY ? "Daily" : "Weekly"],
+              ["Visible to", privacy === 'private' ? "Private" : "Circle"],
             ].map(([label, val]) => (
               <div key={label} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, borderTop: "1px solid var(--border)", paddingTop: 6, marginTop: 6 }}>
                 <span style={{ color: "var(--text3)" }}>{label}</span>
@@ -562,7 +568,7 @@ export default function HabitsPage() {
         {/* Tab switcher */}
         {!showForm && (
           <div style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 12, padding: 4, gap: 3, marginBottom: 14 }}>
-            {([['my', 'My habits'], ['all', 'All habits'], ['templates', 'Templates']] as const).map(([tab, label]) => (
+            {([['my', 'My habits'], ['all', 'Discover'], ['templates', 'Templates']] as const).map(([tab, label]) => (
               <button key={tab} onClick={() => setActiveTab(tab)} style={{
                 flex: 1, textAlign: 'center', padding: '7px 0',
                 borderRadius: 9, border: 'none', cursor: 'pointer',
@@ -625,30 +631,10 @@ export default function HabitsPage() {
                           <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2, fontWeight: 600 }}>
                             {habit.type === 'timed' ? `${habit.duration_minutes} min` : 'Tap'} · {habit.schedule} · {habit.category}
                           </div>
-                          <div style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700, marginTop: 3 }}>
-                            🔥 {isDone ? '✓ Done today' : `${habitStreaks[habit.id] || 0} day streak`}
+                          <div style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700, marginTop: 3, display: 'flex', alignItems: 'center', gap: 3 }}>
+                            <IconFlame size={12} stroke={2} />{isDone ? 'Done today' : `${habitStreaks[habit.id] || 0} day streak`}
                           </div>
                         </div>
-                        <button
-                          onClick={e => { e.stopPropagation(); handleRemove(habit.id); }}
-                          style={{
-                            padding: '6px 12px', borderRadius: 9,
-                            border: '2px solid #f43f5e',
-                            background: 'transparent', color: '#f43f5e',
-                            fontSize: 12, fontWeight: 800,
-                            cursor: 'pointer', fontFamily: 'inherit',
-                            transition: 'all 0.15s',
-                          }}
-                          onMouseEnter={e => {
-                            (e.currentTarget as HTMLElement).style.background = '#f43f5e';
-                            (e.currentTarget as HTMLElement).style.color = '#fff';
-                          }}
-                          onMouseLeave={e => {
-                            (e.currentTarget as HTMLElement).style.background = 'transparent';
-                            (e.currentTarget as HTMLElement).style.color = '#f43f5e';
-                          }}>
-                          Remove
-                        </button>
                       </div>
                     );
                   })}

@@ -12,6 +12,7 @@ import {
   IconTrophy,
   IconChevronRight,
   IconLogout,
+  IconBolt,
 } from '@tabler/icons-react';
 
 export default function SettingsPage() {
@@ -27,7 +28,7 @@ export default function SettingsPage() {
   const [address, setAddress] = useState('');
   const [userRank] = useState<number>(14);
   const [savedToast, setSavedToast] = useState(false);
-  const [copied, setCopied] = useState(false);
+  // copied state removed (wallet section removed)
   const [showUsernameConfirm, setShowUsernameConfirm] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -202,33 +203,21 @@ export default function SettingsPage() {
           </Link>
         </div>
 
-        {/* Wallet */}
-        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '0.625rem' }}>Your Wallet</p>
+        {/* Fuel */}
+        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '0.625rem' }}>Fuel</p>
         <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, padding: '1rem', marginBottom: '1.25rem' }}>
-          <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 8, lineHeight: 1.6 }}>
-            This wallet is linked to your account. Fund it with CELO to record habits onchain.
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, #f59e0b, #ef4444)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <IconBolt size={18} stroke={2} color="#fff" />
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Daily fuel</div>
+              <div style={{ fontSize: 11, color: 'var(--text2)', lineHeight: 1.5 }}>Claim your free fuel once a day from the dashboard.</div>
+            </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--bg2)', borderRadius: 10, marginBottom: 8 }}>
-            <span style={{ fontSize: 12, color: 'var(--text)', fontFamily: 'monospace', letterSpacing: '.5px' }}>
-              {address ? `${address.slice(0, 8)}...${address.slice(-6)}` : 'Not connected'}
-            </span>
-            <button
-              onClick={() => { navigator.clipboard.writeText(address); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-              style={{ fontSize: 11, color: 'var(--accent-text)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}
-            >
-              {copied ? 'Copied ✓' : 'Copy'}
-            </button>
-          </div>
-          {address && (
-            <a
-              href={`https://celoscan.io/address/${address}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ fontSize: 11, color: 'var(--accent-text)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
-            >
-              View on Celoscan →
-            </a>
-          )}
+          <Link href="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, color: 'var(--accent-text)', textDecoration: 'none' }}>
+            Go to dashboard <IconChevronRight size={13} stroke={2} />
+          </Link>
         </div>
 
         {/* Account */}

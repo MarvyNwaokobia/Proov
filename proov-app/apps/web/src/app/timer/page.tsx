@@ -8,6 +8,8 @@ import {
   IconArrowLeft,
   IconClock,
   IconSearch,
+  IconConfetti,
+  IconCircleCheck,
 } from '@tabler/icons-react';
 import {
   getUserHabits, saveHabitCompletion,
@@ -346,7 +348,7 @@ export default function GrindTimerPage() {
             <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
               {isDone ? (
                 <>
-                  <span style={{ fontSize: 32 }}>🎉</span>
+                  <IconConfetti size={32} stroke={1.5} color="var(--accent-text)" />
                   <span style={{ fontSize: 10, color: 'var(--accent-text)', fontWeight: 700, marginTop: 4 }}>Done!</span>
                 </>
               ) : isRunning ? (
@@ -415,7 +417,7 @@ export default function GrindTimerPage() {
               <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text3)', fontSize: 13 }}>
                 {timedHabits.length === 0 ? (
                   <>
-                    <div style={{ fontSize: 24, marginBottom: 8 }}>✅</div>
+                    <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center' }}><IconCircleCheck size={28} stroke={1.5} color="var(--text3)" /></div>
                     <p style={{ marginBottom: 8 }}>No timed habits yet</p>
                     <a href="/habits" className="create-btn" style={{ marginTop: 4 }}>Create one →</a>
                   </>

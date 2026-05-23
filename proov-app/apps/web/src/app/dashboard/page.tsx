@@ -16,7 +16,20 @@ import {
   IconPlayerPlay,
   IconCheck,
   IconSettings2,
+  IconTarget,
+  IconHeart,
 } from '@tabler/icons-react';
+
+const STREAK_MILESTONES = [7, 14, 21, 30, 60, 90];
+function getNextGoal(s: number) {
+  for (const m of STREAK_MILESTONES) if (s < m) return m;
+  return 120;
+}
+function getPrevGoal(s: number) {
+  let p = 0;
+  for (const m of STREAK_MILESTONES) { if (s < m) return p; p = m; }
+  return STREAK_MILESTONES[STREAK_MILESTONES.length - 1];
+}
 
 interface CircleMember {
   address: string;
@@ -241,7 +254,7 @@ export default function DashboardPage() {
       setCurrentStreak(newStreak);
       setLongestStreak(prev => Math.max(prev, newStreak));
       proovTx.recordStreakIncrement(newStreak);
-      showToast(`🔥 ${newStreak} day streak!`);
+      showToast(`${newStreak} day streak!`);
     }
   };
 
@@ -251,7 +264,7 @@ export default function DashboardPage() {
     const updated = { ...cheered, [memberAddress]: true };
     setCheered(updated);
     localStorage.setItem(key, JSON.stringify(updated));
-    showToast('🌸 Cheer sent!');
+    showToast('Cheer sent!');
   };
 
   const showToast = (msg: string) => {
@@ -268,7 +281,7 @@ export default function DashboardPage() {
     const result = await claimFuel();
 
     if (result.success) {
-      showToast('⚡ Fuel claimed! 0.2 CELO added to your wallet');
+      showToast('Fuel claimed!');
       setCanClaimFuel(false);
       setSecondsUntilClaim(86400);
       const addr = localStorage.getItem('proov_address') || '';
@@ -285,7 +298,7 @@ export default function DashboardPage() {
     ? username.charAt(0).toUpperCase() + username.slice(1)
     : 'there';
 
-  const greeting = `${getGreeting()}, ${displayName} 👋`;
+  const greeting = `${getGreeting()}, ${displayName}`;
   const subtitle = formatDate();
 
   // Don't render until mounted to avoid hydration mismatch on date/greeting
@@ -328,20 +341,8 @@ export default function DashboardPage() {
                   boxShadow: '0 2px 8px rgba(239,68,68,0.3)',
                   animation: 'pulse 2s ease-in-out infinite',
                 }}>
-                {claimingFuel ? '...' : '⚡ Claim fuel'}
-              </button>
-            ) : celoBalance < 0.05 && celoBalance > 0 ? (
-              <button
-                onClick={() => showToast('Come back tomorrow to claim your daily fuel')}
-                style={{
-                  padding: '6px 12px', borderRadius: 20,
-                  background: 'rgba(239,68,68,0.1)',
-                  border: '1px solid rgba(239,68,68,0.3)',
-                  color: '#ef4444', fontSize: 11, fontWeight: 600,
-                  cursor: 'pointer', fontFamily: 'inherit',
-                  display: 'flex', alignItems: 'center', gap: 5,
-                }}>
-                ⚠️ Low fuel
+                <IconBolt size={13} stroke={2} />
+                {claimingFuel ? 'Claiming…' : 'Claim fuel'}
               </button>
             ) : celoBalance > 0 ? (
               <div style={{
@@ -350,7 +351,7 @@ export default function DashboardPage() {
                 color: 'var(--text3)', fontSize: 11,
                 display: 'flex', alignItems: 'center', gap: 5,
               }}>
-                ⚡ {celoBalance.toFixed(3)} CELO
+                <IconBolt size={13} stroke={2} /> {celoBalance.toFixed(3)} Fuel
               </div>
             ) : null}
 
@@ -362,47 +363,6 @@ export default function DashboardPage() {
             </button>
           </div>
         </div>
-
-        {/* Low fuel banner */}
-        {celoBalance < 0.02 && celoBalance > 0 && (
-          <div style={{
-            background: 'rgba(239,68,68,0.08)',
-            border: '1px solid rgba(239,68,68,0.2)',
-            borderRadius: 12, padding: '10px 14px',
-            marginBottom: 12,
-            display: 'flex', alignItems: 'center', gap: 10,
-          }}>
-            <span style={{ fontSize: 18 }}>⚡</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#ef4444' }}>Fuel running low</div>
-              <div style={{ fontSize: 11, color: 'var(--text3)' }}>
-                {canClaimFuel ? 'Claim your daily fuel now' : 'Fuel available tomorrow'}
-              </div>
-            </div>
-            {canClaimFuel && (
-              <button onClick={handleClaimFuel} style={{
-                padding: '6px 12px', borderRadius: 9, border: 'none',
-                background: '#ef4444', color: '#fff',
-                fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-              }}>Claim</button>
-            )}
-          </div>
-        )}
-
-        {celoBalance === 0 && !canClaimFuel && mounted && (
-          <div style={{
-            background: 'rgba(239,68,68,0.1)',
-            border: '1px solid rgba(239,68,68,0.3)',
-            borderRadius: 12, padding: '10px 14px', marginBottom: 12,
-            display: 'flex', alignItems: 'center', gap: 10,
-          }}>
-            <span style={{ fontSize: 18 }}>🔋</span>
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#ef4444' }}>No fuel left</div>
-              <div style={{ fontSize: 11, color: 'var(--text3)' }}>Come back tomorrow to claim your daily fuel</div>
-            </div>
-          </div>
-        )}
 
         {/* Streak card — flippable */}
         {!streakFlipped ? (
@@ -426,7 +386,7 @@ export default function DashboardPage() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
                   <span style={{ fontSize: 38, fontWeight: 900, letterSpacing: -2, lineHeight: 1 }}>{currentStreak}</span>
-                  <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)' }}>days 🔥</span>
+                  <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', gap: 4 }}>days <IconFlame size={14} stroke={2} /></span>
                 </div>
               </div>
               <div style={{ textAlign: 'right', fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>
@@ -444,48 +404,61 @@ export default function DashboardPage() {
             </div>
           </div>
         ) : (
-          <div
-            onClick={() => setStreakFlipped(false)}
-            style={{
-              background: 'var(--card-bg)',
-              border: '1px solid var(--border)',
-              borderRadius: 16, padding: 16,
-              marginBottom: 14, cursor: 'pointer',
-            }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text3)', marginBottom: 12 }}>
-              Streak details · tap to flip back
-            </div>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-              {[
-                { num: currentStreak, label: 'Current', color: 'var(--accent-text)' },
-                { num: longestStreak, label: 'All-time best', color: 'var(--text)' },
-                { num: totalCompletionDays, label: 'Total days', color: 'var(--text)' },
-              ].map(s => (
-                <div key={s.label} style={{
-                  flex: 1, background: 'var(--bg2)', borderRadius: 12, padding: 10, textAlign: 'center',
-                }}>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: s.color }}>{s.num}</div>
-                  <div style={{ fontSize: 9, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 600 }}>{s.label}</div>
-                </div>
-              ))}
-            </div>
-            <div style={{ display: 'flex', gap: 5 }}>
-              {last7Days.map((day, i) => (
-                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                  <div style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600 }}>{day.label}</div>
-                  <div style={{
-                    width: 30, height: 30, borderRadius: 8,
-                    background: day.completed ? 'var(--btn-primary-bg)' : day.isToday ? 'transparent' : 'var(--bg2)',
-                    border: day.isToday ? '2px solid var(--accent-border)' : day.completed ? 'none' : '1px solid var(--border)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 13, fontWeight: 700,
-                    color: day.completed ? '#fff' : day.isToday ? 'var(--accent-text)' : 'var(--text3)',
-                  }}>
-                    {day.completed ? '✓' : day.isToday ? '•' : ''}
+          <div onClick={() => setStreakFlipped(false)} style={{
+            background: 'var(--btn-primary-bg)', borderRadius: 16, padding: 16,
+            marginBottom: 14, cursor: 'pointer', color: '#fff',
+          }}>
+            {(() => {
+              const goal = getNextGoal(currentStreak);
+              const prev = getPrevGoal(currentStreak);
+              const range = goal - prev;
+              const elapsed = currentStreak - prev;
+              const pct = range > 0 ? Math.min(100, (elapsed / range) * 100) : 100;
+              const daysLeft = Math.max(0, goal - currentStreak);
+              const displayMilestones = [7, 14, 21, 30];
+              return (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, fontSize: 11, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    <IconTarget size={13} stroke={2} color="rgba(255,255,255,0.65)" /> Goal Progress · tap to flip
                   </div>
-                </div>
-              ))}
-            </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: -1, lineHeight: 1 }}>{goal}</div>
+                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>day milestone</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 20, fontWeight: 800 }}>{daysLeft}</div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>days to go</div>
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'rgba(255,255,255,0.6)', marginBottom: 5 }}>
+                      <span>Day {currentStreak} of {goal}</span>
+                      <span>{Math.round(pct)}%</span>
+                    </div>
+                    <div style={{ height: 5, background: 'rgba(255,255,255,0.2)', borderRadius: 3 }}>
+                      <div style={{ height: '100%', width: `${pct}%`, background: 'rgba(255,255,255,0.9)', borderRadius: 3, transition: 'width .4s ease' }} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 5 }}>
+                    {displayMilestones.map(m => {
+                      const done = currentStreak >= m;
+                      const isCurrent = m === goal;
+                      return (
+                        <div key={m} style={{
+                          flex: 1, textAlign: 'center', padding: '5px 0', borderRadius: 8, fontSize: 9, fontWeight: 700,
+                          background: done ? 'rgba(255,255,255,0.9)' : isCurrent ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.08)',
+                          border: isCurrent && !done ? '1.5px solid rgba(255,255,255,0.5)' : 'none',
+                          color: done ? 'var(--btn-primary-bg)' : 'rgba(255,255,255,0.85)',
+                        }}>
+                          {done ? '✓' : ''}{m}d
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              );
+            })()}
           </div>
         )}
 
@@ -571,7 +544,7 @@ export default function DashboardPage() {
                   <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--text)', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     @{member.username}
                   </div>
-                  <div style={{ fontSize: 9, color: 'var(--text3)' }}>🔥 {member.streak}</div>
+                  <div style={{ fontSize: 9, color: 'var(--text3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}><IconFlame size={10} stroke={2} />{member.streak}</div>
                   {member.completedHabitToday && (
                     <div style={{ fontSize: 8, color: 'var(--accent-text)', margin: '3px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       ✓ {member.completedHabitToday}
@@ -590,12 +563,12 @@ export default function DashboardPage() {
                       onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.05)')}
                       onMouseLeave={e => (e.currentTarget.style.transform = '')}
                     >
-                      🌸 Cheer
+                      <IconHeart size={10} stroke={2} /> Cheer
                     </button>
                   )}
                   {alreadyCheered && (
-                    <div style={{ marginTop: 6, padding: '4px 0', borderRadius: 7, background: 'var(--pink)', color: '#fff', fontSize: 9, fontWeight: 600 }}>
-                      🌸 Cheered!
+                    <div style={{ marginTop: 6, padding: '4px 0', borderRadius: 7, background: 'var(--pink)', color: '#fff', fontSize: 9, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
+                      <IconHeart size={10} stroke={2} /> Cheered
                     </div>
                   )}
                 </div>
@@ -603,18 +576,6 @@ export default function DashboardPage() {
             })}
           </div>
         )}
-
-        {/* Group habits — coming soon */}
-        <div style={{ background: 'var(--bg2)', border: '1px dashed var(--border2)', borderRadius: 14, padding: '1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: 12, opacity: 0.8 }}>
-          <IconUsers size={22} stroke={1.5} color="var(--text3)" />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>Group habits</div>
-            <div style={{ fontSize: 11, color: 'var(--text3)', lineHeight: 1.5 }}>Do habits together with friends. One squad, one streak.</div>
-          </div>
-          <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: 'var(--accent-bg)', color: 'var(--accent-text)', whiteSpace: 'nowrap' }}>
-            Coming soon
-          </span>
-        </div>
 
         {/* Leaderboard snapshot */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -625,14 +586,14 @@ export default function DashboardPage() {
           {[
             ...(lbTop.length >= 2
               ? [
-                  { rank: '1', medal: '🥇', name: lbTop[0].name, streak: lbTop[0].streak, isMe: false },
-                  { rank: '2', medal: '🥈', name: lbTop[1].name, streak: lbTop[1].streak, isMe: false },
+                  { rank: '1', rankColor: '#f59e0b', name: lbTop[0].name, streak: lbTop[0].streak, isMe: false },
+                  { rank: '2', rankColor: '#94a3b8', name: lbTop[1].name, streak: lbTop[1].streak, isMe: false },
                 ]
               : [
-                  { rank: '1', medal: '🥇', name: '@—',  streak: 0, isMe: false },
-                  { rank: '2', medal: '🥈', name: '@—',  streak: 0, isMe: false },
+                  { rank: '1', rankColor: '#f59e0b', name: '@—', streak: 0, isMe: false },
+                  { rank: '2', rankColor: '#94a3b8', name: '@—', streak: 0, isMe: false },
                 ]),
-            { rank: userRank ? `#${userRank}` : '—', medal: '', name: `You · @${displayName}`, streak: currentStreak, isMe: true },
+            { rank: userRank ? `#${userRank}` : '—', rankColor: 'var(--accent-text)', name: `You · @${displayName}`, streak: currentStreak, isMe: true },
           ].map((row, i) => (
             <div key={i} style={{
               display: 'flex', alignItems: 'center', gap: 10,
@@ -640,11 +601,13 @@ export default function DashboardPage() {
               borderBottom: i < 2 ? '1px solid var(--border)' : 'none',
               background: row.isMe ? 'var(--accent-bg)' : 'transparent',
             }}>
-              <span style={{ fontSize: 13, fontWeight: 700, minWidth: 22, color: row.isMe ? 'var(--accent-text)' : row.rank === '1' ? '#f59e0b' : '#94a3b8' }}>
-                {row.medal || row.rank}
+              <span style={{ fontSize: 13, fontWeight: 700, minWidth: 22, color: row.rankColor }}>
+                {row.rank}
               </span>
               <span style={{ flex: 1, fontSize: 12, fontWeight: 500, color: 'var(--text)' }}>{row.name}</span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--streak-color, var(--amber))' }}>🔥 {row.streak}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--streak-color, var(--amber))', display: 'flex', alignItems: 'center', gap: 3 }}>
+                <IconFlame size={13} stroke={2} /> {row.streak}
+              </span>
             </div>
           ))}
         </div>
@@ -658,8 +621,9 @@ export default function DashboardPage() {
               background: 'var(--btn-primary-bg)', border: 'none',
               color: 'var(--btn-primary-text)', fontSize: 12, fontWeight: 700,
               cursor: 'pointer', fontFamily: 'inherit',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
             }}>
-            ⚡ Start session
+            <IconPlayerPlay size={14} stroke={2} /> Start session
           </button>
           <button
             onClick={() => router.push('/habits')}
