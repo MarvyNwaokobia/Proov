@@ -34,12 +34,15 @@ export default function SettingsPage() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [editingUsername, setEditingUsername] = useState(false);
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
   const [newUsername, setNewUsername] = useState('');
   const [usernameHint, setUsernameHint] = useState('');
   const [usernameHintColor, setUsernameHintColor] = useState('var(--text3)');
   const [address, setAddress] = useState('');
   const [userRank, setUserRank] = useState<number | null>(null);
   const [savedToast, setSavedToast] = useState(false);
+  const [toastMsg, setToastMsg] = useState('✓ Saved');
   const [copied, setCopied] = useState(false);
   const [showUsernameConfirm, setShowUsernameConfirm] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -47,6 +50,12 @@ export default function SettingsPage() {
   const [canClaimFuel, setCanClaimFuel] = useState(false);
   const [secondsUntilClaim, setSecondsUntilClaim] = useState(0);
   const [claimingFuel, setClaimingFuel] = useState(false);
+
+  // Notification preferences
+  const [notifTime, setNotifTime] = useState('09:00');
+  const [notifStreak, setNotifStreak] = useState(true);
+  const [notifCircle, setNotifCircle] = useState(true);
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
 
   useEffect(() => {
     setMounted(true);
@@ -62,6 +71,19 @@ export default function SettingsPage() {
     if (rank > 0) setUserRank(rank);
     const storedEmail = localStorage.getItem('proov_email') || '';
     if (storedEmail) setEmail(storedEmail);
+
+    // Load notification prefs from localStorage
+    const t = localStorage.getItem('proov_notif_time');
+    if (t) setNotifTime(t);
+    const streak = localStorage.getItem('proov_notif_streak');
+    if (streak !== null) setNotifStreak(streak !== 'false');
+    const circle = localStorage.getItem('proov_notif_circle');
+    if (circle !== null) setNotifCircle(circle !== 'false');
+
+    // Check notification permission
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setNotifPermission(Notification.permission);
+    }
   }, []);
 
   useEffect(() => {
@@ -126,8 +148,7 @@ export default function SettingsPage() {
     setEditingUsername(false);
     setNewUsername('');
     setUsernameHint('');
-    setSavedToast(true);
-    setTimeout(() => setSavedToast(false), 2500);
+    showToast('✓ Username saved');
   };
 
   const handleSignOut = async () => {
@@ -154,8 +175,7 @@ export default function SettingsPage() {
     const { claimFuel, getUserCeloBalance } = await import('@/lib/fuel');
     const result = await claimFuel();
     if (result.success) {
-      setSavedToast(true);
-      setTimeout(() => setSavedToast(false), 2500);
+      showToast('✓ Fuel claimed');
       setCanClaimFuel(false);
       setSecondsUntilClaim(86400);
       const addr = localStorage.getItem('proov_address') || '';
@@ -163,6 +183,49 @@ export default function SettingsPage() {
       setCeloBalance(newBalance);
     }
     setClaimingFuel(false);
+  };
+
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setSavedToast(true);
+    setTimeout(() => setSavedToast(false), 2500);
+  };
+
+  const requestNotifPermission = async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    const perm = await Notification.requestPermission();
+    setNotifPermission(perm);
+    if (perm === 'granted') showToast('✓ Notifications enabled');
+  };
+
+  const handleNotifTimeChange = (val: string) => {
+    setNotifTime(val);
+    localStorage.setItem('proov_notif_time', val);
+    showToast('✓ Reminder time saved');
+  };
+
+  const handleToggleStreak = () => {
+    const next = !notifStreak;
+    setNotifStreak(next);
+    localStorage.setItem('proov_notif_streak', String(next));
+    showToast(next ? '✓ Streak alerts on' : 'Streak alerts off');
+  };
+
+  const handleToggleCircle = () => {
+    const next = !notifCircle;
+    setNotifCircle(next);
+    localStorage.setItem('proov_notif_circle', String(next));
+    showToast(next ? '✓ Circle activity on' : 'Circle activity off');
+  };
+
+  const handleSaveEmail = () => {
+    const trimmed = newEmail.trim().toLowerCase();
+    if (!trimmed || !trimmed.includes('@')) return;
+    localStorage.setItem('proov_email', trimmed);
+    setEmail(trimmed);
+    setEditingEmail(false);
+    setNewEmail('');
+    showToast('✓ Email saved');
   };
 
   if (!mounted) return null;
@@ -280,13 +343,53 @@ export default function SettingsPage() {
         )}
 
         {/* Email row */}
-        <div style={{ ...listRow, cursor: 'default' }}>
+        <div
+          onClick={() => { setEditingEmail(true); setNewEmail(email); }}
+          style={listRow}
+        >
           <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>Email</span>
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginRight: 8 }}>
-            {email || '—'}
+          <span style={{ fontSize: 13, fontWeight: 600, color: email ? 'var(--text)' : 'var(--text3)', marginRight: 8 }}>
+            {email || 'Add email'}
           </span>
           <IconChevronRight size={14} stroke={2} color="var(--text3)" />
         </div>
+
+        {/* Inline email edit */}
+        {editingEmail && (
+          <div style={{ padding: '12px 0 16px', borderBottom: '1px solid var(--border)' }}>
+            <input
+              type="email"
+              value={newEmail}
+              onChange={e => setNewEmail(e.target.value)}
+              autoFocus
+              placeholder="your@email.com"
+              style={{ marginBottom: 8, fontSize: 13 }}
+            />
+            <p style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 8 }}>
+              Used for notifications only. Different emails create separate accounts.
+            </p>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button
+                onClick={handleSaveEmail}
+                disabled={!newEmail.includes('@')}
+                style={{
+                  padding: '6px 16px', borderRadius: 8, border: 'none',
+                  background: newEmail.includes('@') ? 'var(--btn-primary-bg)' : 'var(--bg3)',
+                  color: newEmail.includes('@') ? 'var(--btn-primary-text)' : 'var(--text3)',
+                  fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                Save
+              </button>
+              <button
+                onClick={() => { setEditingEmail(false); setNewEmail(''); }}
+                style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text3)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Connected account row */}
         {address && (
@@ -355,17 +458,87 @@ export default function SettingsPage() {
 
         {/* ── Notifications ── */}
         <p style={{ ...sectionLabel, marginTop: 16 }}>Notifications</p>
-        {([
-          ['Daily reminder', '9:00 AM'],
-          ['Streak alerts', 'On'],
-          ['Circle activity', 'On'],
-        ] as [string, string][]).map(([label, value], i, arr) => (
-          <div key={label} style={{ ...listRow, borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }}>
-            <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>{label}</span>
-            <span style={{ fontSize: 13, color: 'var(--accent-text)', fontWeight: 600, marginRight: 8 }}>{value}</span>
-            <IconChevronRight size={14} stroke={2} color="var(--text3)" />
+
+        {/* Permission banner */}
+        {notifPermission !== 'granted' && (
+          <div style={{
+            background: 'var(--accent-bg)', border: '1px solid var(--accent-border)',
+            borderRadius: 12, padding: '10px 14px', marginBottom: 10,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+          }}>
+            <span style={{ fontSize: 12, color: 'var(--text2)', flex: 1 }}>
+              {notifPermission === 'denied'
+                ? 'Notifications blocked — enable in browser settings'
+                : 'Enable browser notifications to get reminders'}
+            </span>
+            {notifPermission !== 'denied' && (
+              <button
+                onClick={requestNotifPermission}
+                style={{
+                  padding: '5px 12px', borderRadius: 8, border: 'none', flexShrink: 0,
+                  background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)',
+                  fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                Enable
+              </button>
+            )}
           </div>
-        ))}
+        )}
+
+        {/* Daily reminder time */}
+        <div style={{ ...listRow }}>
+          <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>Daily reminder</span>
+          <input
+            type="time"
+            value={notifTime}
+            onChange={e => handleNotifTimeChange(e.target.value)}
+            style={{
+              border: '1px solid var(--border2)', borderRadius: 8,
+              background: 'var(--bg2)', color: 'var(--text)',
+              fontSize: 13, fontWeight: 600, padding: '4px 8px',
+              fontFamily: 'inherit', outline: 'none', cursor: 'pointer',
+            }}
+          />
+        </div>
+
+        {/* Streak alerts toggle */}
+        <div style={{ ...listRow }}>
+          <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>Streak alerts</span>
+          <button
+            onClick={handleToggleStreak}
+            style={{
+              width: 44, height: 26, borderRadius: 13, border: 'none',
+              background: notifStreak ? 'var(--accent)' : 'var(--border2)',
+              cursor: 'pointer', position: 'relative', transition: 'background .2s', flexShrink: 0,
+            }}
+          >
+            <div style={{
+              position: 'absolute', top: 3, left: notifStreak ? 21 : 3,
+              width: 20, height: 20, borderRadius: '50%', background: '#fff',
+              transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.3)',
+            }} />
+          </button>
+        </div>
+
+        {/* Circle activity toggle */}
+        <div style={{ ...listRow, borderBottom: 'none' }}>
+          <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>Circle activity</span>
+          <button
+            onClick={handleToggleCircle}
+            style={{
+              width: 44, height: 26, borderRadius: 13, border: 'none',
+              background: notifCircle ? 'var(--accent)' : 'var(--border2)',
+              cursor: 'pointer', position: 'relative', transition: 'background .2s', flexShrink: 0,
+            }}
+          >
+            <div style={{
+              position: 'absolute', top: 3, left: notifCircle ? 21 : 3,
+              width: 20, height: 20, borderRadius: '50%', background: '#fff',
+              transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.3)',
+            }} />
+          </button>
+        </div>
 
         {/* ── Sign out ── */}
         <button
@@ -382,7 +555,7 @@ export default function SettingsPage() {
 
       </div>
 
-      <div className={`toast ${savedToast ? 'show' : ''}`} style={{ background: 'var(--success)' }}>✓ Saved</div>
+      <div className={`toast ${savedToast ? 'show' : ''}`} style={{ background: 'var(--success)' }}>{toastMsg}</div>
 
       {/* Username change confirm modal */}
       {showUsernameConfirm && (
