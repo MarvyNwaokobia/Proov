@@ -2,7 +2,10 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { IconArrowLeft, IconChevronRight, IconPencil } from '@tabler/icons-react';
+import {
+  IconArrowLeft, IconPencil, IconArchive,
+  IconPlayerPlay, IconCheck, IconLock, IconUsers, IconWorld, IconFlame,
+} from '@tabler/icons-react';
 import {
   getUserHabits,
   getTodayCompletions,
@@ -13,6 +16,12 @@ import {
   type Habit,
 } from '@/lib/supabase';
 import { useProovTx } from '@/hooks/useProovTx';
+
+function fmtDur(mins: number) {
+  if (mins < 60) return `${mins} min`;
+  const h = Math.floor(mins / 60), m = mins % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
 
 export default function HabitDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -56,7 +65,7 @@ export default function HabitDetailPage() {
     const streak = parseInt(localStorage.getItem('proov_streak_count') || '0');
     await saveHabitCompletion(habit.id, address, streak).catch(() => {});
     proovTx.completeHabit((habit as any)?.on_chain_id || 0);
-    showToast('Marked done ✓');
+    showToast('Marked done');
   };
 
   const handleSaveEdit = async () => {
@@ -83,12 +92,12 @@ export default function HabitDetailPage() {
     } : null);
     setEditing(false);
     setSaving(false);
-    showToast('Habit updated ✓');
+    showToast('Habit updated');
   };
 
-  const handleRemove = async () => {
+  const handleArchive = async () => {
     if (!habit) return;
-    if (!confirm(`Remove "${habit.name}"?`)) return;
+    if (!confirm(`Archive "${habit.name}"?`)) return;
     await deactivateHabit(habit.id);
     proovTx.removeHabit((habit as any)?.on_chain_id || 0);
     router.back();
@@ -111,9 +120,17 @@ export default function HabitDetailPage() {
     </div>
   );
 
-  const todayDow = new Date().getDay();
-  // Map Mon=0..Sun=6 so grid starts on Monday
-  const todayIdx = todayDow === 0 ? 6 : todayDow - 1;
+  // Sun=0 … Sat=6, matches ['S','M','T','W','T','F','S'] index
+  const todayIdx = new Date().getDay();
+
+  const visibilityIcon = habit.visibility === 'private'
+    ? <IconLock size={12} stroke={2} />
+    : habit.visibility === 'circle'
+    ? <IconUsers size={12} stroke={2} />
+    : <IconWorld size={12} stroke={2} />;
+
+  const visibilityLabel = habit.visibility === 'private' ? 'Private'
+    : habit.visibility === 'circle' ? 'Circle' : 'Everyone';
 
   return (
     <div style={{ padding: '1rem 1rem 6rem', maxWidth: 480, margin: '0 auto' }}>
@@ -132,40 +149,165 @@ export default function HabitDetailPage() {
         Back to habits
       </button>
 
-      {/* Header row: emoji + edit toggle */}
-      <div style={{ display: 'flex', alignItems: 'flex-start',
-        justifyContent: 'space-between', marginBottom: 4 }}>
-        <span style={{ fontSize: 36 }}>{habit.emoji}</span>
+      {/* Header: emoji + name + meta */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18 }}>
+        <span style={{ fontSize: 36, flexShrink: 0 }}>{habit.emoji}</span>
+        <div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.4, lineHeight: 1.2 }}>
+            {habit.name}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' as const }}>
+            <span>{habit.type === 'timed' ? fmtDur(habit.duration_minutes) : 'Checkbox'}</span>
+            <span>·</span>
+            <span>{habit.category}</span>
+            <span>·</span>
+            <span style={{ textTransform: 'capitalize' }}>{habit.schedule}</span>
+            <span>·</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>{visibilityIcon} {visibilityLabel}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats row */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 16 }}>
+        {[
+          { value: habitStreak, label: 'Streak' },
+          { value: habitStreak, label: 'Best' },
+          { value: 0, label: 'Total' },
+        ].map(s => (
+          <div key={s.label} style={{
+            background: 'var(--bg2)', border: '1px solid var(--border)',
+            borderRadius: 12, padding: 10, textAlign: 'center',
+          }}>
+            <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>{s.value}</div>
+            <div style={{ fontSize: 9, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginTop: 2, fontWeight: 600 }}>
+              {s.label}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Last 7 days */}
+      <div style={{ marginBottom: 18 }}>
+        <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text3)', marginBottom: 8 }}>
+          Last 7 days
+        </div>
+        <div style={{ display: 'flex', gap: 5 }}>
+          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => {
+            const isToday = i === todayIdx;
+            const done = isToday && isDoneToday;
+            return (
+              <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                <div style={{ fontSize: 9, color: 'var(--text3)', fontWeight: 600 }}>{day}</div>
+                <div style={{
+                  width: '100%', aspectRatio: '1', borderRadius: 7,
+                  background: done ? 'var(--btn-primary-bg)' : isToday ? 'transparent' : 'var(--bg2)',
+                  border: isToday ? '2px solid var(--accent-border)' : done ? 'none' : '1px solid var(--border)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 10, fontWeight: 700,
+                  color: done ? '#fff' : isToday ? 'var(--accent-text)' : 'var(--text3)',
+                }}>
+                  {done ? '✓' : isToday ? '·' : ''}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Primary CTA */}
+      {habit.type === 'timed' ? (
+        isDoneToday ? (
+          <div style={{
+            width: '100%', padding: 13, borderRadius: 13, marginBottom: 12,
+            background: 'var(--accent-bg)', border: '1px solid var(--accent-border)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+            fontSize: 14, fontWeight: 700, color: 'var(--accent-text)',
+          }}>
+            <IconCheck size={16} stroke={2.5} /> Done
+          </div>
+        ) : (
+          <button
+            onClick={() => router.push(`/timer?habitId=${habit.id}&autostart=1`)}
+            style={{
+              width: '100%', padding: 13, borderRadius: 13, border: 'none',
+              background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)',
+              fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+              marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+            }}>
+            <IconPlayerPlay size={15} stroke={2} /> Start {fmtDur(habit.duration_minutes)} session
+          </button>
+        )
+      ) : (
+        isDoneToday ? (
+          <div style={{
+            width: '100%', padding: 13, borderRadius: 13, marginBottom: 12,
+            background: 'var(--accent-bg)', border: '1px solid var(--accent-border)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+            fontSize: 14, fontWeight: 700, color: 'var(--accent-text)',
+          }}>
+            <IconCheck size={16} stroke={2.5} /> Done
+          </div>
+        ) : (
+          <button
+            onClick={handleMarkDone}
+            style={{
+              width: '100%', padding: 13, borderRadius: 13, border: 'none',
+              background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)',
+              fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+              marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+            }}>
+            <IconCheck size={15} stroke={2} /> Mark as done
+          </button>
+        )
+      )}
+
+      {/* Divider */}
+      <div style={{ height: 1, background: 'var(--border)', marginBottom: 12 }} />
+
+      {/* Secondary: Edit + Archive */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: editing ? 20 : 0 }}>
         <button
           onClick={() => setEditing(v => !v)}
           style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            padding: '6px 12px', borderRadius: 9,
-            border: '1px solid var(--border)',
+            flex: 1, padding: 11, borderRadius: 12,
+            border: `1px solid ${editing ? 'var(--accent-border)' : 'var(--border)'}`,
             background: editing ? 'var(--accent-bg)' : 'transparent',
             color: editing ? 'var(--accent-text)' : 'var(--text2)',
-            fontSize: 12, fontWeight: 600, cursor: 'pointer',
-            fontFamily: 'inherit',
+            fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+            transition: 'all 0.15s',
           }}>
-          <IconPencil size={13} stroke={2} />
-          {editing ? 'Cancel' : 'Edit'}
+          <IconPencil size={13} stroke={2} /> {editing ? 'Cancel' : 'Edit'}
+        </button>
+        <button
+          onClick={handleArchive}
+          style={{
+            flex: 1, padding: 11, borderRadius: 12,
+            border: '1px solid rgba(180, 100, 120, 0.28)', background: 'transparent',
+            color: '#a06070', fontSize: 12, fontWeight: 600,
+            cursor: 'pointer', fontFamily: 'inherit',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+            transition: 'background 0.15s, color 0.15s',
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLElement).style.background = 'rgba(180, 100, 120, 0.1)';
+            (e.currentTarget as HTMLElement).style.color = '#8a4a5e';
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLElement).style.background = 'transparent';
+            (e.currentTarget as HTMLElement).style.color = '#a06070';
+          }}>
+          <IconArchive size={13} stroke={2} /> Archive
         </button>
       </div>
 
-      {!editing ? (
-        <>
-          <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)',
-            letterSpacing: -0.5, marginBottom: 2 }}>
-            {habit.name}
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 20 }}>
-            {habit.category} · {habit.type === 'timed'
-              ? `${habit.duration_minutes} min`
-              : 'Tap to complete'} · {habit.schedule}
-          </div>
-        </>
-      ) : (
-        <div style={{ marginBottom: 20 }}>
+      {/* Edit form — inline, shown below secondary row */}
+      {editing && (
+        <div style={{
+          background: 'var(--bg2)', border: '1px solid var(--border)',
+          borderRadius: 16, padding: '16px', marginTop: 4,
+        }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)',
             textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
             Name
@@ -176,7 +318,7 @@ export default function HabitDetailPage() {
             style={{
               width: '100%', padding: '10px 12px', borderRadius: 10,
               border: '1px solid var(--border2)',
-              background: 'var(--bg2)', color: 'var(--text)',
+              background: 'var(--card-bg)', color: 'var(--text)',
               fontSize: 14, fontWeight: 600, marginBottom: 14,
               outline: 'none', fontFamily: 'inherit',
               boxSizing: 'border-box' as const,
@@ -187,7 +329,7 @@ export default function HabitDetailPage() {
             <>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)',
                 textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
-                Duration: {editDuration} min
+                Duration — {fmtDur(editDuration)}
               </div>
               <input
                 type="range" min={1} max={240} step={1}
@@ -203,19 +345,24 @@ export default function HabitDetailPage() {
             Visibility
           </div>
           <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' as const }}>
-            {(['private', 'circle', 'public'] as const).map(v => (
+            {([
+              { value: 'private' as const, Icon: IconLock, label: 'Private' },
+              { value: 'circle' as const, Icon: IconUsers, label: 'Circle' },
+              { value: 'public' as const, Icon: IconWorld, label: 'Public' },
+            ]).map(({ value, Icon, label }) => (
               <button
-                key={v}
-                onClick={() => setEditVisibility(v)}
+                key={value}
+                onClick={() => setEditVisibility(value)}
                 style={{
                   padding: '6px 14px', borderRadius: 20,
-                  border: `1px solid ${editVisibility === v ? 'var(--accent-border)' : 'var(--border)'}`,
-                  background: editVisibility === v ? 'var(--accent-bg)' : 'transparent',
-                  color: editVisibility === v ? 'var(--accent-text)' : 'var(--text2)',
-                  fontSize: 12, fontWeight: editVisibility === v ? 700 : 500,
+                  border: `1px solid ${editVisibility === value ? 'var(--accent-border)' : 'var(--border)'}`,
+                  background: editVisibility === value ? 'var(--accent-bg)' : 'transparent',
+                  color: editVisibility === value ? 'var(--accent-text)' : 'var(--text2)',
+                  fontSize: 12, fontWeight: editVisibility === value ? 700 : 500,
                   cursor: 'pointer', fontFamily: 'inherit',
+                  display: 'flex', alignItems: 'center', gap: 5,
                 }}>
-                {v === 'private' ? '🔒 Private' : v === 'circle' ? '👥 Circle' : '🌍 Public'}
+                <Icon size={12} stroke={2} /> {label}
               </button>
             ))}
           </div>
@@ -226,129 +373,15 @@ export default function HabitDetailPage() {
             style={{
               width: '100%', padding: 11, borderRadius: 11, border: 'none',
               background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)',
-              fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              fontSize: 13, fontWeight: 700,
+              cursor: saving || !editName.trim() ? 'not-allowed' : 'pointer',
               fontFamily: 'inherit',
+              opacity: saving || !editName.trim() ? 0.6 : 1,
             }}>
-            {saving ? 'Saving...' : 'Save changes'}
+            {saving ? 'Saving…' : 'Save changes'}
           </button>
         </div>
       )}
-
-      {/* This week */}
-      <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-        letterSpacing: '0.1em', color: 'var(--text3)', marginBottom: 8 }}>
-        This week
-      </div>
-      <div style={{ display: 'flex', gap: 5, marginBottom: 18 }}>
-        {['M','T','W','T','F','S','S'].map((day, i) => {
-          const isToday = i === todayIdx;
-          const done = isToday && isDoneToday;
-          return (
-            <div key={i} style={{ flex: 1, display: 'flex',
-              flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-              <span style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600 }}>{day}</span>
-              <div style={{
-                width: 28, height: 28, borderRadius: 8,
-                background: done ? 'var(--btn-primary-bg)' : isToday ? 'transparent' : 'var(--bg2)',
-                border: isToday ? '2px solid var(--accent-border)' : done ? 'none' : '1px solid var(--border)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 12, fontWeight: 700,
-                color: done ? '#fff' : isToday ? 'var(--accent-text)' : 'var(--text3)',
-              }}>
-                {done ? '✓' : isToday ? '•' : ''}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Visibility row */}
-      <div
-        onClick={() => setEditing(true)}
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '12px 14px', background: 'var(--bg2)',
-          borderRadius: 12, marginBottom: 12, cursor: 'pointer',
-        }}>
-        <span style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600 }}>Who sees this</span>
-        <span style={{ fontSize: 12, color: 'var(--accent-text)', fontWeight: 700,
-          display: 'flex', alignItems: 'center', gap: 4 }}>
-          {habit.visibility === 'private' ? '🔒 Only me' :
-           habit.visibility === 'circle' ? '👥 Circle' :
-           habit.visibility === 'public' ? '🌍 Everyone' : 'Custom'}
-          <IconChevronRight size={13} stroke={2} />
-        </span>
-      </div>
-
-      {/* Stats */}
-      <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-        letterSpacing: '0.1em', color: 'var(--text3)', marginBottom: 8 }}>
-        Stats
-      </div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-        {[
-          { num: habitStreak, label: 'Current', color: 'var(--accent-text)' },
-          { num: habitStreak, label: 'Best', color: 'var(--text)' },
-          { num: 0, label: 'Total', color: 'var(--text)' },
-        ].map(s => (
-          <div key={s.label} style={{
-            flex: 1, background: 'var(--bg2)', borderRadius: 12, padding: 10, textAlign: 'center',
-          }}>
-            <div style={{ fontSize: 22, fontWeight: 800, color: s.color }}>{s.num}</div>
-            <div style={{ fontSize: 9, color: 'var(--text3)', textTransform: 'uppercase',
-              letterSpacing: '0.07em', fontWeight: 600 }}>{s.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* CTA */}
-      {habit.type === 'timed' ? (
-        <button
-          onClick={() => router.push('/timer')}
-          style={{
-            width: '100%', padding: 12, borderRadius: 12, border: 'none',
-            background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)',
-            fontSize: 14, fontWeight: 700, cursor: 'pointer',
-            fontFamily: 'inherit', marginBottom: 12,
-          }}>
-          ⚡ Start Grind Timer
-        </button>
-      ) : (
-        <button
-          onClick={handleMarkDone}
-          disabled={isDoneToday}
-          style={{
-            width: '100%', padding: 12, borderRadius: 12, border: 'none',
-            background: isDoneToday ? 'var(--bg2)' : 'var(--btn-primary-bg)',
-            color: isDoneToday ? 'var(--text3)' : 'var(--btn-primary-text)',
-            fontSize: 14, fontWeight: 700,
-            cursor: isDoneToday ? 'default' : 'pointer',
-            fontFamily: 'inherit', marginBottom: 12,
-          }}>
-          {isDoneToday ? '✓ Done today' : '✓ Mark as done today'}
-        </button>
-      )}
-
-      {/* Remove */}
-      <button
-        onClick={handleRemove}
-        style={{
-          width: '100%', padding: 11, borderRadius: 12,
-          border: '2px solid #f43f5e', background: 'transparent',
-          color: '#f43f5e', fontSize: 13, fontWeight: 800,
-          cursor: 'pointer', fontFamily: 'inherit',
-          transition: 'all 0.15s',
-        }}
-        onMouseEnter={e => {
-          (e.currentTarget as HTMLElement).style.background = '#f43f5e';
-          (e.currentTarget as HTMLElement).style.color = '#fff';
-        }}
-        onMouseLeave={e => {
-          (e.currentTarget as HTMLElement).style.background = 'transparent';
-          (e.currentTarget as HTMLElement).style.color = '#f43f5e';
-        }}>
-        Remove habit
-      </button>
 
     </div>
   );

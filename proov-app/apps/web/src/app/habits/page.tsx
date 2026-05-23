@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   IconBrain, IconRun, IconYoga, IconBook, IconSalad, IconPalette,
-  IconArrowLeft, IconFlame, IconClock, IconCheck, IconPlayerPlay,
+  IconArrowLeft, IconFlame, IconClock, IconCheck, IconArchive, IconPlayerPlay,
   type Icon as TablerIcon,
 } from '@tabler/icons-react';
 import {
@@ -447,8 +447,8 @@ export default function HabitsPage() {
     setIsSaving(false);
   };
 
-  // ── Remove habit ────────────────────────────────────────────────────────────
-  const handleRemove = async (habitId: string) => {
+  // ── Archive habit ───────────────────────────────────────────────────────────
+  const handleArchive = async (habitId: string) => {
     const habit = habits.find(h => h.id === habitId);
     await supabaseDeactivate(habitId);
     proovTx.removeHabit((habit as any)?.on_chain_id || 0);
@@ -649,6 +649,27 @@ export default function HabitsPage() {
                             <IconPlayerPlay size={13} stroke={2} /> Start
                           </button>
                         )}
+                        <button
+                          onClick={e => { e.stopPropagation(); handleArchive(habit.id); }}
+                          title="Archive habit"
+                          style={{
+                            padding: '6px 7px', borderRadius: 9, flexShrink: 0,
+                            border: '1px solid rgba(180, 100, 120, 0.28)',
+                            background: 'transparent', color: '#a06070',
+                            cursor: 'pointer', display: 'flex', alignItems: 'center',
+                            transition: 'background 0.15s, color 0.15s',
+                          }}
+                          onMouseEnter={e => {
+                            (e.currentTarget as HTMLElement).style.background = 'rgba(180, 100, 120, 0.1)';
+                            (e.currentTarget as HTMLElement).style.color = '#8a4a5e';
+                          }}
+                          onMouseLeave={e => {
+                            (e.currentTarget as HTMLElement).style.background = 'transparent';
+                            (e.currentTarget as HTMLElement).style.color = '#a06070';
+                          }}
+                        >
+                          <IconArchive size={15} stroke={1.8} />
+                        </button>
                       </div>
                     );
                   })}
