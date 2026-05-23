@@ -131,6 +131,17 @@ export default function DashboardPage() {
     getAllHabitStreaks(habits.map(h => h.id), addr).then(setHabitStreaks).catch(() => {});
   }, [habits]);
 
+  // Refresh completedToday when user returns to this tab (e.g. after completing in the timer)
+  useEffect(() => {
+    const addr = localStorage.getItem('proov_address') || '';
+    if (!addr) return;
+    const onVisible = () => {
+      if (!document.hidden) getTodayCompletions(addr).then(setCompletedToday).catch(() => {});
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+
   useEffect(() => {
     setMounted(true);
     const today = new Date().toDateString();
