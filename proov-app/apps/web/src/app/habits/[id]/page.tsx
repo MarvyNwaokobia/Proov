@@ -13,6 +13,8 @@ import {
   deactivateHabit,
   updateHabit,
   getHabitStreak,
+  getCircleRequests,
+  getUsernamesForAddresses,
   type Habit,
 } from '@/lib/supabase';
 import { useProovTx } from '@/hooks/useProovTx';
@@ -35,6 +37,8 @@ export default function HabitDetailPage() {
   const [editName, setEditName] = useState('');
   const [editDuration, setEditDuration] = useState(0);
   const [editVisibility, setEditVisibility] = useState<'private' | 'circle' | 'public' | 'custom'>('private');
+  const [editVisibleTo, setEditVisibleTo] = useState<string[]>([]);
+  const [circleMembers, setCircleMembers] = useState<{ address: string; username: string }[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -45,7 +49,8 @@ export default function HabitDetailPage() {
       getUserHabits(address),
       getTodayCompletions(address),
       getHabitStreak(id, address),
-    ]).then(([habits, todayDone, streak]) => {
+      getCircleRequests(address),
+    ]).then(async ([habits, todayDone, streak, circle]) => {
       const found = habits.find(h => h.id === id);
       if (!found) { router.back(); return; }
       setHabit(found);
@@ -54,6 +59,18 @@ export default function HabitDetailPage() {
       setEditName(found.name);
       setEditDuration(found.duration_minutes);
       setEditVisibility(found.visibility);
+      setEditVisibleTo(found.visible_to || []);
+
+      const memberAddresses = circle.accepted.map(r =>
+        r.from_address === address.toLowerCase() ? r.to_address : r.from_address
+      );
+      if (memberAddresses.length > 0) {
+        const usernameMap = await getUsernamesForAddresses(memberAddresses);
+        setCircleMembers(memberAddresses.map(addr => ({
+          address: addr,
+          username: usernameMap[addr] || addr.slice(0, 6) + '…' + addr.slice(-4),
+        })));
+      }
     });
   }, [id, router]);
 
@@ -75,6 +92,7 @@ export default function HabitDetailPage() {
       name: editName,
       duration_minutes: editDuration,
       visibility: editVisibility,
+      visible_to: editVisibility === 'circle' ? editVisibleTo : [],
     });
     proovTx.editHabit(
       (habit as any)?.on_chain_id || 0,
@@ -89,6 +107,7 @@ export default function HabitDetailPage() {
       name: editName,
       duration_minutes: editDuration,
       visibility: editVisibility,
+      visible_to: editVisibility === 'circle' ? editVisibleTo : [],
     } : null);
     setEditing(false);
     setSaving(false);
@@ -344,7 +363,7 @@ export default function HabitDetailPage() {
             textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
             Visibility
           </div>
-          <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' as const }}>
+          <div style={{ display: 'flex', gap: 6, marginBottom: editVisibility === 'circle' && circleMembers.length > 0 ? 10 : 16, flexWrap: 'wrap' as const }}>
             {([
               { value: 'private' as const, Icon: IconLock, label: 'Private' },
               { value: 'circle' as const, Icon: IconUsers, label: 'Circle' },
@@ -366,6 +385,74 @@ export default function HabitDetailPage() {
               </button>
             ))}
           </div>
+
+          {editVisibility === 'circle' && circleMembers.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)',
+                textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                Who can see this
+              </div>
+              <div style={{
+                background: 'var(--card-bg)', border: '1px solid var(--border)',
+                borderRadius: 12, overflow: 'hidden',
+              }}>
+                {circleMembers.map((member, idx) => {
+                  const checked = editVisibleTo.includes(member.address);
+                  return (
+                    <label
+                      key={member.address}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '11px 14px', cursor: 'pointer',
+                        borderBottom: idx < circleMembers.length - 1 ? '1px solid var(--border)' : 'none',
+                        background: checked ? 'var(--accent-bg)' : 'transparent',
+                        transition: 'background 0.12s',
+                      }}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          setEditVisibleTo(prev =>
+                            checked ? prev.filter(a => a !== member.address) : [...prev, member.address]
+                          );
+                        }}
+                        style={{ accentColor: 'var(--accent)', width: 15, height: 15, flexShrink: 0 }}
+                      />
+                      <div style={{
+                        width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                        background: 'var(--accent-bg)', border: '1.5px solid var(--accent-border)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 11, fontWeight: 700, color: 'var(--accent-text)',
+                      }}>
+                        {member.username.slice(0, 1).toUpperCase()}
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                        @{member.username}
+                      </span>
+                      {checked && (
+                        <IconCheck size={13} stroke={2.5} style={{ marginLeft: 'auto', color: 'var(--accent-text)' }} />
+                      )}
+                    </label>
+                  );
+                })}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 6 }}>
+                {editVisibleTo.length === 0
+                  ? 'No members selected — only you can see this habit'
+                  : `${editVisibleTo.length} member${editVisibleTo.length > 1 ? 's' : ''} selected`}
+              </div>
+            </div>
+          )}
+
+          {editVisibility === 'circle' && circleMembers.length === 0 && (
+            <div style={{
+              fontSize: 12, color: 'var(--text3)', marginBottom: 16,
+              padding: '10px 12px', background: 'var(--bg2)',
+              borderRadius: 10, border: '1px solid var(--border)',
+            }}>
+              You have no circle members yet. Add people to your circle to control per-habit visibility.
+            </div>
+          )}
 
           <button
             onClick={handleSaveEdit}
