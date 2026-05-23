@@ -12,7 +12,7 @@ import {
   IconCircleCheck,
 } from '@tabler/icons-react';
 import {
-  getUserHabits, saveHabitCompletion,
+  getUserHabits, saveHabitCompletion, getTodayCompletions,
   saveTimerSession, updateTimerSession, getAllSessionHistory,
   type Habit, type TimerSession,
 } from '@/lib/supabase';
@@ -52,6 +52,7 @@ export default function GrindTimerPage() {
   const [search, setSearch] = useState('');
 
   const [userAddress, setUserAddress] = useState('');
+  const [completedToday, setCompletedToday] = useState<string[]>([]);
   const [duration, setDuration] = useState(25);
 
   const [secondsLeft, setSecondsLeft] = useState(0);
@@ -77,10 +78,11 @@ export default function GrindTimerPage() {
     if (addr) setUserAddress(addr);
   }, []);
 
-  // Reload session history whenever the address is known (survives sign-out → sign-in)
+  // Reload session history + today's completions whenever the address is known
   useEffect(() => {
     if (!userAddress) return;
     getAllSessionHistory(userAddress).then(setSessionHistory).catch(() => {});
+    getTodayCompletions(userAddress).then(setCompletedToday).catch(() => {});
   }, [userAddress]);
 
   // Load habits + restore active timer
@@ -280,6 +282,7 @@ export default function GrindTimerPage() {
 
     if (!isCustom && selectedHabit) {
       await saveHabitCompletion(selectedHabit.id, address, streak).catch(() => {});
+      setCompletedToday(prev => prev.includes(selectedHabit.id) ? prev : [...prev, selectedHabit.id]);
       if (isConnected) {
         proovTx.completeHabit((selectedHabit as any)?.on_chain_id || 0);
         proovTx.endSession(0, true);
@@ -470,30 +473,53 @@ export default function GrindTimerPage() {
               )}
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {filteredHabits.map(habit => (
-                  <div
-                    key={habit.id}
-                    onClick={() => selectHabit(habit)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 13, cursor: 'pointer', transition: 'border-color .15s' }}
-                    onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent-border)')}
-                    onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--card-border)')}
-                  >
-                    <span style={{ fontSize: 20 }}>{habit.emoji}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{habit.name}</div>
-                      <div style={{ fontSize: 10, color: 'var(--text3)' }}>
-                        {habit.duration_minutes ? fmtDur(habit.duration_minutes) : ''}
-                        {habit.category ? ` · ${habit.category}` : ''}
-                      </div>
-                    </div>
-                    <button
-                      onClick={e => { e.stopPropagation(); selectHabit(habit); }}
-                      style={{ padding: '6px 14px', borderRadius: 20, border: 'none', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}
+                {filteredHabits.map(habit => {
+                  const isDone = completedToday.includes(habit.id);
+                  return (
+                    <div
+                      key={habit.id}
+                      onClick={() => !isDone && selectHabit(habit)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '10px 14px',
+                        background: isDone ? 'var(--bg2)' : 'var(--card-bg)',
+                        border: `1px solid ${isDone ? 'var(--accent-border)' : 'var(--card-border)'}`,
+                        borderRadius: 13,
+                        cursor: isDone ? 'default' : 'pointer',
+                        opacity: isDone ? 0.72 : 1,
+                        transition: 'border-color .15s',
+                      }}
+                      onMouseEnter={e => { if (!isDone) e.currentTarget.style.borderColor = 'var(--accent-border)'; }}
+                      onMouseLeave={e => { if (!isDone) e.currentTarget.style.borderColor = 'var(--card-border)'; }}
                     >
-                      Start
-                    </button>
-                  </div>
-                ))}
+                      <span style={{ fontSize: 20 }}>{habit.emoji}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{habit.name}</div>
+                        <div style={{ fontSize: 10, color: 'var(--text3)' }}>
+                          {habit.duration_minutes ? fmtDur(habit.duration_minutes) : ''}
+                          {habit.category ? ` · ${habit.category}` : ''}
+                        </div>
+                      </div>
+                      {isDone ? (
+                        <div style={{
+                          display: 'flex', alignItems: 'center', gap: 4,
+                          padding: '6px 12px', borderRadius: 20, flexShrink: 0,
+                          background: 'var(--accent-bg)', color: 'var(--accent-text)',
+                          fontSize: 11, fontWeight: 700,
+                        }}>
+                          <IconCircleCheck size={13} stroke={2} /> Done
+                        </div>
+                      ) : (
+                        <button
+                          onClick={e => { e.stopPropagation(); selectHabit(habit); }}
+                          style={{ padding: '6px 14px', borderRadius: 20, border: 'none', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}
+                        >
+                          Start
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

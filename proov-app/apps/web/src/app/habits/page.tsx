@@ -421,6 +421,17 @@ export default function HabitsPage() {
     getAllHabitStreaks(habits.map(h => h.id), address).then(setHabitStreaks).catch(() => {});
   }, [habits]);
 
+  // Refresh completedToday when user returns to this tab (e.g. after completing a session elsewhere)
+  useEffect(() => {
+    const address = localStorage.getItem('proov_address') || '';
+    if (!address) return;
+    const onVisible = () => {
+      if (!document.hidden) getTodayCompletions(address).then(setCompletedToday).catch(() => {});
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+
   const showToast = (msg: string) => {
     setToast(msg);
     setToastVisible(true);
@@ -578,6 +589,16 @@ export default function HabitsPage() {
           >
             <IconPlayerPlay size={13} stroke={2} /> Start
           </button>
+        )}
+        {habit.type === 'timed' && isDone && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 4,
+            padding: '7px 12px', borderRadius: 10, flexShrink: 0,
+            background: 'var(--accent-bg)', color: 'var(--accent-text)',
+            fontSize: 12, fontWeight: 700,
+          }}>
+            <IconCheck size={13} stroke={2} /> Done
+          </div>
         )}
         <button
           onClick={e => { e.stopPropagation(); handleArchive(habit.id); }}
