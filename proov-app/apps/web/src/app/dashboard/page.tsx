@@ -475,32 +475,115 @@ export default function DashboardPage() {
             </Link>
           </div>
         ) : (
-          <div id="wt-habits-grid" data-wt="wt-habits-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: '1rem', width: '100%' }}>
+          <div id="wt-habits-grid" data-wt="wt-habits-grid" style={{ marginBottom: '1rem' }}>
             {habits.map(habit => {
               const isDone = completedToday.includes(habit.id);
+              const habitStreak = habitStreaks[habit.id] || 0;
               return (
-                <div key={habit.id} style={{ background: 'var(--card-bg)', border: `1px solid ${isDone ? 'var(--accent-border)' : 'var(--card-border)'}`, borderRadius: 14, padding: '12px', opacity: isDone ? 0.7 : 1, transition: 'all 0.2s ease' }}>
-                  <div style={{ fontSize: 18, marginBottom: 4 }}>{habit.emoji}</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{habit.name}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 10 }}>
-                    {habit.type === 'timed' ? `${habit.duration_minutes}m · ${habit.schedule}` : `Tap · ${habit.schedule}`}
+                <div
+                  key={habit.id}
+                  onClick={() => router.push(`/habits/${habit.id}`)}
+                  style={{
+                    background: 'var(--card-bg)',
+                    border: `1px solid ${isDone ? 'var(--accent-border)' : 'var(--card-border)'}`,
+                    borderRadius: 14, padding: '11px 12px', marginBottom: 8,
+                    display: 'flex', alignItems: 'center', gap: 11,
+                    cursor: 'pointer', transition: 'border-color 0.2s',
+                  }}>
+                  {/* Emoji icon box */}
+                  <div style={{
+                    width: 42, height: 42, borderRadius: 11, flexShrink: 0,
+                    background: isDone ? 'var(--accent-bg)' : 'var(--bg2)',
+                    border: `1px solid ${isDone ? 'var(--accent-border)' : 'var(--border)'}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 21, transition: 'background 0.2s',
+                  }}>
+                    {habit.emoji}
                   </div>
+
+                  {/* Name + meta */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: 13, fontWeight: 700,
+                      color: isDone ? 'var(--text3)' : 'var(--text)',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      marginBottom: 3,
+                    }}>
+                      {habit.name}
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span>{habit.type === 'timed' ? `${habit.duration_minutes}m` : 'Checkbox'}</span>
+                      <span>·</span>
+                      <span style={{ textTransform: 'capitalize' }}>{habit.schedule}</span>
+                      {habitStreak > 0 && (
+                        <>
+                          <span>·</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 2, color: '#f59e0b', fontWeight: 600 }}>
+                            <IconFlame size={10} stroke={2} color="#f59e0b" />{habitStreak}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Action — stop propagation so card click doesn't fire */}
                   {habit.type === 'timed' ? (
-                    <button onClick={() => router.push(`/timer?habitId=${habit.id}&autostart=1`)} disabled={isDone} style={{ width: '100%', padding: '6px 0', borderRadius: 8, border: 'none', background: isDone ? 'var(--bg2)' : 'var(--btn-primary-bg)', color: isDone ? 'var(--text3)' : 'var(--btn-primary-text)', fontSize: 11, fontWeight: 600, cursor: isDone ? 'default' : 'pointer', fontFamily: 'inherit' }}>
-                      {isDone ? 'Done ✓' : '▶ Start'}
-                    </button>
+                    isDone ? (
+                      <div
+                        onClick={e => e.stopPropagation()}
+                        style={{
+                          width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                          background: 'var(--accent)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                        <IconCheck size={16} stroke={3} color="#fff" />
+                      </div>
+                    ) : (
+                      <button
+                        onClick={e => { e.stopPropagation(); router.push(`/timer?habitId=${habit.id}&autostart=1`); }}
+                        style={{
+                          flexShrink: 0, padding: '6px 12px', borderRadius: 18, border: 'none',
+                          background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)',
+                          fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                          display: 'flex', alignItems: 'center', gap: 4,
+                        }}>
+                        <IconPlayerPlay size={11} stroke={2} /> Start
+                      </button>
+                    )
                   ) : (
-                    <button onClick={() => handleToggleHabit(habit.id)} style={{ width: '100%', padding: '6px 0', borderRadius: 8, border: '1.5px solid', borderColor: isDone ? 'var(--accent)' : 'var(--border2)', background: isDone ? 'var(--accent)' : 'transparent', color: isDone ? '#fff' : 'var(--text2)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s ease' }}>
-                      {isDone ? '✓ Done' : 'Mark done'}
+                    <button
+                      onClick={e => { e.stopPropagation(); if (!isDone) handleToggleHabit(habit.id); }}
+                      style={{
+                        width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                        border: `2px solid ${isDone ? 'var(--accent)' : 'var(--border2)'}`,
+                        background: isDone ? 'var(--accent)' : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: isDone ? 'default' : 'pointer', transition: 'all 0.2s',
+                        padding: 0,
+                      }}>
+                      {isDone && <IconCheck size={16} stroke={3} color="#fff" />}
                     </button>
                   )}
                 </div>
               );
             })}
-            {/* Add habit cell */}
-            <button id="wt-add-habit" data-wt="wt-add-habit" onClick={() => router.push('/habits')} style={{ border: '2px dashed var(--border2)', borderRadius: 14, padding: '12px', background: 'transparent', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 100 }}>
-              <IconPlus size={22} stroke={1.5} color="var(--text3)" />
-              <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'inherit', marginTop: 4 }}>Add habit</span>
+            {/* Add habit row */}
+            <button
+              id="wt-add-habit" data-wt="wt-add-habit"
+              onClick={() => router.push('/habits')}
+              style={{
+                width: '100%', padding: '10px 12px', borderRadius: 14,
+                border: '1.5px dashed var(--border2)', background: 'transparent',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10,
+              }}>
+              <div style={{
+                width: 42, height: 42, borderRadius: 11,
+                background: 'var(--bg2)', border: '1px solid var(--border)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <IconPlus size={18} stroke={1.8} color="var(--text3)" />
+              </div>
+              <span style={{ fontSize: 13, color: 'var(--text3)', fontFamily: 'inherit', fontWeight: 500 }}>Add habit</span>
             </button>
           </div>
         )}
