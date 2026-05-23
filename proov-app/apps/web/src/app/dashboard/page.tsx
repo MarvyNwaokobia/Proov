@@ -482,13 +482,22 @@ export default function DashboardPage() {
               return (
                 <div
                   key={habit.id}
-                  onClick={() => router.push(`/habits/${habit.id}`)}
+                  onClick={() => {
+                    if (habit.type === 'checkbox') {
+                      if (!isDone) handleToggleHabit(habit.id);
+                    } else {
+                      isDone
+                        ? router.push(`/habits/${habit.id}`)
+                        : router.push(`/timer?habitId=${habit.id}&autostart=1`);
+                    }
+                  }}
                   style={{
                     background: 'var(--card-bg)',
                     border: `1px solid ${isDone ? 'var(--accent-border)' : 'var(--card-border)'}`,
                     borderRadius: 14, padding: '11px 12px', marginBottom: 8,
                     display: 'flex', alignItems: 'center', gap: 11,
-                    cursor: 'pointer', transition: 'border-color 0.2s',
+                    cursor: isDone && habit.type === 'checkbox' ? 'default' : 'pointer',
+                    transition: 'border-color 0.2s',
                   }}>
                   {/* Emoji icon box */}
                   <div style={{
@@ -526,43 +535,36 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  {/* Action — stop propagation so card click doesn't fire */}
+                  {/* Action indicator — purely visual, card handles the click */}
                   {habit.type === 'timed' ? (
                     isDone ? (
-                      <div
-                        onClick={e => e.stopPropagation()}
-                        style={{
-                          width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                          background: 'var(--accent)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}>
+                      <div style={{
+                        width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                        background: 'var(--accent)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
                         <IconCheck size={16} stroke={3} color="#fff" />
                       </div>
                     ) : (
-                      <button
-                        onClick={e => { e.stopPropagation(); router.push(`/timer?habitId=${habit.id}&autostart=1`); }}
-                        style={{
-                          flexShrink: 0, padding: '6px 12px', borderRadius: 18, border: 'none',
-                          background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)',
-                          fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-                          display: 'flex', alignItems: 'center', gap: 4,
-                        }}>
+                      <div style={{
+                        flexShrink: 0, padding: '6px 12px', borderRadius: 18,
+                        background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)',
+                        fontSize: 11, fontWeight: 700,
+                        display: 'flex', alignItems: 'center', gap: 4,
+                      }}>
                         <IconPlayerPlay size={11} stroke={2} /> Start
-                      </button>
+                      </div>
                     )
                   ) : (
-                    <button
-                      onClick={e => { e.stopPropagation(); if (!isDone) handleToggleHabit(habit.id); }}
-                      style={{
-                        width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                        border: `2px solid ${isDone ? 'var(--accent)' : 'var(--border2)'}`,
-                        background: isDone ? 'var(--accent)' : 'transparent',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        cursor: isDone ? 'default' : 'pointer', transition: 'all 0.2s',
-                        padding: 0,
-                      }}>
+                    <div style={{
+                      width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                      border: `2px solid ${isDone ? 'var(--accent)' : 'var(--border2)'}`,
+                      background: isDone ? 'var(--accent)' : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all 0.2s',
+                    }}>
                       {isDone && <IconCheck size={16} stroke={3} color="#fff" />}
-                    </button>
+                    </div>
                   )}
                 </div>
               );
