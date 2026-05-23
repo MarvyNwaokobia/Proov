@@ -8,8 +8,9 @@ import {
   IconArrowLeft,
   IconClock,
   IconSearch,
-  IconConfetti,
   IconCircleCheck,
+  IconCheck,
+  IconShare,
 } from '@tabler/icons-react';
 import {
   getUserHabits, saveHabitCompletion, getTodayCompletions,
@@ -20,6 +21,7 @@ import {
 type TimerView = 'pick' | 'setup' | 'running' | 'done';
 
 const CIRC = 2 * Math.PI * 84;
+const CIRC_220 = 2 * Math.PI * 94;
 
 function fmtDur(mins: number) {
   if (mins < 60) return `${mins} min`;
@@ -53,6 +55,8 @@ export default function GrindTimerPage() {
 
   const [userAddress, setUserAddress] = useState('');
   const [completedToday, setCompletedToday] = useState<string[]>([]);
+  const [streakCount, setStreakCount] = useState(0);
+  const [leaderboardRank, setLeaderboardRank] = useState<number | null>(null);
   const [duration, setDuration] = useState(25);
 
   const [secondsLeft, setSecondsLeft] = useState(0);
@@ -76,6 +80,10 @@ export default function GrindTimerPage() {
   useEffect(() => {
     const addr = localStorage.getItem('proov_address') || '';
     if (addr) setUserAddress(addr);
+    const streak = parseInt(localStorage.getItem('proov_streak_count') || '0');
+    if (streak > 0) setStreakCount(streak);
+    const rank = parseInt(localStorage.getItem('proov_leaderboard_rank') || '0');
+    if (rank > 0) setLeaderboardRank(rank);
   }, []);
 
   // Reload session history + today's completions whenever the address is known
@@ -326,6 +334,7 @@ export default function GrindTimerPage() {
     ? 1 - (secondsLeft / totalSeconds)
     : 0;
   const strokeDashoffset = CIRC * (1 - Math.min(progress, 1));
+  const strokeDashoffset220 = CIRC_220 * (1 - Math.min(progress, 1));
   const isRunning = view === 'running';
   const isDone = view === 'done';
 
@@ -349,6 +358,151 @@ export default function GrindTimerPage() {
         transition: 'left 0.08s linear, top 0.08s linear',
       }} />
 
+      {/* RUNNING — full-screen focus overlay */}
+      {isRunning && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'var(--bg)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          justifyContent: 'center', padding: 24, zIndex: 100,
+        }}>
+          <style>{`@keyframes tpulse{0%,100%{opacity:.4;transform:translate(-50%,-50%) scale(1)}50%{opacity:.9;transform:translate(-50%,-50%) scale(1.08)}}`}</style>
+          <div style={{
+            position: 'absolute', top: '50%', left: '50%',
+            width: 340, height: 340, borderRadius: '50%',
+            background: 'radial-gradient(circle,var(--accent-bg),transparent 70%)',
+            pointerEvents: 'none', animation: 'tpulse 2.5s ease-in-out infinite',
+          }} />
+          <button onClick={cancelTimer} style={{
+            position: 'absolute', top: 14, left: 18,
+            background: 'none', border: 'none', color: 'var(--accent-text)',
+            fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+            display: 'flex', alignItems: 'center', gap: 4,
+          }}>
+            <IconArrowLeft size={13} stroke={2.5} /> Change habit
+          </button>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8, marginBottom: 26,
+            background: 'var(--accent-bg)', border: '1px solid var(--accent-border)',
+            borderRadius: 12, padding: '8px 14px', position: 'relative', zIndex: 1,
+          }}>
+            {selectedHabit ? (
+              <>
+                <span style={{ fontSize: 18 }}>{selectedHabit.emoji}</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-text)' }}>{sessionHabitName}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>Target: {fmtDur(sessionDuration)}</div>
+                </div>
+              </>
+            ) : (
+              <>
+                <IconClock size={18} stroke={1.8} color="var(--accent-text)" />
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-text)' }}>Custom session</div>
+                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>Target: {fmtDur(sessionDuration)}</div>
+                </div>
+              </>
+            )}
+          </div>
+          <div style={{ position: 'relative', width: 220, height: 220, marginBottom: 26, zIndex: 1 }}>
+            <svg viewBox="0 0 220 220" width="220" height="220" style={{ transform: 'rotate(-90deg)', position: 'relative', zIndex: 1 }}>
+              <circle cx="110" cy="110" r="94" fill="none" stroke="var(--border2)" strokeWidth="8" />
+              <circle cx="110" cy="110" r="94" fill="none" stroke="var(--accent)" strokeWidth="12"
+                strokeLinecap="round" strokeDasharray={CIRC_220} strokeDashoffset={strokeDashoffset220}
+                style={{ filter: 'drop-shadow(0 0 8px var(--accent))', transition: 'stroke-dashoffset 1s linear' }} />
+            </svg>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: 36, fontWeight: 900, color: 'var(--text)', letterSpacing: -2, lineHeight: 1 }}>
+                {fmtTime(secondsLeft)}
+              </span>
+              <span style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>remaining</span>
+            </div>
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--text3)', textAlign: 'center', lineHeight: 1.6, marginBottom: 22, position: 'relative', zIndex: 1 }}>
+            Timer runs in the background.<br />Come back when you're done.
+          </p>
+          <button onClick={cancelTimer} style={{
+            padding: '11px 28px', borderRadius: 12, background: 'transparent',
+            border: '1px solid var(--border2)', color: 'var(--text2)',
+            fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+            position: 'relative', zIndex: 1,
+          }}>
+            Cancel session
+          </button>
+        </div>
+      )}
+
+      {/* DONE — full-screen completion overlay */}
+      {isDone && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'var(--bg)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          justifyContent: 'center', padding: 24, zIndex: 100, overflowY: 'auto',
+        }}>
+          <style>{`@keyframes pop{0%{transform:scale(.5);opacity:0}80%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}`}</style>
+          <div style={{ marginBottom: 12, animation: 'pop .4s ease', color: 'var(--accent-text)' }}>
+            <IconCircleCheck size={56} stroke={1.5} />
+          </div>
+          <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', textAlign: 'center', letterSpacing: '-.5px', marginBottom: 6, margin: '0 0 6px' }}>
+            {sessionHabitName ? `${sessionHabitName} · ${fmtDur(sessionDuration)} done` : `${fmtDur(sessionDuration)} session complete`}
+          </h2>
+          <p style={{ fontSize: 13, color: 'var(--text2)', textAlign: 'center', lineHeight: 1.6, marginBottom: 20 }}>
+            "Keep showing up. That's the whole game."
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, width: '100%', maxWidth: 360, marginBottom: 18 }}>
+            {([
+              [String(streakCount || '—'), 'streak'],
+              [String(completedToday.length), 'today'],
+              [leaderboardRank ? `#${leaderboardRank}` : '—', 'rank'],
+            ] as [string, string][]).map(([val, label]) => (
+              <div key={label} style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14, padding: '12px 6px', textAlign: 'center' }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{val}</div>
+                <div style={{ fontSize: 9, color: 'var(--text3)', marginTop: 3 }}>{label}</div>
+              </div>
+            ))}
+          </div>
+          <button onClick={confirmDone} style={{
+            width: '100%', maxWidth: 360, padding: 14, borderRadius: 14,
+            background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)',
+            border: 'none', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+            marginBottom: 10, fontFamily: 'inherit',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          }}>
+            <IconCheck size={15} stroke={2} /> Mark complete
+          </button>
+          <button style={{
+            width: '100%', maxWidth: 360, padding: 13, borderRadius: 14,
+            background: 'transparent', border: '1px solid var(--border2)',
+            color: 'var(--text2)', fontSize: 13, fontWeight: 600,
+            cursor: 'pointer', fontFamily: 'inherit', marginBottom: 18,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+          }}>
+            <IconShare size={14} stroke={1.8} /> Share this
+          </button>
+          {sessionHistory.length > 0 && (
+            <div style={{ width: '100%', maxWidth: 360, borderTop: '1px solid var(--border)', paddingTop: 14 }}>
+              <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.2px', color: 'var(--text3)', marginBottom: 10 }}>Session history</div>
+              {sessionHistory.map((session, i) => {
+                const label = session.label || `${fmtDur(session.duration_minutes)} session`;
+                const when = new Date(session.started_at).toLocaleDateString('en', { month: 'short', day: 'numeric' });
+                return (
+                  <div key={session.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0',
+                    borderBottom: i < sessionHistory.length - 1 ? '1px solid var(--border)' : 'none',
+                  }}>
+                    <IconClock size={16} stroke={1.5} color="var(--text3)" style={{ flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{label} · {fmtDur(session.duration_minutes)}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text3)' }}>{when}</div>
+                    </div>
+                    <IconCircleCheck size={14} stroke={1.5} color="var(--accent-text)" style={{ flexShrink: 0 }} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '1rem 1.25rem 100px', position: 'relative', zIndex: 1 }}>
 
         {/* Header */}
@@ -356,95 +510,6 @@ export default function GrindTimerPage() {
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', letterSpacing: '-.2px', display: 'flex', alignItems: 'center', gap: 5 }}><IconBolt size={16} stroke={2} color="var(--accent-text)" /> Grind Timer</div>
         </div>
 
-        {/* Running: Change habit link + habit pill badge (above ring) */}
-        {isRunning && (
-          <div style={{ marginBottom: 4 }}>
-            <button onClick={() => { cancelTimer(); setView('pick'); }} style={{
-              fontSize: 12, color: 'var(--accent-text)', fontWeight: 700,
-              background: 'transparent', border: 'none', cursor: 'pointer',
-              fontFamily: 'inherit', marginBottom: 10,
-              display: 'flex', alignItems: 'center', gap: 5,
-            }}>
-              <IconArrowLeft size={13} stroke={2.5} /> Change habit
-            </button>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 7,
-                padding: '7px 18px', borderRadius: 20,
-                background: 'var(--accent-bg)', border: '1px solid var(--accent-border)',
-                fontSize: 13, fontWeight: 700, color: 'var(--accent-text)',
-              }}>
-                {selectedHabit
-                  ? <>{selectedHabit.emoji} {sessionHabitName} · Target: {fmtDur(sessionDuration)}</>
-                  : <><IconClock size={14} stroke={2} /> Custom · {fmtDur(sessionDuration)}</>
-                }
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Timer ring — only when running or done */}
-        {(isRunning || isDone) && (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '1.25rem 0 1rem' }}>
-            <div style={{ position: 'relative', width: 200, height: 200 }}>
-              {/* Pulse glow */}
-              <div style={{
-                position: 'absolute', inset: -24, borderRadius: '50%',
-                background: 'radial-gradient(circle, var(--accent-bg), transparent 65%)',
-                animation: 'timerPulse 2.5s ease-in-out infinite', pointerEvents: 'none',
-              }} />
-              <style>{`
-                @keyframes timerPulse {
-                  0%, 100% { opacity: 0.5; transform: scale(1); }
-                  50%       { opacity: 1;   transform: scale(1.08); }
-                }
-              `}</style>
-
-              <svg viewBox="0 0 200 200" width="200" height="200" style={{ transform: 'rotate(-90deg)', position: 'relative', zIndex: 1 }}>
-                <circle cx="100" cy="100" r="84" fill="none" stroke="var(--border2)" strokeWidth="8" />
-                <circle cx="100" cy="100" r="84" fill="none" stroke="var(--accent)" strokeWidth="14"
-                  strokeLinecap="round" strokeDasharray={CIRC} strokeDashoffset={strokeDashoffset}
-                  opacity="0.2" style={{ filter: 'blur(4px)', transition: 'stroke-dashoffset 1s linear' }} />
-                <circle cx="100" cy="100" r="84" fill="none" stroke="var(--accent)" strokeWidth="12"
-                  strokeLinecap="round" strokeDasharray={CIRC} strokeDashoffset={strokeDashoffset}
-                  style={{ transition: 'stroke-dashoffset 1s linear' }} />
-              </svg>
-
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
-                {isDone ? (
-                  <>
-                    <IconConfetti size={32} stroke={1.5} color="var(--accent-text)" />
-                    <span style={{ fontSize: 10, color: 'var(--accent-text)', fontWeight: 700, marginTop: 4 }}>Done!</span>
-                  </>
-                ) : (
-                  <>
-                    <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)', letterSpacing: -1, lineHeight: 1 }}>
-                      {fmtTime(secondsLeft)}
-                    </span>
-                    <span style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3 }}>remaining</span>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* DONE */}
-        {isDone && (
-          <div style={{ background: 'var(--accent-bg)', border: '1.5px solid var(--accent-border)', borderRadius: 16, padding: 18, textAlign: 'center', marginTop: 12, marginBottom: '1.25rem' }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
-              {sessionHabitName
-                ? `${sessionHabitName} · ${fmtDur(sessionDuration)} done`
-                : `${fmtDur(sessionDuration)} session complete`}
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: '1rem' }}>
-              {sessionHabitName ? "Keep showing up. That's the whole game." : 'Good work. Every session counts.'}
-            </div>
-            <button onClick={confirmDone} style={{ padding: '10px 24px', borderRadius: 12, border: 'none', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-              Mark complete
-            </button>
-          </div>
-        )}
 
         {/* PICK HABIT */}
         {view === 'pick' && (
@@ -647,21 +712,6 @@ export default function GrindTimerPage() {
               onMouseLeave={e => (e.currentTarget.style.transform = '')}
             >
               Start {fmtDur(duration)} session
-            </button>
-          </div>
-        )}
-
-        {/* RUNNING */}
-        {isRunning && (
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: 12, color: 'var(--text3)', marginBottom: '1.25rem', lineHeight: 1.6 }}>
-              Timer runs in the background.<br />Come back when you're done.
-            </p>
-            <button
-              onClick={cancelTimer}
-              style={{ padding: '10px 24px', borderRadius: 12, border: '1px solid var(--border2)', background: 'transparent', color: 'var(--text3)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}
-            >
-              Cancel session
             </button>
           </div>
         )}
