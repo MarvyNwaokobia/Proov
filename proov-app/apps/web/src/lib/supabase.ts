@@ -290,6 +290,25 @@ export async function getCustomSessionHistory(userAddress: string): Promise<Time
   return data || [];
 }
 
+export async function getLatestActivityForAddress(address: string): Promise<{
+  habitName: string;
+  completedAt: string;
+} | null> {
+  if (!supabase || !address) return null;
+  const { data } = await supabase
+    .from('habit_completions')
+    .select('completed_at, habits(name)')
+    .eq('user_address', address.toLowerCase())
+    .order('completed_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+  return {
+    habitName: (data as any).habits?.name || 'a habit',
+    completedAt: (data as any).completed_at,
+  };
+}
+
 export async function getAllSessionHistory(userAddress: string): Promise<TimerSession[]> {
   if (!supabase || !userAddress) return [];
   const { data } = await supabase

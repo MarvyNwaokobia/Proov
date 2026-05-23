@@ -2,25 +2,74 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { IconUsers } from '@tabler/icons-react';
+import {
+  IconArrowLeft, IconFlame, IconHeart, IconBell, IconCheck, IconSend,
+  IconAlertTriangle,
+} from "@tabler/icons-react";
 import {
   getAddressForUsername,
   sendCircleRequest,
   getCircleRequests,
   respondToCircleRequest,
   getUsernamesForAddresses,
+  getStreakData,
+  getLatestActivityForAddress,
   type CircleRequest,
 } from "@/lib/supabase";
 import { useProovTx } from "@/hooks/useProovTx";
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function timeAgo(dateStr: string): string {
+  const mins = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function todayStr() { return new Date().toISOString().split('T')[0]; }
+function yesterdayStr() {
+  const d = new Date(); d.setDate(d.getDate() - 1);
+  return d.toISOString().split('T')[0];
+}
+
+function Avatar({ name, size = 40 }: { name: string; size?: number }) {
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: '50%', flexShrink: 0,
+      background: 'var(--accent-bg)', border: '1.5px solid var(--accent-border)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      color: 'var(--accent-text)', fontWeight: 800,
+      fontSize: Math.round(size * 0.38), fontFamily: 'inherit',
+    }}>
+      {(name || '?').slice(0, 1).toUpperCase()}
+    </div>
+  );
+}
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type MemberInfo = {
+  streak: number;
+  lastCompletionDate: string | null;
+  activityName: string | null;
+  activityTime: string | null;
+};
+
+// ─── Page ────────────────────────────────────────────────────────────────────
+
 export default function CirclePage() {
   const router = useRouter();
+  const proovTx = useProovTx();
+
+  const [tab, setTab] = useState<'members' | 'requests'>('members');
 
   const [sent, setSent] = useState<CircleRequest[]>([]);
   const [received, setReceived] = useState<CircleRequest[]>([]);
   const [accepted, setAccepted] = useState<CircleRequest[]>([]);
   const [usernameMap, setUsernameMap] = useState<Record<string, string>>({});
+  const [memberData, setMemberData] = useState<Record<string, MemberInfo>>({});
   const [loading, setLoading] = useState(true);
 
   const [inviteInput, setInviteInput] = useState('');
@@ -33,7 +82,7 @@ export default function CirclePage() {
   const [toast, setToast] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
   const [cheeredMap, setCheeredMap] = useState<Record<string, boolean>>({});
-  const proovTx = useProovTx();
+  const [nudgedMap, setNudgedMap] = useState<Record<string, boolean>>({});
 
   const myAddress = typeof window !== 'undefined'
     ? (localStorage.getItem('proov_address') || '').toLowerCase()
@@ -45,7 +94,7 @@ export default function CirclePage() {
     setTimeout(() => setToastVisible(false), 2200);
   };
 
-  // ── Load circle data ────────────────────────────────────────────────────────
+  // ── Load circle data ──────────────────────────────────────────────────────
   const loadCircleData = useCallback(async () => {
     const address = localStorage.getItem('proov_address') || '';
     if (!address) { setLoading(false); return; }
@@ -55,54 +104,71 @@ export default function CirclePage() {
     setReceived(r);
     setAccepted(a);
 
+    const memberAddrs = a.map(req =>
+      req.from_address === address.toLowerCase() ? req.to_address : req.from_address
+    );
+
     const allAddresses = [
       ...s.map(x => x.to_address),
       ...r.map(x => x.from_address),
-      ...a.map(x => x.from_address === address.toLowerCase() ? x.to_address : x.from_address),
+      ...memberAddrs,
     ];
     if (allAddresses.length > 0) {
       const map = await getUsernamesForAddresses(allAddresses).catch(() => ({}));
       setUsernameMap(map);
     }
+
+    // Load streak + activity for each accepted member
+    if (memberAddrs.length > 0) {
+      const [streaks, activities] = await Promise.all([
+        Promise.all(memberAddrs.map(addr => getStreakData(addr).catch(() => null))),
+        Promise.all(memberAddrs.map(addr => getLatestActivityForAddress(addr).catch(() => null))),
+      ]);
+      const infoMap: Record<string, MemberInfo> = {};
+      memberAddrs.forEach((addr, i) => {
+        const s = streaks[i];
+        const act = activities[i];
+        infoMap[addr] = {
+          streak: s?.currentStreak ?? 0,
+          lastCompletionDate: s?.lastCompletionDate ?? null,
+          activityName: act?.habitName ?? null,
+          activityTime: act?.completedAt ?? null,
+        };
+      });
+      setMemberData(infoMap);
+    }
+
     setLoading(false);
   }, []);
 
-  // Mount + poll every 30 seconds
   useEffect(() => {
     loadCircleData();
     const interval = setInterval(loadCircleData, 30000);
     return () => clearInterval(interval);
   }, [loadCircleData]);
 
-  // ── Invite: clear errors on input change ───────────────────────────────────
   useEffect(() => {
-    setInviteError('');
-    setResolvedAddress('');
-    setResolvedUsername('');
+    setInviteError(''); setResolvedAddress(''); setResolvedUsername('');
   }, [inviteInput]);
 
-  // ── Invite submit: validate then show confirm ───────────────────────────────
+  // ── Invite ────────────────────────────────────────────────────────────────
   const handleInviteSubmit = async () => {
     const raw = inviteInput.trim();
     if (!raw) return;
     setInviteLoading(true);
     setInviteError('');
-
     const clean = raw.replace(/^@/, '').toLowerCase();
-
     const address = await getAddressForUsername(clean).catch(() => null);
     if (!address) {
       setInviteError(`@${clean} not found — they need to join Proov first`);
       setInviteLoading(false);
       return;
     }
-
     if (address.toLowerCase() === myAddress) {
       setInviteError("That's you!");
       setInviteLoading(false);
       return;
     }
-
     const allRequests = [...sent, ...received, ...accepted];
     const alreadyExists = allRequests.some(
       r => r.to_address === address.toLowerCase() || r.from_address === address.toLowerCase()
@@ -112,7 +178,6 @@ export default function CirclePage() {
       setInviteLoading(false);
       return;
     }
-
     setResolvedAddress(address);
     setResolvedUsername(clean);
     setInviteLoading(false);
@@ -123,9 +188,7 @@ export default function CirclePage() {
     if (!resolvedAddress) return;
     await sendCircleRequest(myAddress, resolvedAddress).catch(() => {});
     proovTx.sendCircleRequest(resolvedAddress as `0x${string}`);
-    setInviteInput('');
-    setResolvedAddress('');
-    setResolvedUsername('');
+    setInviteInput(''); setResolvedAddress(''); setResolvedUsername('');
     setShowConfirm(false);
     showToast('Invite sent ✓');
     loadCircleData();
@@ -148,148 +211,242 @@ export default function CirclePage() {
     localStorage.setItem(`proov_cheered_${addr}_${today}`, '1');
     setCheeredMap(m => ({ ...m, [addr]: true }));
     proovTx.sendCheer(addr as `0x${string}`);
-    showToast('Cheer sent 🌸');
+    showToast('Cheer sent!');
   };
 
-  const canCheer = (addr: string) => {
-    if (cheeredMap[addr]) return false;
+  const handleNudge = (addr: string, username: string) => {
+    setNudgedMap(m => ({ ...m, [addr]: true }));
+    showToast(`Nudge sent to @${username}!`);
+  };
+
+  const wasCheerAlready = (addr: string) => {
+    if (cheeredMap[addr]) return true;
     const today = new Date().toDateString();
-    return !localStorage.getItem(`proov_cheered_${addr}_${today}`);
+    return !!localStorage.getItem(`proov_cheered_${addr}_${today}`);
   };
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
+  const today = todayStr();
+  const yesterday = yesterdayStr();
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', paddingBottom: 96 }}>
 
       {/* Accent glow */}
-      <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 400, height: 200, borderRadius: '50%', pointerEvents: 'none', background: 'radial-gradient(ellipse, var(--accent-bg), transparent)', opacity: 0.4 }} />
+      <div style={{ position: 'fixed', top: 0, left: '50%', transform: 'translateX(-50%)', width: 400, height: 200, borderRadius: '50%', pointerEvents: 'none', background: 'radial-gradient(ellipse, var(--accent-bg), transparent)', opacity: 0.4, zIndex: 0 }} />
 
       {/* Header */}
       <div style={{ background: 'var(--nav-bg)', borderBottom: '1px solid var(--border)', padding: '1rem 1.25rem', position: 'sticky', top: 0, zIndex: 30, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
         <div style={{ maxWidth: 512, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Link href="/dashboard" style={{ width: 32, height: 32, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: 'var(--text3)', textDecoration: 'none', border: '1px solid var(--border2)', background: 'var(--bg2)' }}>←</Link>
-          <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: 'linear-gradient(135deg, var(--accent), var(--accent2, var(--accent)))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <IconUsers size={18} color="#fff" stroke={1.8} />
-          </div>
+          <button onClick={() => router.back()} style={{ width: 32, height: 32, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)', border: '1px solid var(--border2)', background: 'var(--bg2)', cursor: 'pointer', fontFamily: 'inherit' }}>
+            <IconArrowLeft size={16} stroke={2} />
+          </button>
           <div>
-            <p style={{ fontWeight: 700, color: 'var(--text)', fontSize: 15, margin: 0 }}>Circle</p>
-            <p style={{ fontSize: 12, color: 'var(--text2)', margin: 0 }}>{accepted.length} member{accepted.length !== 1 ? 's' : ''}</p>
+            <p style={{ fontWeight: 800, color: 'var(--text)', fontSize: 16, margin: 0, letterSpacing: '-.3px' }}>Circle</p>
+            <p style={{ fontSize: 11, color: 'var(--text3)', margin: 0 }}>Your accountability crew</p>
           </div>
         </div>
       </div>
 
-      <div style={{ maxWidth: 512, margin: '0 auto', padding: '1.25rem 1.25rem 0' }}>
+      <div style={{ maxWidth: 512, margin: '0 auto', padding: '1rem 1.25rem 0', position: 'relative', zIndex: 1 }}>
 
-        {/* Invite input */}
-        <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 20, padding: '1.25rem', marginBottom: '1.25rem' }}>
-          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10 }}>Add Member</p>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-            <input
-              value={inviteInput}
-              onChange={e => setInviteInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleInviteSubmit()}
-              placeholder="@username"
-              style={{ flex: 1 }}
-            />
-            <button
-              onClick={handleInviteSubmit}
-              disabled={inviteLoading || !inviteInput.trim()}
-              style={{ padding: '0 18px', borderRadius: 12, border: 'none', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: (inviteLoading || !inviteInput.trim()) ? 0.4 : 1, whiteSpace: 'nowrap' }}
-            >
-              {inviteLoading ? '…' : 'Invite'}
-            </button>
-          </div>
-          {inviteError && (
-            <p style={{ fontSize: 11, color: '#f43f5e', marginBottom: 4 }}>{inviteError}</p>
-          )}
-          <p style={{ fontSize: 11, color: 'var(--text3)' }}>Your circle sees your progress and cheers you on.</p>
+        {/* Tab toggle */}
+        <div style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 12, padding: 4, gap: 3, marginBottom: 18 }}>
+          {/* Members tab */}
+          <button onClick={() => setTab('members')} style={{
+            flex: 1, textAlign: 'center', padding: '7px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12,
+            background: tab === 'members' ? 'var(--card-bg)' : 'transparent',
+            color: tab === 'members' ? 'var(--text)' : 'var(--text3)',
+            fontWeight: tab === 'members' ? 700 : 500,
+            boxShadow: tab === 'members' ? '0 1px 3px rgba(0,0,0,0.07)' : 'none',
+            transition: 'all 0.2s',
+          }}>
+            Members · {accepted.length}
+          </button>
+          {/* Requests tab */}
+          <button onClick={() => setTab('requests')} style={{
+            flex: 1, textAlign: 'center', padding: '7px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12,
+            background: tab === 'requests' ? 'var(--card-bg)' : 'transparent',
+            color: tab === 'requests' ? 'var(--text)' : 'var(--text3)',
+            fontWeight: tab === 'requests' ? 700 : 500,
+            boxShadow: tab === 'requests' ? '0 1px 3px rgba(0,0,0,0.07)' : 'none',
+            transition: 'all 0.2s',
+            position: 'relative',
+          }}>
+            Requests{received.length > 0 ? ` · ${received.length}` : ''}
+            {received.length > 0 && (
+              <span style={{ position: 'absolute', top: 5, right: 8, width: 7, height: 7, borderRadius: '50%', background: '#f43f5e', flexShrink: 0 }} />
+            )}
+          </button>
         </div>
 
-        {/* SECTION 1: Incoming requests */}
-        {received.length > 0 && (
-          <div style={{ marginBottom: '1.5rem' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--accent-text)', margin: '14px 0 8px' }}>
-              {received.length} circle request{received.length !== 1 ? 's' : ''}
-            </div>
-            {received.map(req => {
-              const username = usernameMap[req.from_address] || req.from_address.slice(0, 8);
+        {/* ── MEMBERS TAB ─────────────────────────────────────────────── */}
+        {tab === 'members' && (
+          <>
+            {loading && (
+              <p style={{ textAlign: 'center', color: 'var(--text3)', fontSize: 13, padding: '2rem 0' }}>Loading…</p>
+            )}
+
+            {!loading && accepted.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '2.5rem 1rem', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, color: 'var(--text3)', fontSize: 13, marginBottom: 16 }}>
+                <p style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>No members yet</p>
+                <p style={{ fontSize: 12 }}>Invite someone who will hold you accountable.</p>
+              </div>
+            )}
+
+            {!loading && accepted.map(req => {
+              const otherAddr = req.from_address === myAddress ? req.to_address : req.from_address;
+              const username = usernameMap[otherAddr] || otherAddr.slice(0, 8);
+              const info = memberData[otherAddr];
+              const activeToday = info?.lastCompletionDate === today;
+              const activeYesterday = info?.lastCompletionDate === yesterday;
+              const brokenStreak = (info?.streak ?? 0) > 1 && !activeToday && !activeYesterday && !!info?.lastCompletionDate;
+              const alreadyCheered = wasCheerAlready(otherAddr);
+              const alreadyNudged = nudgedMap[otherAddr];
+
+              // Activity line
+              let activityLine = 'No activity yet today';
+              if (info?.activityTime) {
+                const actDate = info.activityTime.split('T')[0];
+                if (actDate === today || actDate === yesterday) {
+                  activityLine = `${info.activityName || 'Habit'} done · ${timeAgo(info.activityTime)}`;
+                }
+              }
+
               return (
-                <div key={req.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 14, border: '1.5px solid var(--accent-border)', background: 'var(--accent-bg)', marginBottom: 8 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--btn-primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: 'var(--btn-primary-text)', flexShrink: 0 }}>
-                    {username[0]?.toUpperCase()}
+                <div key={req.id} style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, padding: '14px', marginBottom: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                    <Avatar name={username} size={42} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>@{username}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                          <IconFlame size={13} stroke={2} color="#f59e0b" />
+                          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{info?.streak ?? '—'}</span>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 11, color: activeToday ? 'var(--accent-text)' : 'var(--text3)', marginBottom: brokenStreak ? 6 : 0 }}>
+                        {activityLine}
+                      </div>
+                      {brokenStreak && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, fontSize: 10, color: '#f59e0b', fontWeight: 600 }}>
+                          <IconAlertTriangle size={11} stroke={2} color="#f59e0b" />
+                          Streak at risk — needs to complete something
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>@{username}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text3)' }}>wants to join your circle</div>
+                  {/* Action button row */}
+                  <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
+                    {activeToday ? (
+                      alreadyCheered ? (
+                        <span style={{ fontSize: 11, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 4, padding: '5px 0' }}>
+                          <IconCheck size={12} stroke={2.5} /> Cheered
+                        </span>
+                      ) : (
+                        <button onClick={() => handleCheer(otherAddr)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 20, border: '1.5px solid rgba(244,63,94,0.4)', background: 'rgba(244,63,94,0.06)', color: '#f43f5e', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s' }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(244,63,94,0.12)'; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(244,63,94,0.06)'; }}>
+                          <IconHeart size={13} stroke={2} /> Cheer
+                        </button>
+                      )
+                    ) : (
+                      alreadyNudged ? (
+                        <span style={{ fontSize: 11, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 4, padding: '5px 0' }}>
+                          <IconCheck size={12} stroke={2.5} /> Nudged
+                        </span>
+                      ) : (
+                        <button onClick={() => handleNudge(otherAddr, username)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 20, border: '1.5px solid var(--border2)', background: 'transparent', color: 'var(--text3)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s' }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLElement).style.color = 'var(--text2)'; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border2)'; (e.currentTarget as HTMLElement).style.color = 'var(--text3)'; }}>
+                          <IconBell size={13} stroke={1.8} /> Nudge
+                        </button>
+                      )
+                    )}
                   </div>
-                  <button onClick={() => handleAccept(req.id, req.from_address)} style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Accept</button>
-                  <button onClick={() => handleDecline(req.id)} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text3)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
                 </div>
               );
             })}
-          </div>
+
+            {/* Invite someone — bottom of members tab */}
+            <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, padding: '1rem', marginTop: accepted.length > 0 ? 8 : 0 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10 }}>Invite Someone</p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  value={inviteInput}
+                  onChange={e => setInviteInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleInviteSubmit()}
+                  placeholder="@username"
+                  style={{ flex: 1 }}
+                />
+                <button
+                  onClick={handleInviteSubmit}
+                  disabled={inviteLoading || !inviteInput.trim()}
+                  style={{ padding: '0 16px', borderRadius: 12, border: 'none', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: (inviteLoading || !inviteInput.trim()) ? 0.4 : 1, display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}
+                >
+                  <IconSend size={14} stroke={2} />{inviteLoading ? '…' : 'Send'}
+                </button>
+              </div>
+              {inviteError && <p style={{ fontSize: 11, color: '#f43f5e', marginTop: 6 }}>{inviteError}</p>}
+            </div>
+          </>
         )}
 
-        {/* SECTION 2: Your circle (accepted) */}
-        <div style={{ marginBottom: '1.5rem' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text3)', margin: '14px 0 8px' }}>
-            Your circle · {accepted.length}
-          </div>
-          {loading ? (
-            <p style={{ fontSize: 13, color: 'var(--text3)', textAlign: 'center', padding: '2rem 0' }}>Loading…</p>
-          ) : accepted.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '2rem 1rem', background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: 14, color: 'var(--text3)', fontSize: 13 }}>
-              Your circle is empty. Invite someone who will hold you accountable.
-            </div>
-          ) : (
-            accepted.map(req => {
-              const otherAddress = req.from_address === myAddress ? req.to_address : req.from_address;
-              const username = usernameMap[otherAddress] || otherAddress.slice(0, 8);
-              const cheerAvailable = canCheer(otherAddress);
-              return (
-                <div key={req.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 14, border: '1px solid var(--border)', background: 'var(--card-bg)', marginBottom: 8 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: 'var(--accent-text)', flexShrink: 0 }}>
-                    {username[0]?.toUpperCase()}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>@{username}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text3)' }}>In your circle</div>
-                  </div>
-                  {cheerAvailable ? (
-                    <button onClick={() => handleCheer(otherAddress)} style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--accent-border)', background: 'transparent', color: 'var(--accent-text)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>
-                      🌸 Cheer
-                    </button>
-                  ) : (
-                    <span style={{ fontSize: 11, color: 'var(--text3)', padding: '6px 0' }}>Cheered ✓</span>
-                  )}
-                </div>
-              );
-            })
-          )}
-        </div>
+        {/* ── REQUESTS TAB ────────────────────────────────────────────── */}
+        {tab === 'requests' && (
+          <>
+            {/* Incoming */}
+            {received.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10 }}>
+                  Incoming · {received.length}
+                </p>
+                {received.map(req => {
+                  const username = usernameMap[req.from_address] || req.from_address.slice(0, 8);
+                  return (
+                    <div key={req.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 14, border: '1.5px solid var(--accent-border)', background: 'var(--accent-bg)', marginBottom: 8 }}>
+                      <Avatar name={username} size={38} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>@{username}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text3)' }}>wants to join your circle</div>
+                      </div>
+                      <button onClick={() => handleDecline(req.id)} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text3)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
+                      <button onClick={() => handleAccept(req.id, req.from_address)} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Accept</button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
-        {/* SECTION 3: Pending sent requests */}
-        {sent.length > 0 && (
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text3)', margin: '14px 0 8px' }}>
-              Pending · {sent.length}
-            </div>
-            {sent.map(req => {
-              const username = usernameMap[req.to_address] || req.to_address.slice(0, 8);
-              return (
-                <div key={req.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 14, border: '1px solid var(--border)', background: 'var(--card-bg)', opacity: 0.7, marginBottom: 8 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: 'var(--text3)', flexShrink: 0 }}>
-                    {username[0]?.toUpperCase()}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>@{username}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text3)' }}>Waiting for them to accept</div>
-                  </div>
-                  <span style={{ fontSize: 10, color: 'var(--text3)', background: 'var(--bg2)', padding: '3px 8px', borderRadius: 6 }}>Pending</span>
-                </div>
-              );
-            })}
-          </div>
+            {/* Sent / Pending */}
+            {sent.length > 0 && (
+              <div>
+                <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10 }}>
+                  Sent · {sent.length}
+                </p>
+                {sent.map(req => {
+                  const username = usernameMap[req.to_address] || req.to_address.slice(0, 8);
+                  return (
+                    <div key={req.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 14, border: '1px solid var(--border)', background: 'var(--card-bg)', marginBottom: 8, opacity: 0.75 }}>
+                      <Avatar name={username} size={38} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>@{username}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text3)' }}>Waiting for them to accept</div>
+                      </div>
+                      <span style={{ fontSize: 10, color: 'var(--text3)', background: 'var(--bg2)', padding: '3px 8px', borderRadius: 6, flexShrink: 0 }}>Pending</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {received.length === 0 && sent.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '2.5rem 1rem', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, color: 'var(--text3)', fontSize: 13 }}>
+                <p style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>No pending requests</p>
+                <p style={{ fontSize: 12 }}>Invite someone from the Members tab.</p>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -298,7 +455,7 @@ export default function CirclePage() {
         {toast}
       </div>
 
-      {/* Confirm invite bottom sheet */}
+      {/* Confirm invite sheet */}
       {showConfirm && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100, padding: '0 1rem 1.5rem' }} onClick={() => setShowConfirm(false)}>
           <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 20, padding: '1.5rem', width: '100%', maxWidth: 400 }} onClick={e => e.stopPropagation()}>
