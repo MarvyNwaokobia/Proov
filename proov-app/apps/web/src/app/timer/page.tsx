@@ -82,12 +82,32 @@ export default function GrindTimerPage() {
 
         // Deep-link: pre-select habit by id from URL
         const habitId = searchParams.get('habitId');
+        const autostart = searchParams.get('autostart') === '1';
         if (habitId) {
           const found = timed.find(h => h.id === habitId);
           if (found) {
+            const dur = found.duration_minutes || 25;
             setSelectedHabit(found);
-            setDuration(found.duration_minutes || 25);
-            setView('setup');
+            setDuration(dur);
+            if (autostart) {
+              // Skip setup — start the timer immediately
+              const now = Date.now();
+              setSessionHabitName(found.name);
+              setSessionDuration(dur);
+              setSecondsLeft(dur * 60);
+              setView('running');
+              localStorage.setItem('proov_active_timer', JSON.stringify({
+                habitId: found.id,
+                startedAt: now,
+                duration: dur,
+                isCustom: false,
+                customLabel: '',
+                sessionId: null,
+              }));
+              proovTx.startSession((found as any)?.on_chain_id || 0, dur);
+            } else {
+              setView('setup');
+            }
           }
         }
       }).catch(() => {
