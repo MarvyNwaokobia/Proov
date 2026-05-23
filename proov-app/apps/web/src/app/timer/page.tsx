@@ -13,7 +13,7 @@ import {
 } from '@tabler/icons-react';
 import {
   getUserHabits, saveHabitCompletion,
-  saveTimerSession, updateTimerSession, getCustomSessionHistory,
+  saveTimerSession, updateTimerSession, getAllSessionHistory,
   type Habit, type TimerSession,
 } from '@/lib/supabase';
 
@@ -46,7 +46,7 @@ export default function GrindTimerPage() {
   const [sessionHabitName, setSessionHabitName] = useState('');
   const [sessionDuration, setSessionDuration] = useState(0);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [customHistory, setCustomHistory] = useState<TimerSession[]>([]);
+  const [sessionHistory, setSessionHistory] = useState<TimerSession[]>([]);
   const [isCustom, setIsCustom] = useState(false);
   const [customLabel, setCustomLabel] = useState('');
   const [search, setSearch] = useState('');
@@ -76,7 +76,7 @@ export default function GrindTimerPage() {
 
     // Load timed habits from Supabase
     if (address) {
-      getUserHabits(address).then(all => {
+      getUserHabits(address).then(async (all) => {
         const timed = all.filter(h => h.type === 'timed');
         setTimedHabits(timed);
 
@@ -96,14 +96,25 @@ export default function GrindTimerPage() {
               setSessionDuration(dur);
               setSecondsLeft(dur * 60);
               setView('running');
+              const saved = await saveTimerSession({
+                user_address: address.toLowerCase(),
+                habit_id: found.id,
+                label: found.name,
+                duration_minutes: dur,
+                started_at: new Date(now).toISOString(),
+                ended_at: null,
+                is_custom: false,
+                completed: false,
+              }).catch(() => null);
               localStorage.setItem('proov_active_timer', JSON.stringify({
                 habitId: found.id,
                 startedAt: now,
                 duration: dur,
                 isCustom: false,
                 customLabel: '',
-                sessionId: null,
+                sessionId: saved?.id || null,
               }));
+              if (saved) setSessionId(saved.id);
               proovTx.startSession((found as any)?.on_chain_id || 0, dur);
             } else {
               setView('setup');
@@ -115,8 +126,8 @@ export default function GrindTimerPage() {
         setTimedHabits(cached.filter((h: any) => h.type === 'timed'));
       });
 
-      // Load custom session history
-      getCustomSessionHistory(address).then(setCustomHistory).catch(() => {});
+      // Load all session history (habit + custom)
+      getAllSessionHistory(address).then(setSessionHistory).catch(() => {});
     }
 
     // Restore active timer if still running
@@ -223,21 +234,18 @@ export default function GrindTimerPage() {
 
     let newSessionId: string | null = null;
 
-    // Save custom session to Supabase (Fix 5)
-    if (isCustom) {
-      const address = localStorage.getItem('proov_address') || '';
-      const saved = await saveTimerSession({
-        user_address: address.toLowerCase(),
-        habit_id: null,
-        label: customLabel || null,
-        duration_minutes: duration,
-        started_at: new Date(now).toISOString(),
-        ended_at: null,
-        is_custom: true,
-        completed: false,
-      }).catch(() => null);
-      if (saved) { newSessionId = saved.id; setSessionId(saved.id); }
-    }
+    const address = localStorage.getItem('proov_address') || '';
+    const saved = await saveTimerSession({
+      user_address: address.toLowerCase(),
+      habit_id: selectedHabit?.id || null,
+      label: isCustom ? (customLabel || null) : (selectedHabit?.name || null),
+      duration_minutes: duration,
+      started_at: new Date(now).toISOString(),
+      ended_at: null,
+      is_custom: isCustom,
+      completed: false,
+    }).catch(() => null);
+    if (saved) { newSessionId = saved.id; setSessionId(saved.id); }
 
     localStorage.setItem('proov_active_timer', JSON.stringify({
       habitId: selectedHabit?.id || null,
@@ -267,14 +275,16 @@ export default function GrindTimerPage() {
       }
     }
 
-    if (isCustom && sessionId) {
+    if (isCustom && isConnected) proovTx.endCustomSession(0, true);
+
+    if (sessionId) {
       await updateTimerSession(sessionId, {
         ended_at: new Date().toISOString(),
         completed: true,
       }).catch(() => {});
-      if (isConnected) proovTx.endCustomSession(0, true);
-      getCustomSessionHistory(address).then(setCustomHistory).catch(() => {});
     }
+
+    getAllSessionHistory(address).then(setSessionHistory).catch(() => {});
 
     setView('pick');
     setSelectedHabit(null);
@@ -408,22 +418,16 @@ export default function GrindTimerPage() {
         {/* PICK HABIT */}
         {view === 'pick' && (
           <div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 3, letterSpacing: -0.5 }}>
-              Grind Timer
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 16 }}>
-              Which habit are you working on?
-            </div>
-
+            {/* Search */}
             <div style={{
               display: 'flex', alignItems: 'center', gap: 10,
               background: 'var(--bg2)', borderRadius: 11, padding: '10px 12px',
-              border: '1px solid var(--border)', marginBottom: 14,
+              border: '1px solid var(--border)', marginBottom: 18,
             }}>
               <IconSearch size={16} stroke={1.5} color="var(--text3)" />
               <input
                 type="text"
-                placeholder="Search habits..."
+                placeholder="Search timed habits..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 style={{
@@ -433,47 +437,56 @@ export default function GrindTimerPage() {
               />
             </div>
 
-            {filteredHabits.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text3)', fontSize: 13 }}>
-                {timedHabits.length === 0 ? (
-                  <>
-                    <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center' }}><IconCircleCheck size={28} stroke={1.5} color="var(--text3)" /></div>
-                    <p style={{ marginBottom: 8 }}>No timed habits yet</p>
-                    <a href="/habits" className="create-btn" style={{ marginTop: 4 }}>Create one →</a>
-                  </>
-                ) : 'No habits match your search'}
-              </div>
-            )}
+            {/* Your Timed Habits */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10 }}>
+                Your Timed Habits
+              </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: '1rem' }}>
-              {filteredHabits.map(habit => (
-                <div
-                  key={habit.id}
-                  onClick={() => selectHabit(habit)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 13, cursor: 'pointer', transition: 'border-color .15s' }}
-                  onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent-border)')}
-                  onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--card-border)')}
-                >
-                  <span style={{ fontSize: 20 }}>{habit.emoji}</span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{habit.name}</div>
-                    <div style={{ fontSize: 10, color: 'var(--text3)' }}>
-                      {habit.duration_minutes ? `Target: ${fmtDur(habit.duration_minutes)}` : ''}
-                      {habit.category ? ` · ${habit.category}` : ''}
-                    </div>
-                  </div>
-                  <button
-                    onClick={e => { e.stopPropagation(); selectHabit(habit); }}
-                    style={{ padding: '6px 14px', borderRadius: 20, border: 'none', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}
-                  >
-                    Start
-                  </button>
+              {timedHabits.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text3)', fontSize: 13 }}>
+                  <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center' }}><IconCircleCheck size={28} stroke={1.5} color="var(--text3)" /></div>
+                  <p style={{ marginBottom: 8 }}>No timed habits yet</p>
+                  <a href="/habits" style={{ fontSize: 12, color: 'var(--accent-text)', textDecoration: 'none', fontWeight: 600 }}>Create one →</a>
                 </div>
-              ))}
+              )}
+
+              {timedHabits.length > 0 && filteredHabits.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--text3)', fontSize: 13 }}>
+                  No habits match your search
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {filteredHabits.map(habit => (
+                  <div
+                    key={habit.id}
+                    onClick={() => selectHabit(habit)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 13, cursor: 'pointer', transition: 'border-color .15s' }}
+                    onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent-border)')}
+                    onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--card-border)')}
+                  >
+                    <span style={{ fontSize: 20 }}>{habit.emoji}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{habit.name}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text3)' }}>
+                        {habit.duration_minutes ? fmtDur(habit.duration_minutes) : ''}
+                        {habit.category ? ` · ${habit.category}` : ''}
+                      </div>
+                    </div>
+                    <button
+                      onClick={e => { e.stopPropagation(); selectHabit(habit); }}
+                      style={{ padding: '6px 14px', borderRadius: 20, border: 'none', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}
+                    >
+                      Start
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Custom session — clearly secondary */}
-            <div style={{ borderTop: '1px solid var(--border)', paddingTop: '0.875rem' }}>
+            {/* Custom session */}
+            <div style={{ borderTop: '1px solid var(--border)', paddingTop: '0.875rem', marginBottom: '1.5rem' }}>
               <p style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 8, textAlign: 'center' }}>
                 Or start without linking a habit
               </p>
@@ -487,48 +500,20 @@ export default function GrindTimerPage() {
               </button>
             </div>
 
-            {/* Custom session history */}
-            {customHistory.length > 0 && (
-              <div style={{ marginTop: '1.5rem' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '0.75rem' }}>
-                  Recent sessions
-                </div>
-                {customHistory.map(session => {
-                  const dur = session.duration_minutes;
-                  const label = session.label || `${fmtDur(dur)} session`;
+            {/* Recent Sessions */}
+            {sessionHistory.length > 0 && (
+              <div>
+                <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10 }}>
+                  Recent Sessions
+                </p>
+                {sessionHistory.map(session => {
+                  const label = session.label || `${fmtDur(session.duration_minutes)} session`;
                   const date = new Date(session.started_at).toLocaleDateString('en', { month: 'short', day: 'numeric' });
                   return (
                     <div key={session.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--card-bg)', marginBottom: 8 }}>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{label}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text3)' }}>{date}</div>
-                      </div>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button
-                          onClick={() => {
-                            setDuration(session.duration_minutes);
-                            setCustomLabel(session.label || '');
-                            setIsCustom(true);
-                            setView('setup');
-                          }}
-                          style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text2)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => {
-                            setDuration(session.duration_minutes);
-                            setCustomLabel(session.label || '');
-                            setIsCustom(true);
-                            setSessionHabitName('');
-                            setSessionDuration(session.duration_minutes);
-                            setSecondsLeft(session.duration_minutes * 60);
-                            setView('running');
-                          }}
-                          style={{ padding: '5px 10px', borderRadius: 8, border: 'none', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-                        >
-                          Redo
-                        </button>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>{fmtDur(session.duration_minutes)} · {date}</div>
                       </div>
                     </div>
                   );

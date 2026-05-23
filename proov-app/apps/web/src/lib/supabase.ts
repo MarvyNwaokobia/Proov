@@ -290,6 +290,18 @@ export async function getCustomSessionHistory(userAddress: string): Promise<Time
   return data || [];
 }
 
+export async function getAllSessionHistory(userAddress: string): Promise<TimerSession[]> {
+  if (!supabase || !userAddress) return [];
+  const { data } = await supabase
+    .from('timer_sessions')
+    .select('*')
+    .eq('user_address', userAddress.toLowerCase())
+    .eq('completed', true)
+    .order('started_at', { ascending: false })
+    .limit(10);
+  return data || [];
+}
+
 /**
  * Update a username for an existing address.
  */
