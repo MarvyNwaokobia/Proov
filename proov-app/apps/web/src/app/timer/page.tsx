@@ -356,62 +356,78 @@ export default function GrindTimerPage() {
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', letterSpacing: '-.2px', display: 'flex', alignItems: 'center', gap: 5 }}><IconBolt size={16} stroke={2} color="var(--accent-text)" /> Grind Timer</div>
         </div>
 
-        {/* Timer ring — always visible */}
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '1.25rem 0 1rem' }}>
-          <div style={{ position: 'relative', width: 200, height: 200 }}>
-            {/* Pulse glow when running */}
-            {(isRunning || isDone) && (
+        {/* Running: Change habit link + habit pill badge (above ring) */}
+        {isRunning && (
+          <div style={{ marginBottom: 4 }}>
+            <button onClick={() => { cancelTimer(); setView('pick'); }} style={{
+              fontSize: 12, color: 'var(--accent-text)', fontWeight: 700,
+              background: 'transparent', border: 'none', cursor: 'pointer',
+              fontFamily: 'inherit', marginBottom: 10,
+              display: 'flex', alignItems: 'center', gap: 5,
+            }}>
+              <IconArrowLeft size={13} stroke={2.5} /> Change habit
+            </button>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 7,
+                padding: '7px 18px', borderRadius: 20,
+                background: 'var(--accent-bg)', border: '1px solid var(--accent-border)',
+                fontSize: 13, fontWeight: 700, color: 'var(--accent-text)',
+              }}>
+                {selectedHabit
+                  ? <>{selectedHabit.emoji} {sessionHabitName} · Target: {fmtDur(sessionDuration)}</>
+                  : <><IconClock size={14} stroke={2} /> Custom · {fmtDur(sessionDuration)}</>
+                }
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Timer ring — only when running or done */}
+        {(isRunning || isDone) && (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '1.25rem 0 1rem' }}>
+            <div style={{ position: 'relative', width: 200, height: 200 }}>
+              {/* Pulse glow */}
               <div style={{
                 position: 'absolute', inset: -24, borderRadius: '50%',
                 background: 'radial-gradient(circle, var(--accent-bg), transparent 65%)',
                 animation: 'timerPulse 2.5s ease-in-out infinite', pointerEvents: 'none',
               }} />
-            )}
-            <style>{`
-              @keyframes timerPulse {
-                0%, 100% { opacity: 0.5; transform: scale(1); }
-                50%       { opacity: 1;   transform: scale(1.08); }
-              }
-            `}</style>
+              <style>{`
+                @keyframes timerPulse {
+                  0%, 100% { opacity: 0.5; transform: scale(1); }
+                  50%       { opacity: 1;   transform: scale(1.08); }
+                }
+              `}</style>
 
-            <svg viewBox="0 0 200 200" width="200" height="200" style={{ transform: 'rotate(-90deg)', position: 'relative', zIndex: 1 }}>
-              {/* Track */}
-              <circle cx="100" cy="100" r="84" fill="none" stroke="var(--border2)" strokeWidth="8" />
-              {/* Glow layer */}
-              {(isRunning || isDone) && (
+              <svg viewBox="0 0 200 200" width="200" height="200" style={{ transform: 'rotate(-90deg)', position: 'relative', zIndex: 1 }}>
+                <circle cx="100" cy="100" r="84" fill="none" stroke="var(--border2)" strokeWidth="8" />
                 <circle cx="100" cy="100" r="84" fill="none" stroke="var(--accent)" strokeWidth="14"
                   strokeLinecap="round" strokeDasharray={CIRC} strokeDashoffset={strokeDashoffset}
                   opacity="0.2" style={{ filter: 'blur(4px)', transition: 'stroke-dashoffset 1s linear' }} />
-              )}
-              {/* Progress ring */}
-              <circle cx="100" cy="100" r="84" fill="none" stroke="var(--accent)" strokeWidth="12"
-                strokeLinecap="round" strokeDasharray={CIRC} strokeDashoffset={strokeDashoffset}
-                style={{ transition: 'stroke-dashoffset 1s linear' }} />
-            </svg>
+                <circle cx="100" cy="100" r="84" fill="none" stroke="var(--accent)" strokeWidth="12"
+                  strokeLinecap="round" strokeDasharray={CIRC} strokeDashoffset={strokeDashoffset}
+                  style={{ transition: 'stroke-dashoffset 1s linear' }} />
+              </svg>
 
-            {/* Center content */}
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
-              {isDone ? (
-                <>
-                  <IconConfetti size={32} stroke={1.5} color="var(--accent-text)" />
-                  <span style={{ fontSize: 10, color: 'var(--accent-text)', fontWeight: 700, marginTop: 4 }}>Done!</span>
-                </>
-              ) : isRunning ? (
-                <>
-                  <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)', letterSpacing: -1, lineHeight: 1 }}>
-                    {fmtTime(secondsLeft)}
-                  </span>
-                  <span style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3 }}>remaining</span>
-                </>
-              ) : (
-                <>
-                  <IconBolt size={28} stroke={1.8} color="var(--text3)" />
-                  <span style={{ fontSize: 9, color: 'var(--text3)', marginTop: 4 }}>Grind Timer</span>
-                </>
-              )}
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
+                {isDone ? (
+                  <>
+                    <IconConfetti size={32} stroke={1.5} color="var(--accent-text)" />
+                    <span style={{ fontSize: 10, color: 'var(--accent-text)', fontWeight: 700, marginTop: 4 }}>Done!</span>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)', letterSpacing: -1, lineHeight: 1 }}>
+                      {fmtTime(secondsLeft)}
+                    </span>
+                    <span style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3 }}>remaining</span>
+                  </>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* DONE */}
         {isDone && (
@@ -637,40 +653,16 @@ export default function GrindTimerPage() {
 
         {/* RUNNING */}
         {isRunning && (
-          <div>
-            <button onClick={() => { cancelTimer(); setView('pick'); }} style={{
-              fontSize: 12, color: 'var(--accent-text)', fontWeight: 700,
-              background: 'transparent', border: 'none', cursor: 'pointer',
-              fontFamily: 'inherit', marginBottom: 14,
-              display: 'flex', alignItems: 'center', gap: 5,
-            }}>
-              <IconArrowLeft size={13} stroke={2.5} /> Change habit
-            </button>
-
-            {selectedHabit && (
-              <div style={{
-                background: 'var(--bg2)', borderRadius: 13, padding: '10px 14px',
-                marginBottom: 18, display: 'flex', alignItems: 'center', gap: 10,
-              }}>
-                <span style={{ fontSize: 20 }}>{selectedHabit.emoji}</span>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{selectedHabit.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text3)' }}>Target: {selectedHabit.duration_minutes} min</div>
-                </div>
-              </div>
-            )}
-
-            <p style={{ fontSize: 12, color: 'var(--text3)', marginBottom: '1.25rem', lineHeight: 1.6, textAlign: 'center' }}>
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ fontSize: 12, color: 'var(--text3)', marginBottom: '1.25rem', lineHeight: 1.6 }}>
               Timer runs in the background.<br />Come back when you're done.
             </p>
-            <div style={{ textAlign: 'center' }}>
-              <button
-                onClick={cancelTimer}
-                style={{ padding: '10px 24px', borderRadius: 12, border: '1px solid var(--border2)', background: 'transparent', color: 'var(--text3)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}
-              >
-                Cancel session
-              </button>
-            </div>
+            <button
+              onClick={cancelTimer}
+              style={{ padding: '10px 24px', borderRadius: 12, border: '1px solid var(--border2)', background: 'transparent', color: 'var(--text3)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              Cancel session
+            </button>
           </div>
         )}
 
