@@ -4,7 +4,6 @@ import { useSearchParams } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import { useProovTx } from '@/hooks/useProovTx';
 import {
-  IconBolt,
   IconArrowLeft,
   IconClock,
   IconSearch,
@@ -350,13 +349,15 @@ export default function GrindTimerPage() {
 
   return (
     <div style={{ position: 'relative', minHeight: '100vh', background: 'var(--bg)' }}>
-      {/* Cursor glow */}
-      <div ref={glowRef} style={{
-        position: 'fixed', width: 340, height: 340, borderRadius: '50%',
-        background: 'radial-gradient(circle, var(--accent-bg), transparent 70%)',
-        transform: 'translate(-50%, -50%)', pointerEvents: 'none', zIndex: 0, opacity: 0.7,
-        transition: 'left 0.08s linear, top 0.08s linear',
-      }} />
+      {/* Cursor glow — only while a session is active */}
+      {(isRunning || isDone) && (
+        <div ref={glowRef} style={{
+          position: 'fixed', width: 340, height: 340, borderRadius: '50%',
+          background: 'radial-gradient(circle, var(--accent-bg), transparent 70%)',
+          transform: 'translate(-50%, -50%)', pointerEvents: 'none', zIndex: 0, opacity: 0.7,
+          transition: 'left 0.08s linear, top 0.08s linear',
+        }} />
+      )}
 
       {/* RUNNING — full-screen focus overlay */}
       {isRunning && (
@@ -503,13 +504,18 @@ export default function GrindTimerPage() {
         </div>
       )}
 
-      <div style={{ maxWidth: 480, margin: '0 auto', padding: '1rem 1.25rem 100px', position: 'relative', zIndex: 1 }}>
+      <div style={{ maxWidth: 560, margin: '0 auto', padding: '1.25rem 1.25rem 100px', position: 'relative', zIndex: 1 }}>
 
         {/* Header */}
-        <div style={{ textAlign: 'center', padding: '1rem 0 0.5rem' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', letterSpacing: '-.2px', display: 'flex', alignItems: 'center', gap: 5 }}><IconBolt size={16} stroke={2} color="var(--accent-text)" /> Grind Timer</div>
+        <div style={{ marginBottom: 20, paddingTop: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 3 }}>
+            <IconClock size={22} stroke={1.8} color="var(--accent-text)" />
+            <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.5 }}>Grind Timer</span>
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text3)', paddingLeft: 31 }}>
+            Pick a habit or start a custom session
+          </div>
         </div>
-
 
         {/* PICK HABIT */}
         {view === 'pick' && (
@@ -605,17 +611,33 @@ export default function GrindTimerPage() {
             </div>
 
             {/* Custom session */}
-            <div style={{ borderTop: '1px solid var(--border)', paddingTop: '0.875rem', marginBottom: '1.5rem' }}>
-              <p style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 8, textAlign: 'center' }}>
-                Or start without linking a habit
+            <div style={{ marginBottom: '1.5rem' }}>
+              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10 }}>
+                Custom session
               </p>
               <button
                 onClick={() => { setIsCustom(true); setSelectedHabit(null); setView('setup'); }}
-                style={{ width: '100%', padding: 11, borderRadius: 12, border: '1px solid var(--border2)', background: 'transparent', color: 'var(--text2)', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--text)'; }}
+                style={{
+                  width: '100%', padding: '11px 14px', borderRadius: 13,
+                  border: '1px solid var(--border2)', background: 'var(--card-bg)',
+                  color: 'var(--text2)', fontSize: 13, fontWeight: 500,
+                  cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s',
+                  display: 'flex', alignItems: 'center', gap: 10,
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent-border)'; e.currentTarget.style.color = 'var(--text)'; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border2)'; e.currentTarget.style.color = 'var(--text2)'; }}
               >
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><IconClock size={16} stroke={1.8} /> Custom session</span>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 9, flexShrink: 0,
+                  background: 'var(--bg2)', border: '1px solid var(--border)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <IconClock size={17} stroke={1.8} color="var(--text3)" />
+                </div>
+                <div style={{ flex: 1, textAlign: 'left' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 1 }}>Custom session</div>
+                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>Set any duration — no habit linked</div>
+                </div>
               </button>
             </div>
 
@@ -629,10 +651,21 @@ export default function GrindTimerPage() {
                   const label = session.label || `${fmtDur(session.duration_minutes)} session`;
                   const date = new Date(session.started_at).toLocaleDateString('en', { month: 'short', day: 'numeric' });
                   return (
-                    <div key={session.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--card-bg)', marginBottom: 8 }}>
-                      <div style={{ minWidth: 0 }}>
+                    <div key={session.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '10px 14px', borderRadius: 13,
+                      border: '1px solid var(--border)', background: 'var(--card-bg)', marginBottom: 8,
+                    }}>
+                      <div style={{
+                        width: 36, height: 36, borderRadius: 9, flexShrink: 0,
+                        background: 'var(--accent-bg)', border: '1px solid var(--accent-border)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <IconCircleCheck size={17} stroke={1.6} color="var(--accent-text)" />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>{fmtDur(session.duration_minutes)} · {date}</div>
+                        <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 2 }}>{fmtDur(session.duration_minutes)} · {date}</div>
                       </div>
                     </div>
                   );
