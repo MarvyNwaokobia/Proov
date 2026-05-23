@@ -464,6 +464,55 @@ export async function getHabitStreak(habitId: string, userAddress: string): Prom
   return streak;
 }
 
+// ── NUDGES ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Record a nudge from one user to another.
+ * The UNIQUE constraint on (from_address, to_address, nudged_date) silently
+ * ignores duplicate calls on the same day.
+ * Also inserts a notification row for the recipient.
+ */
+export async function sendNudge(fromAddress: string, toAddress: string): Promise<boolean> {
+  if (!supabase) return false;
+  const today = new Date().toISOString().split('T')[0];
+  const from = fromAddress.toLowerCase();
+  const to = toAddress.toLowerCase();
+
+  const { error } = await supabase.from('nudges').upsert(
+    { from_address: from, to_address: to, nudged_date: today },
+    { onConflict: 'from_address,to_address,nudged_date', ignoreDuplicates: true }
+  );
+  if (error) return false;
+
+  // Best-effort notification — don't fail the nudge if this errors
+  try {
+    await supabase.from('notifications').insert({
+      user_address: to,
+      type: 'nudge',
+      from_address: from,
+      message: 'nudged you to keep going',
+    });
+  } catch {}
+
+  return true;
+}
+
+/**
+ * Returns the list of to_address values that fromAddress has nudged today.
+ */
+export async function getTodayNudgesSent(fromAddress: string): Promise<string[]> {
+  if (!supabase) return [];
+  const today = new Date().toISOString().split('T')[0];
+  const { data } = await supabase
+    .from('nudges')
+    .select('to_address')
+    .eq('from_address', fromAddress.toLowerCase())
+    .eq('nudged_date', today);
+  return (data ?? []).map((r: { to_address: string }) => r.to_address);
+}
+
+// ───────────────────────────────────────────────────────────────────────────────
+
 export async function getAllHabitStreaks(
   habitIds: string[],
   userAddress: string

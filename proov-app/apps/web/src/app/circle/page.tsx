@@ -14,6 +14,8 @@ import {
   getUsernamesForAddresses,
   getStreakData,
   getLatestActivityForAddress,
+  sendNudge,
+  getTodayNudgesSent,
   type CircleRequest,
 } from "@/lib/supabase";
 import { useProovTx } from "@/hooks/useProovTx";
@@ -138,6 +140,16 @@ export default function CirclePage() {
       setMemberData(infoMap);
     }
 
+    // Restore today's nudge state from the database
+    const nudgedToday = await getTodayNudgesSent(address).catch(() => [] as string[]);
+    if (nudgedToday.length > 0) {
+      setNudgedMap(prev => {
+        const next = { ...prev };
+        nudgedToday.forEach(addr => { next[addr] = true; });
+        return next;
+      });
+    }
+
     setLoading(false);
   }, []);
 
@@ -214,9 +226,17 @@ export default function CirclePage() {
     showToast('Cheer sent!');
   };
 
-  const handleNudge = (addr: string, username: string) => {
+  const handleNudge = async (addr: string, username: string) => {
+    // Optimistic update so the button changes immediately
     setNudgedMap(m => ({ ...m, [addr]: true }));
-    showToast(`Nudge sent to @${username}!`);
+    const ok = await sendNudge(myAddress, addr).catch(() => false);
+    if (ok) {
+      showToast(`Nudge sent to @${username}!`);
+    } else {
+      // Rollback on failure and let the user try again
+      setNudgedMap(m => { const next = { ...m }; delete next[addr]; return next; });
+      showToast('Could not send nudge — try again');
+    }
   };
 
   const wasCheerAlready = (addr: string) => {
