@@ -2,19 +2,17 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useAccount } from "wagmi";
-import { useLeaderboard } from "@/hooks/useStreak";
-import { displayName } from "@/lib/username";
-import { getLeaderboard, type LeaderboardEntry } from "@/lib/goldsky";
-import { getUsernamesForAddresses } from "@/lib/supabase";
+import {
+  getCircleRequests, getUsernamesForAddresses, getStreakData,
+  getGlobalLeaderboard,
+} from "@/lib/supabase";
 import { IconArrowLeft, IconFlame } from "@tabler/icons-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Entry = { address: string; streak: number; username: string };
-type CircleMember = { address: string; username: string; streak: number };
 
-// ─── Avatar ──────────────────────────────────────────────────────────────────
+// ─── Podium config ────────────────────────────────────────────────────────────
 
 const RANK_STYLES = [
   { bg: 'linear-gradient(135deg, #f59e0b, #d97706)', border: 'rgba(245,158,11,0.5)', color: '#fff' },
@@ -37,8 +35,6 @@ function Avatar({ name, size = 36, rank }: { name: string; size?: number; rank?:
     </div>
   );
 }
-
-// ─── Podium column ────────────────────────────────────────────────────────────
 
 const PODIUM = [
   { rankIdx: 1, rankLabel: '2', blockH: 72,  avatarSz: 44, labelColor: '#9ca3af' },
@@ -86,80 +82,88 @@ function PodiumCol({ entry, cfg, isMe }: {
 
 export default function LeaderboardPage() {
   const router = useRouter();
-  const { address } = useAccount();
   const [authed, setAuthed] = useState<boolean | null>(null);
+  const [myAddress, setMyAddress] = useState('');
+
   useEffect(() => {
     const addr = localStorage.getItem('proov_address');
-    if (!addr) { router.push('/'); setAuthed(false); } else { setAuthed(true); }
+    if (!addr) { router.push('/'); setAuthed(false); } else { setMyAddress(addr.toLowerCase()); setAuthed(true); }
   }, [router]);
 
   const [tab, setTab] = useState<'global' | 'circle'>('global');
 
-  // Global data sources
-  const { entries: contractEntries, isLoading: contractLoading } = useLeaderboard(50);
-  const [goldskyEntries, setGoldskyEntries] = useState<LeaderboardEntry[]>([]);
-  const [goldskyLoaded, setGoldskyLoaded] = useState(false);
+  const [globalRaw, setGlobalRaw] = useState<{ address: string; streak: number }[]>([]);
   const [usernameMap, setUsernameMap] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
 
-  // Circle data
-  const [circleMembers, setCircleMembers] = useState<CircleMember[]>([]);
+  const [circleEntries, setCircleEntries] = useState<Entry[]>([]);
+  const [circleLoading, setCircleLoading] = useState(false);
 
-  // Current user (loaded client-side)
-  const [me, setMe] = useState<{ address: string; username: string; streak: number } | null>(null);
-
+  // Load global leaderboard from Supabase streaks table
   useEffect(() => {
-    const addr = (address?.toLowerCase() || localStorage.getItem('proov_address') || '').toLowerCase();
-    if (!addr) return;
-    const un = localStorage.getItem('proov_username') || displayName(addr);
-    const streak = parseInt(localStorage.getItem('proov_streak_count') || '0');
-    setMe({ address: addr, username: un, streak });
-  }, [address]);
+    if (!myAddress) return;
+    setLoading(true);
+    getGlobalLeaderboard(100).then(async rows => {
+      setGlobalRaw(rows);
+      const addrs = rows.map(r => r.address);
+      if (addrs.length > 0) {
+        const map = await getUsernamesForAddresses(addrs).catch(() => ({}));
+        setUsernameMap(map);
+      }
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [myAddress]);
 
+  // Load circle tab from Supabase
   useEffect(() => {
-    getLeaderboard(100).then(data => {
-      setGoldskyEntries(data);
-      setGoldskyLoaded(true);
-      const addrs = data.map(e => e.id.toLowerCase());
-      getUsernamesForAddresses(addrs).then(setUsernameMap).catch(() => {});
-    });
-  }, []);
-
-  useEffect(() => {
-    const raw = localStorage.getItem('proov_circle');
-    if (raw) { try { setCircleMembers(JSON.parse(raw)); } catch {} }
-  }, []);
+    if (tab !== 'circle' || !myAddress) return;
+    setCircleLoading(true);
+    getCircleRequests(myAddress).then(async ({ accepted }) => {
+      const memberAddrs = accepted.map(r =>
+        r.from_address === myAddress ? r.to_address : r.from_address
+      );
+      const allAddrs = [myAddress, ...memberAddrs];
+      const [streaks, usernames] = await Promise.all([
+        Promise.all(allAddrs.map(addr => getStreakData(addr).catch(() => ({ currentStreak: 0 })))),
+        getUsernamesForAddresses(allAddrs).catch(() => ({} as Record<string, string>)),
+      ]);
+      const entries: Entry[] = allAddrs.map((addr, i) => ({
+        address: addr,
+        streak: streaks[i]?.currentStreak ?? 0,
+        username: usernames[addr] || addr.slice(0, 8),
+      }));
+      setCircleEntries(entries.sort((a, b) => b.streak - a.streak));
+      setCircleLoading(false);
+    }).catch(() => setCircleLoading(false));
+  }, [tab, myAddress]);
 
   const globalEntries: Entry[] = useMemo(() => {
-    const raw = goldskyLoaded && goldskyEntries.length > 0
-      ? goldskyEntries.map(e => ({ address: e.id as string, streak: Number(e.currentStreak ?? 0) }))
-      : contractEntries.map(e => ({ address: e.address as string, streak: Number(e.streak) }));
-    const mapped: Entry[] = raw.map(e => ({
-      address: e.address,
-      streak: e.streak,
-      username: usernameMap[e.address.toLowerCase()] || displayName(e.address),
-    }));
-    // Always include the current user if they have a streak and aren't in the on-chain data yet
-    if (me && me.streak > 0 && !mapped.some(e => e.address.toLowerCase() === me.address.toLowerCase())) {
-      mapped.push({ address: me.address, streak: me.streak, username: me.username });
-    }
-    return mapped.sort((a, b) => b.streak - a.streak);
-  }, [goldskyLoaded, goldskyEntries, contractEntries, usernameMap, me]);
+    const myUsername = localStorage.getItem('proov_username') || myAddress.slice(0, 8);
+    const myStreak = parseInt(localStorage.getItem('proov_streak_count') || '0');
 
-  const circleEntries: Entry[] = useMemo(() => {
-    if (!me) return [];
-    const self: Entry = { address: me.address, streak: me.streak, username: me.username };
-    const others = circleMembers
-      .filter(m => m.address.toLowerCase() !== me.address)
-      .map(m => ({ address: m.address, streak: m.streak ?? 0, username: m.username }));
-    return [self, ...others].sort((a, b) => b.streak - a.streak);
-  }, [circleMembers, me]);
+    const mapped: Entry[] = globalRaw.map(r => ({
+      address: r.address,
+      streak: r.streak,
+      username: usernameMap[r.address] || r.address.slice(0, 8),
+    }));
+
+    // Include current user if not already present (e.g., streak = 0 was filtered out)
+    if (myAddress && !mapped.some(e => e.address === myAddress)) {
+      if (myStreak > 0) {
+        mapped.push({ address: myAddress, streak: myStreak, username: myUsername });
+      }
+    }
+
+    return mapped.sort((a, b) => b.streak - a.streak);
+  }, [globalRaw, usernameMap, myAddress]);
 
   const entries = tab === 'global' ? globalEntries : circleEntries;
-  const loading = tab === 'global' ? (goldskyLoaded ? false : contractLoading) : false;
+  const isLoading = tab === 'global' ? loading : circleLoading;
 
-  const myRank = me ? entries.findIndex(e => e.address.toLowerCase() === me.address) + 1 : 0;
+  const myRank = myAddress ? entries.findIndex(e => e.address === myAddress) + 1 : 0;
+  const me = myAddress ? entries.find(e => e.address === myAddress) ?? null : null;
 
-  // Cache global rank so Settings can display it without reloading leaderboard data
+  // Cache rank for settings page
   useEffect(() => {
     if (tab === 'global' && myRank > 0) {
       localStorage.setItem('proov_leaderboard_rank', String(myRank));
@@ -168,7 +172,6 @@ export default function LeaderboardPage() {
 
   const top3 = entries.slice(0, 3);
   const rest = entries.slice(3);
-  // Podium order: 2nd left, 1st center, 3rd right
   const podiumOrder = top3.length >= 3
     ? [{ entry: top3[1], cfg: PODIUM[0] }, { entry: top3[0], cfg: PODIUM[1] }, { entry: top3[2], cfg: PODIUM[2] }]
     : [];
@@ -228,7 +231,7 @@ export default function LeaderboardPage() {
         </div>
 
         {/* Loading spinner */}
-        {loading && (
+        {isLoading && (
           <div style={{ textAlign: 'center', padding: '4rem 0' }}>
             <div style={{
               width: 28, height: 28, borderRadius: '50%', margin: '0 auto',
@@ -240,33 +243,33 @@ export default function LeaderboardPage() {
         )}
 
         {/* Empty */}
-        {!loading && entries.length === 0 && (
+        {!isLoading && entries.length === 0 && (
           <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, padding: '3rem', textAlign: 'center' }}>
             <p style={{ fontSize: 13, color: 'var(--text2)', margin: 0 }}>
-              {tab === 'circle' ? 'Add friends to see them here.' : 'Be the first on the board — keep your streak going.'}
+              {tab === 'circle' ? 'Add friends to your circle to compare streaks.' : 'No streaks yet — keep your habits going!'}
             </p>
           </div>
         )}
 
         {/* Podium — top 3 */}
-        {!loading && podiumOrder.length > 0 && (
+        {!isLoading && podiumOrder.length > 0 && (
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, marginBottom: 4 }}>
             {podiumOrder.map(({ entry, cfg }) => (
               <PodiumCol
                 key={entry.address}
                 entry={entry}
                 cfg={cfg}
-                isMe={entry.address.toLowerCase() === (me?.address ?? '')}
+                isMe={entry.address === myAddress}
               />
             ))}
           </div>
         )}
 
         {/* Simple list when < 3 entries */}
-        {!loading && entries.length > 0 && top3.length < 3 && (
+        {!isLoading && entries.length > 0 && top3.length < 3 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {entries.map((entry, i) => {
-              const isMe = entry.address.toLowerCase() === (me?.address ?? '');
+              const isMe = entry.address === myAddress;
               return (
                 <div key={entry.address} style={{
                   display: 'flex', alignItems: 'center', gap: 12,
@@ -292,11 +295,11 @@ export default function LeaderboardPage() {
         )}
 
         {/* Ranked list — #4 and beyond */}
-        {!loading && rest.length > 0 && (
+        {!isLoading && rest.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 16 }}>
             {rest.map((entry, i) => {
               const rank = 4 + i;
-              const isMe = entry.address.toLowerCase() === (me?.address ?? '');
+              const isMe = entry.address === myAddress;
               return (
                 <div key={entry.address} style={{
                   display: 'flex', alignItems: 'center', gap: 12,
@@ -326,7 +329,7 @@ export default function LeaderboardPage() {
       </div>
 
       {/* Pinned current-user bar */}
-      {me && !loading && (
+      {me && !isLoading && (
         <div style={{ position: 'fixed', bottom: 68, left: 0, right: 0, zIndex: 40, padding: '0 1.25rem' }}>
           <div style={{ maxWidth: 512, margin: '0 auto' }}>
             <div style={{
