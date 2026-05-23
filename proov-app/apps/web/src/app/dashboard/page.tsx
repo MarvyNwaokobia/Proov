@@ -11,10 +11,8 @@ import {
   IconFlame,
   IconCheckbox,
   IconUsers,
-  IconBolt,
   IconPlus,
   IconPlayerPlay,
-  IconCheck,
   IconSettings2,
   IconTarget,
   IconHeart,
@@ -69,37 +67,12 @@ export default function DashboardPage() {
   const [showWalkthrough, setShowWalkthrough] = useState(false);
   const [streakFlipped, setStreakFlipped] = useState(false);
   const [habitStreaks, setHabitStreaks] = useState<Record<string, number>>({});
-  const [canClaimFuel, setCanClaimFuel] = useState(false);
-  const [claimingFuel, setClaimingFuel] = useState(false);
-  const [celoBalance, setCeloBalance] = useState(0);
-  const [secondsUntilClaim, setSecondsUntilClaim] = useState(0);
   const proovTx = useProovTx();
 
   useEffect(() => {
     const isAuth = localStorage.getItem('proov_authenticated') === 'true';
     if (!isAuth) router.replace('/');
   }, [router]);
-
-  // Fuel faucet status
-  useEffect(() => {
-    const addr = localStorage.getItem('proov_address') || '';
-    if (!addr) return;
-
-    const checkFuel = async () => {
-      const { checkCanClaim, getUserCeloBalance } = await import('@/lib/fuel');
-      const [claimStatus, balance] = await Promise.all([
-        checkCanClaim(addr),
-        getUserCeloBalance(addr),
-      ]);
-      setCanClaimFuel(claimStatus.canClaim);
-      setSecondsUntilClaim(claimStatus.secondsLeft);
-      setCeloBalance(balance);
-    };
-
-    checkFuel();
-    const interval = setInterval(checkFuel, 60000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Walkthrough — show once for new users, never for returning users
   useEffect(() => {
@@ -273,27 +246,6 @@ export default function DashboardPage() {
     setTimeout(() => setToastVisible(false), 2200);
   };
 
-  const handleClaimFuel = async () => {
-    if (!canClaimFuel || claimingFuel) return;
-    setClaimingFuel(true);
-
-    const { claimFuel, getUserCeloBalance } = await import('@/lib/fuel');
-    const result = await claimFuel();
-
-    if (result.success) {
-      showToast('Fuel claimed!');
-      setCanClaimFuel(false);
-      setSecondsUntilClaim(86400);
-      const addr = localStorage.getItem('proov_address') || '';
-      const newBalance = await getUserCeloBalance(addr);
-      setCeloBalance(newBalance);
-    } else {
-      showToast(result.error || 'Could not claim fuel');
-    }
-
-    setClaimingFuel(false);
-  };
-
   const displayName = username
     ? username.charAt(0).toUpperCase() + username.slice(1)
     : 'there';
@@ -326,42 +278,12 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div data-wt="wt-fuel" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {canClaimFuel ? (
-              <button
-                onClick={handleClaimFuel}
-                disabled={claimingFuel}
-                style={{
-                  padding: '6px 12px', borderRadius: 20,
-                  background: 'linear-gradient(135deg, #f59e0b, #ef4444)',
-                  border: 'none', color: '#fff',
-                  fontSize: 11, fontWeight: 700,
-                  cursor: 'pointer', fontFamily: 'inherit',
-                  display: 'flex', alignItems: 'center', gap: 5,
-                  boxShadow: '0 2px 8px rgba(239,68,68,0.3)',
-                  animation: 'pulse 2s ease-in-out infinite',
-                }}>
-                <IconBolt size={13} stroke={2} />
-                {claimingFuel ? 'Claiming…' : 'Claim fuel'}
-              </button>
-            ) : celoBalance > 0 ? (
-              <div style={{
-                padding: '6px 12px', borderRadius: 20,
-                background: 'var(--bg2)', border: '1px solid var(--border)',
-                color: 'var(--text3)', fontSize: 11,
-                display: 'flex', alignItems: 'center', gap: 5,
-              }}>
-                <IconBolt size={13} stroke={2} /> {celoBalance.toFixed(3)} Fuel
-              </div>
-            ) : null}
-
-            <button onClick={() => router.push('/settings')} style={{
-              background: 'transparent', border: 'none',
-              color: 'var(--text3)', cursor: 'pointer', padding: 4,
-            }}>
-              <IconSettings2 size={20} stroke={1.8} />
-            </button>
-          </div>
+          <button onClick={() => router.push('/settings')} style={{
+            background: 'transparent', border: 'none',
+            color: 'var(--text3)', cursor: 'pointer', padding: 4,
+          }}>
+            <IconSettings2 size={20} stroke={1.8} />
+          </button>
         </div>
 
         {/* Streak card — flippable */}
