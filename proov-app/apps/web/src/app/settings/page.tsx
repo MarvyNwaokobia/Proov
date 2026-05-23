@@ -15,6 +15,14 @@ import {
   IconBolt,
 } from '@tabler/icons-react';
 
+function fmtCountdown(secs: number): string {
+  if (secs <= 0) return 'Claimable now';
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  if (h > 0) return `Next in ${h}h ${m > 0 ? ` ${m}m` : ''}`;
+  return `Next in ${m}m`;
+}
+
 export default function SettingsPage() {
   const router = useRouter();
   const { disconnect } = useDisconnect();
@@ -31,6 +39,10 @@ export default function SettingsPage() {
   // copied state removed (wallet section removed)
   const [showUsernameConfirm, setShowUsernameConfirm] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [celoBalance, setCeloBalance] = useState(0);
+  const [canClaimFuel, setCanClaimFuel] = useState(false);
+  const [secondsUntilClaim, setSecondsUntilClaim] = useState(0);
+  const [claimingFuel, setClaimingFuel] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -42,6 +54,24 @@ export default function SettingsPage() {
     }
     const fallback = localStorage.getItem('proov_username');
     if (fallback && !username) setUsername(fallback);
+  }, []);
+
+  useEffect(() => {
+    const addr = localStorage.getItem('proov_address') || '';
+    if (!addr) return;
+    const checkFuel = async () => {
+      const { checkCanClaim, getUserCeloBalance } = await import('@/lib/fuel');
+      const [claimStatus, balance] = await Promise.all([
+        checkCanClaim(addr),
+        getUserCeloBalance(addr),
+      ]);
+      setCanClaimFuel(claimStatus.canClaim);
+      setSecondsUntilClaim(claimStatus.secondsLeft);
+      setCeloBalance(balance);
+    };
+    checkFuel();
+    const interval = setInterval(checkFuel, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   const checkNewUsername = (val: string) => {
@@ -108,6 +138,23 @@ export default function SettingsPage() {
     const { clearWeb3AuthSession } = await import('@/lib/clearSession');
     await clearWeb3AuthSession();
     window.location.href = '/';
+  };
+
+  const handleClaimFuel = async () => {
+    if (!canClaimFuel || claimingFuel) return;
+    setClaimingFuel(true);
+    const { claimFuel, getUserCeloBalance } = await import('@/lib/fuel');
+    const result = await claimFuel();
+    if (result.success) {
+      setSavedToast(true);
+      setTimeout(() => setSavedToast(false), 2500);
+      setCanClaimFuel(false);
+      setSecondsUntilClaim(86400);
+      const addr = localStorage.getItem('proov_address') || '';
+      const newBalance = await getUserCeloBalance(addr);
+      setCeloBalance(newBalance);
+    }
+    setClaimingFuel(false);
   };
 
   if (!mounted) return null;
@@ -205,19 +252,48 @@ export default function SettingsPage() {
 
         {/* Fuel */}
         <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '0.625rem' }}>Fuel</p>
-        <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, padding: '1rem', marginBottom: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, #f59e0b, #ef4444)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <IconBolt size={18} stroke={2} color="#fff" />
+        <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, overflow: 'hidden', marginBottom: '1.25rem' }}>
+          {/* Balance row */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1rem', borderBottom: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 9, background: 'linear-gradient(135deg, #f59e0b, #ef4444)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <IconBolt size={16} stroke={2} color="#fff" />
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>Balance</span>
             </div>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Daily fuel</div>
-              <div style={{ fontSize: 11, color: 'var(--text2)', lineHeight: 1.5 }}>Claim your free fuel once a day from the dashboard.</div>
-            </div>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 5 }}>
+              <IconBolt size={14} stroke={2} color="#f59e0b" />
+              {Math.floor(celoBalance)} Fuel
+            </span>
           </div>
-          <Link href="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, color: 'var(--accent-text)', textDecoration: 'none' }}>
-            Go to dashboard <IconChevronRight size={13} stroke={2} />
-          </Link>
+          {/* Daily status row */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1rem', borderBottom: '1px solid var(--border)' }}>
+            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>Daily Fuel</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: canClaimFuel ? 'var(--accent-text)' : 'var(--text3)' }}>
+              {canClaimFuel ? 'Claimable now' : fmtCountdown(secondsUntilClaim)}
+            </span>
+          </div>
+          {/* Claim button row */}
+          <div style={{ padding: '0.875rem 1rem' }}>
+            <button
+              onClick={handleClaimFuel}
+              disabled={!canClaimFuel || claimingFuel}
+              style={{
+                width: '100%', padding: '10px 0', borderRadius: 12, border: 'none',
+                background: canClaimFuel ? 'linear-gradient(135deg, #f59e0b, #ef4444)' : 'var(--bg3)',
+                color: canClaimFuel ? '#fff' : 'var(--text3)',
+                fontSize: 13, fontWeight: 700,
+                cursor: canClaimFuel && !claimingFuel ? 'pointer' : 'not-allowed',
+                fontFamily: 'inherit',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                transition: 'opacity 0.15s',
+                opacity: claimingFuel ? 0.7 : 1,
+              }}
+            >
+              <IconBolt size={15} stroke={2} />
+              {claimingFuel ? 'Claiming…' : 'Claim Daily Fuel'}
+            </button>
+          </div>
         </div>
 
         {/* Account */}
