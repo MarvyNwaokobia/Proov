@@ -373,8 +373,8 @@ export default function GrindTimerPage() {
           <div style={{ background: 'var(--accent-bg)', border: '1.5px solid var(--accent-border)', borderRadius: 16, padding: 18, textAlign: 'center', marginTop: 12, marginBottom: '1.25rem' }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
               {sessionHabitName
-                ? `${sessionHabitName} · ${sessionDuration < 60 ? `${sessionDuration}m` : `${sessionDuration / 60}h`} done`
-                : `${sessionDuration < 60 ? `${sessionDuration}m` : `${sessionDuration / 60}h`} session complete`}
+                ? `${sessionHabitName} · ${fmtDur(sessionDuration)} done`
+                : `${fmtDur(sessionDuration)} session complete`}
             </div>
             <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: '1rem' }}>
               {sessionHabitName ? "Keep showing up. That's the whole game." : 'Good work. Every session counts.'}
@@ -475,7 +475,7 @@ export default function GrindTimerPage() {
                 </div>
                 {customHistory.map(session => {
                   const dur = session.duration_minutes;
-                  const label = session.label || (dur < 60 ? `${dur}m session` : `${dur / 60}h session`);
+                  const label = session.label || `${fmtDur(dur)} session`;
                   const date = new Date(session.started_at).toLocaleDateString('en', { month: 'short', day: 'numeric' });
                   return (
                     <div key={session.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--card-bg)', marginBottom: 8 }}>
@@ -559,7 +559,7 @@ export default function GrindTimerPage() {
             {/* Duration — plain slider, label always matches */}
             <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text)',
               textAlign: 'center', marginBottom: 12, letterSpacing: -1 }}>
-              {duration < 60 ? `${duration} min` : `${duration / 60}h`}
+              {fmtDur(duration)}
             </div>
 
             <input
@@ -587,7 +587,7 @@ export default function GrindTimerPage() {
               onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')}
               onMouseLeave={e => (e.currentTarget.style.transform = '')}
             >
-              Start {duration < 60 ? `${duration} min` : `${duration / 60}h`} session
+              Start {fmtDur(duration)} session
             </button>
           </div>
         )}
