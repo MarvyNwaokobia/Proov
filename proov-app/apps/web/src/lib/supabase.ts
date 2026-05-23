@@ -520,6 +520,17 @@ export async function getTodayNudgesSent(fromAddress: string): Promise<string[]>
 
 // ───────────────────────────────────────────────────────────────────────────────
 
+export async function getGlobalLeaderboard(limit = 50): Promise<{ address: string; streak: number }[]> {
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from('streaks')
+    .select('user_address, current_streak')
+    .gt('current_streak', 0)
+    .order('current_streak', { ascending: false })
+    .limit(limit);
+  return (data || []).map(r => ({ address: r.user_address, streak: r.current_streak }));
+}
+
 export async function getAllHabitStreaks(
   habitIds: string[],
   userAddress: string
