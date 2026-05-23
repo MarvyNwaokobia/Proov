@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   IconBrain, IconRun, IconYoga, IconBook, IconSalad, IconPalette,
-  IconArrowLeft, IconFlame, IconClock, IconCheck, IconArchive,
+  IconArrowLeft, IconFlame, IconClock, IconCheck, IconArchive, IconPlayerPlay,
   type Icon as TablerIcon,
 } from '@tabler/icons-react';
 import {
@@ -635,6 +635,20 @@ export default function HabitsPage() {
                             <IconFlame size={12} stroke={2} />{isDone ? 'Done today' : `${habitStreaks[habit.id] || 0} day streak`}
                           </div>
                         </div>
+                        {habit.type === 'timed' && !isDone && (
+                          <button
+                            onClick={e => { e.stopPropagation(); router.push(`/timer?habitId=${habit.id}&autostart=1`); }}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 5,
+                              padding: '7px 12px', borderRadius: 10, border: 'none',
+                              background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)',
+                              fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                              flexShrink: 0,
+                            }}
+                          >
+                            <IconPlayerPlay size={13} stroke={2} /> Start
+                          </button>
+                        )}
                         <button
                           onClick={e => { e.stopPropagation(); handleArchive(habit.id); }}
                           title="Archive habit"
