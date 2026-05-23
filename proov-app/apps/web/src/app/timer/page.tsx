@@ -51,6 +51,7 @@ export default function GrindTimerPage() {
   const [customLabel, setCustomLabel] = useState('');
   const [search, setSearch] = useState('');
 
+  const [userAddress, setUserAddress] = useState('');
   const [duration, setDuration] = useState(25);
 
   const [secondsLeft, setSecondsLeft] = useState(0);
@@ -70,7 +71,19 @@ export default function GrindTimerPage() {
     return () => window.removeEventListener('mousemove', onMouseMove);
   }, [onMouseMove]);
 
-  // Load habits + restore active timer + load custom session history
+  // Load address into state so history effect re-runs if address becomes available after sign-in
+  useEffect(() => {
+    const addr = localStorage.getItem('proov_address') || '';
+    if (addr) setUserAddress(addr);
+  }, []);
+
+  // Reload session history whenever the address is known (survives sign-out → sign-in)
+  useEffect(() => {
+    if (!userAddress) return;
+    getAllSessionHistory(userAddress).then(setSessionHistory).catch(() => {});
+  }, [userAddress]);
+
+  // Load habits + restore active timer
   useEffect(() => {
     const address = localStorage.getItem('proov_address') || '';
 
@@ -126,8 +139,6 @@ export default function GrindTimerPage() {
         setTimedHabits(cached.filter((h: any) => h.type === 'timed'));
       });
 
-      // Load all session history (habit + custom)
-      getAllSessionHistory(address).then(setSessionHistory).catch(() => {});
     }
 
     // Restore active timer if still running
@@ -264,7 +275,7 @@ export default function GrindTimerPage() {
   };
 
   const confirmDone = async () => {
-    const address = localStorage.getItem('proov_address') || '';
+    const address = userAddress || localStorage.getItem('proov_address') || '';
     const streak = parseInt(localStorage.getItem('proov_streak_count') || '0');
 
     if (!isCustom && selectedHabit) {
@@ -284,7 +295,8 @@ export default function GrindTimerPage() {
       }).catch(() => {});
     }
 
-    getAllSessionHistory(address).then(setSessionHistory).catch(() => {});
+    // Reload from backend — await so pick view renders with fresh history
+    await getAllSessionHistory(address).then(setSessionHistory).catch(() => {});
 
     setView('pick');
     setSelectedHabit(null);
