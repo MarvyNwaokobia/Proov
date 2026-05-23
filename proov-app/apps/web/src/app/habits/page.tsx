@@ -58,8 +58,16 @@ const SUGGESTIONS: Record<string, SuggestionItem[]> = {
     { name: 'No Alcohol',         emoji: '🚫', type: 'checkbox' },
     { name: 'Meal Prep',          emoji: '🥗', type: 'timed',    duration: 60 },
   ],
+  Creative: [
+    { name: 'Sketch',                       emoji: '✏️', type: 'timed',    duration: 10 },
+    { name: 'Free Write',                   emoji: '📝', type: 'timed',    duration: 15 },
+    { name: 'Practice an Instrument',       emoji: '🎸', type: 'timed',    duration: 30 },
+    { name: 'Take a Photo a Day',           emoji: '📷', type: 'checkbox' },
+    { name: 'Create Something with Hands',  emoji: '🖐️', type: 'checkbox' },
+    { name: 'Write a Poem',                 emoji: '🖊️', type: 'timed',    duration: 20 },
+  ],
 };
-const SUGGESTION_CATS = ['Focus', 'Fitness', 'Wellness', 'Learning', 'Nutrition'];
+const SUGGESTION_CATS = ['Focus', 'Fitness', 'Wellness', 'Learning', 'Nutrition', 'Creative'];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
