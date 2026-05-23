@@ -462,6 +462,7 @@ export default function HabitsPage() {
       showToast('✓ Habit saved!');
       setShowForm(false);
       setPrefill(undefined);
+      setActiveTab('my');
     }
     setIsSaving(false);
   };
@@ -525,6 +526,7 @@ export default function HabitsPage() {
       const cached = JSON.parse(localStorage.getItem('proov_habits_cache') || '[]');
       localStorage.setItem('proov_habits_cache', JSON.stringify([...cached, saved]));
       showToast(`${s.emoji} ${s.name} added`);
+      setActiveTab('my');
     }
     setIsSaving(false);
   };
@@ -640,7 +642,7 @@ export default function HabitsPage() {
       <div style={{ background: "var(--nav-bg)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderBottom: "1px solid var(--border)", padding: "1rem 1.25rem", position: "sticky", top: 0, zIndex: 30 }}>
         <div style={{ maxWidth: 520, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <p style={{ color: "var(--text)", fontWeight: 700, fontSize: 16 }}>Habits</p>
-          <button onClick={() => { setPrefill(undefined); setShowForm(true); setActiveTab("all"); }} style={{ padding: "7px 14px", borderRadius: 10, border: "none", background: "var(--btn-primary-bg)", color: "var(--btn-primary-text)", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+          <button onClick={() => { setPrefill(undefined); setShowForm(true); setActiveTab("my"); }} style={{ padding: "7px 14px", borderRadius: 10, border: "none", background: "var(--btn-primary-bg)", color: "var(--btn-primary-text)", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
             + New
           </button>
         </div>
