@@ -4,7 +4,13 @@ import { useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import Link from 'next/link';
 import { getLeaderboard, getUserStats } from '@/lib/goldsky';
-import { getUsernameForAddress, getUserHabits, getTodayCompletions, saveHabitCompletion, getStreakData, updateDailyStreak, getAllHabitStreaks, type Habit } from '@/lib/supabase';
+import {
+  getUsernameForAddress, getUserHabits, getTodayCompletions, saveHabitCompletion,
+  getStreakData, updateDailyStreak, getAllHabitStreaks,
+  getCircleRequests, getUsernamesForAddresses, getLatestActivityForAddress,
+  sendNudge, getTodayNudgesSent,
+  type Habit,
+} from '@/lib/supabase';
 import { useProovTx } from '@/hooks/useProovTx';
 import { Walkthrough } from '@/components/shared/Walkthrough';
 import {
@@ -16,6 +22,8 @@ import {
   IconSettings2,
   IconTarget,
   IconHeart,
+  IconBell,
+  IconCheck,
 } from '@tabler/icons-react';
 
 const STREAK_MILESTONES = [7, 14, 21, 30, 60, 90];
@@ -33,7 +41,9 @@ interface CircleMember {
   address: string;
   username: string;
   streak: number;
-  completedHabitToday?: string;
+  lastCompletionDate: string | null;
+  activityName: string | null;
+  activityTime: string | null;
 }
 
 function getGreeting(): string {
@@ -59,6 +69,7 @@ export default function DashboardPage() {
   const [completedToday, setCompletedToday] = useState<string[]>([]);
   const [circleMembers, setCircleMembers] = useState<CircleMember[]>([]);
   const [cheered, setCheered] = useState<Record<string, boolean>>({});
+  const [nudgedMap, setNudgedMap] = useState<Record<string, boolean>>({});
   const [toast, setToast] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -124,6 +135,57 @@ export default function DashboardPage() {
     }).catch(() => {});
   }, []);
 
+  // Load circle members from Supabase
+  useEffect(() => {
+    const addr = localStorage.getItem('proov_address') || '';
+    if (!addr) return;
+    const addrLower = addr.toLowerCase();
+    const today = new Date().toDateString();
+
+    const load = async () => {
+      const { accepted } = await getCircleRequests(addr).catch(() => ({ sent: [], received: [], accepted: [] }));
+      if (accepted.length === 0) return;
+
+      const memberAddrs = accepted.map(req =>
+        req.from_address === addrLower ? req.to_address : req.from_address
+      );
+
+      const [usernameMap, streaks, activities, nudgedToday] = await Promise.all([
+        getUsernamesForAddresses(memberAddrs).catch(() => ({} as Record<string, string>)),
+        Promise.all(memberAddrs.map(a => getStreakData(a).catch(() => null))),
+        Promise.all(memberAddrs.map(a => getLatestActivityForAddress(a).catch(() => null))),
+        getTodayNudgesSent(addr).catch(() => [] as string[]),
+      ]);
+
+      setCircleMembers(memberAddrs.map((a, i) => ({
+        address: a,
+        username: usernameMap[a] || a.slice(0, 8),
+        streak: streaks[i]?.currentStreak ?? 0,
+        lastCompletionDate: streaks[i]?.lastCompletionDate ?? null,
+        activityName: activities[i]?.habitName ?? null,
+        activityTime: activities[i]?.completedAt ?? null,
+      })));
+
+      // Restore nudge state from DB
+      if (nudgedToday.length > 0) {
+        setNudgedMap(prev => {
+          const next = { ...prev };
+          nudgedToday.forEach(a => { next[a] = true; });
+          return next;
+        });
+      }
+
+      // Restore cheer state from localStorage (per-address key, same as Circle page)
+      const cheeredState: Record<string, boolean> = {};
+      memberAddrs.forEach(a => {
+        if (localStorage.getItem(`proov_cheered_${a}_${today}`)) cheeredState[a] = true;
+      });
+      if (Object.keys(cheeredState).length > 0) setCheered(cheeredState);
+    };
+
+    load();
+  }, []);
+
   // Load per-habit streaks whenever habits array changes
   useEffect(() => {
     const addr = localStorage.getItem('proov_address') || '';
@@ -169,18 +231,6 @@ export default function DashboardPage() {
         setCurrentStreak(prev => prev || s.current || 0);
         setLongestStreak(prev => prev || s.longest || 0);
       } catch {}
-    }
-
-    // Circle members
-    const circleRaw = localStorage.getItem('proov_circle');
-    if (circleRaw) {
-      try { setCircleMembers(JSON.parse(circleRaw)); } catch {}
-    }
-
-    // Today's cheers
-    const cheeredRaw = localStorage.getItem(`proov_cheered_${today}`);
-    if (cheeredRaw) {
-      try { setCheered(JSON.parse(cheeredRaw)); } catch {}
     }
 
     // Goldsky leaderboard snapshot — only when authenticated
@@ -244,11 +294,21 @@ export default function DashboardPage() {
 
   const handleCheer = (memberAddress: string) => {
     const today = new Date().toDateString();
-    const key = `proov_cheered_${today}`;
-    const updated = { ...cheered, [memberAddress]: true };
-    setCheered(updated);
-    localStorage.setItem(key, JSON.stringify(updated));
+    localStorage.setItem(`proov_cheered_${memberAddress}_${today}`, '1');
+    setCheered(prev => ({ ...prev, [memberAddress]: true }));
     showToast('Cheer sent!');
+  };
+
+  const handleNudge = async (memberAddress: string, memberUsername: string) => {
+    const myAddr = localStorage.getItem('proov_address') || '';
+    setNudgedMap(prev => ({ ...prev, [memberAddress]: true }));
+    const ok = await sendNudge(myAddr, memberAddress).catch(() => false);
+    if (ok) {
+      showToast(`Nudge sent to @${memberUsername}!`);
+    } else {
+      setNudgedMap(prev => { const next = { ...prev }; delete next[memberAddress]; return next; });
+      showToast('Could not send nudge — try again');
+    }
   };
 
   const showToast = (msg: string) => {
@@ -465,48 +525,74 @@ export default function DashboardPage() {
             </Link>
           </div>
         ) : (
-          <div data-wt="wt-circle" style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(circleMembers.length, 3)}, 1fr)`, gap: 8, marginBottom: '1rem' }}>
-            {circleMembers.slice(0, 3).map(member => {
-              const canCheer = !!member.completedHabitToday && !cheered[member.address];
+          <div data-wt="wt-circle" style={{ marginBottom: '1rem' }}>
+            {circleMembers.map(member => {
+              const todayIso = new Date().toISOString().split('T')[0];
+              const activeToday = member.lastCompletionDate === todayIso;
               const alreadyCheered = cheered[member.address];
+              const alreadyNudged = nudgedMap[member.address];
               return (
-                <div key={member.address} style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 13, padding: '0.75rem', textAlign: 'center' }}>
-                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)', margin: '0 auto 5px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#fff' }}>
-                    {(member.username || '?').slice(0, 2).toUpperCase()}
+                <div key={member.address} style={{
+                  background: 'var(--card-bg)', border: '1px solid var(--card-border)',
+                  borderRadius: 13, padding: '11px 14px', marginBottom: 8,
+                  display: 'flex', alignItems: 'center', gap: 10,
+                }}>
+                  {/* Avatar */}
+                  <div style={{
+                    width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                    background: 'var(--accent-bg)', border: '1.5px solid var(--accent-border)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 13, fontWeight: 800, color: 'var(--accent-text)',
+                  }}>
+                    {(member.username || '?').slice(0, 1).toUpperCase()}
                   </div>
-                  <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--text)', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    @{member.username}
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      @{member.username}
+                    </div>
+                    <div style={{ fontSize: 10, color: activeToday ? 'var(--accent-text)' : 'var(--text3)', marginTop: 1, display: 'flex', alignItems: 'center', gap: 3 }}>
+                      <IconFlame size={10} stroke={2} color="#f59e0b" />
+                      {member.streak} · {activeToday
+                        ? (member.activityName ? `${member.activityName} done` : 'Done today')
+                        : 'No activity yet'}
+                    </div>
                   </div>
-                  <div style={{ fontSize: 9, color: 'var(--text3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}><IconFlame size={10} stroke={2} />{member.streak}</div>
-                  {member.completedHabitToday && (
-                    <div style={{ fontSize: 8, color: 'var(--accent-text)', margin: '3px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      ✓ {member.completedHabitToday}
-                    </div>
-                  )}
-                  {canCheer && (
-                    <button
-                      onClick={() => handleCheer(member.address)}
-                      style={{
-                        display: 'block', width: '100%', marginTop: 6, padding: '4px 0',
-                        borderRadius: 7, border: '1px solid var(--pink-border)',
-                        background: 'var(--pink-bg)', color: 'var(--pink-text)',
-                        fontSize: 9, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                        transition: 'transform .2s',
-                      }}
-                      onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.05)')}
-                      onMouseLeave={e => (e.currentTarget.style.transform = '')}
-                    >
-                      <IconHeart size={10} stroke={2} /> Cheer
-                    </button>
-                  )}
-                  {alreadyCheered && (
-                    <div style={{ marginTop: 6, padding: '4px 0', borderRadius: 7, background: 'var(--pink)', color: '#fff', fontSize: 9, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
-                      <IconHeart size={10} stroke={2} /> Cheered
-                    </div>
+                  {/* Action */}
+                  {activeToday ? (
+                    alreadyCheered ? (
+                      <span style={{ fontSize: 10, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                        <IconCheck size={11} stroke={2.5} /> Cheered
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleCheer(member.address)}
+                        style={{ flexShrink: 0, padding: '5px 11px', borderRadius: 18, border: '1.5px solid rgba(244,63,94,0.35)', background: 'rgba(244,63,94,0.06)', color: '#f43f5e', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4 }}
+                      >
+                        <IconHeart size={11} stroke={2} /> Cheer
+                      </button>
+                    )
+                  ) : (
+                    alreadyNudged ? (
+                      <span style={{ fontSize: 10, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                        <IconCheck size={11} stroke={2.5} /> Nudged
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleNudge(member.address, member.username)}
+                        style={{ flexShrink: 0, padding: '5px 11px', borderRadius: 18, border: '1.5px solid var(--border2)', background: 'transparent', color: 'var(--text3)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4 }}
+                      >
+                        <IconBell size={11} stroke={1.8} /> Nudge
+                      </button>
+                    )
                   )}
                 </div>
               );
             })}
+            {/* Invite prompt below existing members */}
+            <Link href="/circle" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: 9, borderRadius: 12, border: '1.5px dashed var(--border2)', color: 'var(--text3)', textDecoration: 'none', fontSize: 12, fontWeight: 500 }}>
+              <IconPlus size={13} stroke={2} /> Invite someone
+            </Link>
           </div>
         )}
 
