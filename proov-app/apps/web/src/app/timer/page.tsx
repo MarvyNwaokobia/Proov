@@ -10,10 +10,15 @@ import {
   IconCircleCheck,
   IconCheck,
   IconShare,
+  IconRotate,
+  IconArchive,
+  IconPlus,
+  IconX,
 } from '@tabler/icons-react';
 import {
   getUserHabits, saveHabitCompletion, getTodayCompletions,
-  saveTimerSession, updateTimerSession, getAllSessionHistory,
+  saveTimerSession, updateTimerSession, getAllSessionHistory, archiveTimerSession,
+  saveHabit,
   type Habit, type TimerSession,
 } from '@/lib/supabase';
 
@@ -61,6 +66,15 @@ export default function GrindTimerPage() {
   const [secondsLeft, setSecondsLeft] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const justCompletedRef = useRef(false);
+
+  // Session editing state
+  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
+  const [redoDuration, setRedoDuration] = useState<number>(25);
+  const [convertSessionId, setConvertSessionId] = useState<string | null>(null);
+  const [convertName, setConvertName] = useState('');
+  const [convertEmoji, setConvertEmoji] = useState('⏱');
+  const [convertDuration, setConvertDuration] = useState(25);
+  const [convertSaving, setConvertSaving] = useState(false);
 
   // Cursor glow
   const glowRef = useRef<HTMLDivElement>(null);
@@ -326,6 +340,52 @@ export default function GrindTimerPage() {
       else proovTx.cancelSession(0);
     }
     setView('pick');
+  };
+
+  const handleRedo = (session: TimerSession) => {
+    const dur = redoDuration || session.duration_minutes;
+    if (session.habit_id) {
+      const found = timedHabits.find(h => h.id === session.habit_id);
+      if (found) {
+        setSelectedHabit(found);
+        setDuration(dur);
+        setIsCustom(false);
+        setView('setup');
+        return;
+      }
+    }
+    setIsCustom(true);
+    setSelectedHabit(null);
+    setCustomLabel(session.label || '');
+    setDuration(dur);
+    setView('setup');
+  };
+
+  const handleArchive = async (sessionId: string) => {
+    await archiveTimerSession(sessionId).catch(() => {});
+    setSessionHistory(prev => prev.filter(s => s.id !== sessionId));
+    if (expandedSessionId === sessionId) setExpandedSessionId(null);
+  };
+
+  const handleConvertToHabit = async (session: TimerSession) => {
+    if (!convertName.trim()) return;
+    setConvertSaving(true);
+    const address = userAddress || localStorage.getItem('proov_address') || '';
+    await saveHabit({
+      user_address: address.toLowerCase(),
+      name: convertName.trim(),
+      emoji: convertEmoji,
+      category: 'Other',
+      type: 'timed',
+      duration_minutes: convertDuration,
+      schedule: 'daily',
+      visibility: 'private',
+      visible_to: [],
+      active: true,
+    }).catch(() => {});
+    setConvertSaving(false);
+    setConvertSessionId(null);
+    setExpandedSessionId(null);
   };
 
   const totalSeconds = duration * 60;
@@ -634,23 +694,175 @@ export default function GrindTimerPage() {
                 {sessionHistory.map(session => {
                   const label = session.label || `${fmtDur(session.duration_minutes)} session`;
                   const date = new Date(session.started_at).toLocaleDateString('en', { month: 'short', day: 'numeric' });
+                  const isExpanded = expandedSessionId === session.id;
+                  const isConverting = convertSessionId === session.id;
                   return (
                     <div key={session.id} style={{
-                      display: 'flex', alignItems: 'center', gap: 10,
-                      padding: '10px 14px', borderRadius: 13,
-                      border: '1px solid var(--border)', background: 'var(--card-bg)', marginBottom: 8,
+                      borderRadius: 13, border: `1px solid ${isExpanded ? 'var(--accent-border)' : 'var(--border)'}`,
+                      background: 'var(--card-bg)', marginBottom: 8, overflow: 'hidden',
+                      transition: 'border-color .15s',
                     }}>
-                      <div style={{
-                        width: 36, height: 36, borderRadius: 9, flexShrink: 0,
-                        background: 'var(--accent-bg)', border: '1px solid var(--accent-border)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>
-                        <IconCircleCheck size={17} stroke={1.6} color="var(--accent-text)" />
+                      {/* Main row */}
+                      <div
+                        onClick={() => {
+                          setExpandedSessionId(isExpanded ? null : session.id);
+                          setRedoDuration(session.duration_minutes);
+                          setConvertSessionId(null);
+                          setConvertName(session.label || '');
+                          setConvertEmoji('⏱');
+                          setConvertDuration(session.duration_minutes);
+                        }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', cursor: 'pointer' }}
+                      >
+                        <div style={{
+                          width: 36, height: 36, borderRadius: 9, flexShrink: 0,
+                          background: 'var(--accent-bg)', border: '1px solid var(--accent-border)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          <IconCircleCheck size={17} stroke={1.6} color="var(--accent-text)" />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</div>
+                          <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 2 }}>{fmtDur(session.duration_minutes)} · {date}</div>
+                        </div>
+                        <span style={{ fontSize: 10, color: 'var(--text3)', flexShrink: 0 }}>{isExpanded ? '▲' : '▼'}</span>
                       </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</div>
-                        <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 2 }}>{fmtDur(session.duration_minutes)} · {date}</div>
-                      </div>
+
+                      {/* Expanded controls */}
+                      {isExpanded && !isConverting && (
+                        <div style={{ borderTop: '1px solid var(--border)', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                          {/* Redo with editable duration */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 11, color: 'var(--text3)', flex: 1 }}>Redo duration (min)</span>
+                            <input
+                              type="number"
+                              min={1}
+                              max={240}
+                              value={redoDuration}
+                              onChange={e => {
+                                const v = parseInt(e.target.value);
+                                if (!isNaN(v)) setRedoDuration(Math.min(240, Math.max(1, v)));
+                              }}
+                              onClick={e => e.stopPropagation()}
+                              style={{
+                                width: 60, fontSize: 13, fontWeight: 700, color: 'var(--text)',
+                                background: 'var(--bg2)', border: '1px solid var(--border2)',
+                                borderRadius: 8, textAlign: 'center', outline: 'none',
+                                fontFamily: 'inherit', padding: '4px 6px',
+                              }}
+                            />
+                            <button
+                              onClick={e => { e.stopPropagation(); handleRedo(session); }}
+                              style={{
+                                display: 'flex', alignItems: 'center', gap: 5,
+                                padding: '6px 14px', borderRadius: 9, border: 'none',
+                                background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)',
+                                fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                              }}
+                            >
+                              <IconRotate size={12} stroke={2} /> Redo
+                            </button>
+                          </div>
+                          {/* Convert to habit (custom sessions only) */}
+                          {session.is_custom && (
+                            <button
+                              onClick={e => { e.stopPropagation(); setConvertSessionId(session.id); }}
+                              style={{
+                                display: 'flex', alignItems: 'center', gap: 5,
+                                padding: '7px 14px', borderRadius: 9,
+                                border: '1px solid var(--accent-border)', background: 'var(--accent-bg)',
+                                color: 'var(--accent-text)', fontSize: 11, fontWeight: 700,
+                                cursor: 'pointer', fontFamily: 'inherit', width: 'fit-content',
+                              }}
+                            >
+                              <IconPlus size={12} stroke={2.5} /> Save as Habit
+                            </button>
+                          )}
+                          {/* Archive */}
+                          <button
+                            onClick={e => { e.stopPropagation(); handleArchive(session.id); }}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 5,
+                              padding: '7px 14px', borderRadius: 9,
+                              border: '1px solid var(--border2)', background: 'transparent',
+                              color: 'var(--text3)', fontSize: 11, fontWeight: 600,
+                              cursor: 'pointer', fontFamily: 'inherit', width: 'fit-content',
+                            }}
+                          >
+                            <IconArchive size={12} stroke={1.8} /> Archive session
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Convert to habit form */}
+                      {isExpanded && isConverting && (
+                        <div style={{ borderTop: '1px solid var(--border)', padding: '14px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent-text)' }}>Save as Habit</span>
+                            <button onClick={e => { e.stopPropagation(); setConvertSessionId(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)' }}>
+                              <IconX size={14} stroke={2} />
+                            </button>
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                            <input
+                              type="text"
+                              placeholder="Emoji"
+                              value={convertEmoji}
+                              onChange={e => setConvertEmoji(e.target.value)}
+                              onClick={e => e.stopPropagation()}
+                              style={{
+                                width: 48, fontSize: 18, textAlign: 'center', border: '1px solid var(--border2)',
+                                borderRadius: 9, background: 'var(--bg2)', outline: 'none', fontFamily: 'inherit', padding: '6px 4px',
+                              }}
+                            />
+                            <input
+                              type="text"
+                              placeholder="Habit name"
+                              value={convertName}
+                              onChange={e => setConvertName(e.target.value)}
+                              onClick={e => e.stopPropagation()}
+                              style={{
+                                flex: 1, fontSize: 13, border: '1px solid var(--border2)',
+                                borderRadius: 9, background: 'var(--bg2)', color: 'var(--text)',
+                                outline: 'none', fontFamily: 'inherit', padding: '6px 10px',
+                              }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                            <span style={{ fontSize: 11, color: 'var(--text3)' }}>Duration (min)</span>
+                            <input
+                              type="number"
+                              min={1}
+                              max={240}
+                              value={convertDuration}
+                              onChange={e => {
+                                const v = parseInt(e.target.value);
+                                if (!isNaN(v)) setConvertDuration(Math.min(240, Math.max(1, v)));
+                              }}
+                              onClick={e => e.stopPropagation()}
+                              style={{
+                                width: 60, fontSize: 13, fontWeight: 700, color: 'var(--text)',
+                                background: 'var(--bg2)', border: '1px solid var(--border2)',
+                                borderRadius: 8, textAlign: 'center', outline: 'none',
+                                fontFamily: 'inherit', padding: '4px 6px',
+                              }}
+                            />
+                          </div>
+                          <button
+                            onClick={e => { e.stopPropagation(); handleConvertToHabit(session); }}
+                            disabled={!convertName.trim() || convertSaving}
+                            style={{
+                              width: '100%', padding: '9px', borderRadius: 10, border: 'none',
+                              background: convertName.trim() ? 'var(--btn-primary-bg)' : 'var(--bg3)',
+                              color: convertName.trim() ? 'var(--btn-primary-text)' : 'var(--text3)',
+                              fontSize: 12, fontWeight: 700, cursor: convertName.trim() ? 'pointer' : 'not-allowed',
+                              fontFamily: 'inherit',
+                            }}
+                          >
+                            {convertSaving ? 'Saving…' : 'Create Habit'}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
