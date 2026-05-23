@@ -524,14 +524,11 @@ export default function DashboardPage() {
                       <span>{habit.type === 'timed' ? `${habit.duration_minutes}m` : 'Checkbox'}</span>
                       <span>·</span>
                       <span style={{ textTransform: 'capitalize' }}>{habit.schedule}</span>
-                      {habitStreak > 0 && (
-                        <>
-                          <span>·</span>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 2, color: '#f59e0b', fontWeight: 600 }}>
-                            <IconFlame size={10} stroke={2} color="#f59e0b" />{habitStreak}
-                          </span>
-                        </>
-                      )}
+                      <span>·</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 2, color: '#f59e0b', fontWeight: 700 }}>
+                        <IconFlame size={10} stroke={2} color="#f59e0b" />
+                        {isDone ? '✓' : habitStreak > 0 ? `${habitStreak}d` : '0d'}
+                      </span>
                     </div>
                   </div>
 
