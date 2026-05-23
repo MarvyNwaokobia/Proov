@@ -344,7 +344,7 @@ export async function updateUsername(
 
 export async function updateHabit(
   habitId: string,
-  updates: { name?: string; duration_minutes?: number; visibility?: string }
+  updates: { name?: string; duration_minutes?: number; visibility?: string; visible_to?: string[] }
 ): Promise<void> {
   if (!supabase) return;
   await supabase
