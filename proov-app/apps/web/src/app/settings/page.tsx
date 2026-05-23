@@ -14,6 +14,8 @@ import {
   IconLogout,
   IconBolt,
   IconUser,
+  IconCopy,
+  IconCheck,
 } from '@tabler/icons-react';
 
 function fmtCountdown(secs: number): string {
@@ -38,7 +40,7 @@ export default function SettingsPage() {
   const [address, setAddress] = useState('');
   const [userRank, setUserRank] = useState<number | null>(null);
   const [savedToast, setSavedToast] = useState(false);
-  // copied state removed (wallet section removed)
+  const [copied, setCopied] = useState(false);
   const [showUsernameConfirm, setShowUsernameConfirm] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [celoBalance, setCeloBalance] = useState(0);
@@ -278,13 +280,38 @@ export default function SettingsPage() {
         )}
 
         {/* Email row */}
-        <div style={{ ...listRow, borderBottom: 'none', cursor: 'default' }}>
+        <div style={{ ...listRow, cursor: 'default' }}>
           <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>Email</span>
           <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginRight: 8 }}>
             {email || '—'}
           </span>
           <IconChevronRight size={14} stroke={2} color="var(--text3)" />
         </div>
+
+        {/* Connected account row */}
+        {address && (
+          <div style={{ ...listRow, borderBottom: 'none', cursor: 'default' }}>
+            <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>Connected account</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', fontFamily: 'monospace', marginRight: 8 }}>
+              {address.slice(0, 6)}…{address.slice(-4)}
+            </span>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(address).catch(() => {});
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer', padding: 4,
+                color: copied ? 'var(--accent-text)' : 'var(--text3)',
+                display: 'flex', alignItems: 'center', flexShrink: 0,
+              }}
+              title="Copy address"
+            >
+              {copied ? <IconCheck size={14} stroke={2.5} /> : <IconCopy size={14} stroke={1.8} />}
+            </button>
+          </div>
+        )}
 
         {/* ── Appearance ── */}
         <p style={{ ...sectionLabel, marginTop: 16 }}>Appearance</p>
