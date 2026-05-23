@@ -133,12 +133,17 @@ export default function LeaderboardPage() {
     const raw = goldskyLoaded && goldskyEntries.length > 0
       ? goldskyEntries.map(e => ({ address: e.id as string, streak: Number(e.currentStreak ?? 0) }))
       : contractEntries.map(e => ({ address: e.address as string, streak: Number(e.streak) }));
-    return raw.map(e => ({
+    const mapped: Entry[] = raw.map(e => ({
       address: e.address,
       streak: e.streak,
       username: usernameMap[e.address.toLowerCase()] || displayName(e.address),
     }));
-  }, [goldskyLoaded, goldskyEntries, contractEntries, usernameMap]);
+    // Always include the current user if they have a streak and aren't in the on-chain data yet
+    if (me && me.streak > 0 && !mapped.some(e => e.address.toLowerCase() === me.address.toLowerCase())) {
+      mapped.push({ address: me.address, streak: me.streak, username: me.username });
+    }
+    return mapped.sort((a, b) => b.streak - a.streak);
+  }, [goldskyLoaded, goldskyEntries, contractEntries, usernameMap, me]);
 
   const circleEntries: Entry[] = useMemo(() => {
     if (!me) return [];
@@ -153,6 +158,13 @@ export default function LeaderboardPage() {
   const loading = tab === 'global' ? (goldskyLoaded ? false : contractLoading) : false;
 
   const myRank = me ? entries.findIndex(e => e.address.toLowerCase() === me.address) + 1 : 0;
+
+  // Cache global rank so Settings can display it without reloading leaderboard data
+  useEffect(() => {
+    if (tab === 'global' && myRank > 0) {
+      localStorage.setItem('proov_leaderboard_rank', String(myRank));
+    }
+  }, [tab, myRank]);
 
   const top3 = entries.slice(0, 3);
   const rest = entries.slice(3);
@@ -231,7 +243,7 @@ export default function LeaderboardPage() {
         {!loading && entries.length === 0 && (
           <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, padding: '3rem', textAlign: 'center' }}>
             <p style={{ fontSize: 13, color: 'var(--text2)', margin: 0 }}>
-              {tab === 'circle' ? 'Add friends to see them here.' : 'No players yet — complete a habit to appear.'}
+              {tab === 'circle' ? 'Add friends to see them here.' : 'Be the first on the board — keep your streak going.'}
             </p>
           </div>
         )}

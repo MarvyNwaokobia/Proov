@@ -34,7 +34,7 @@ export default function SettingsPage() {
   const [usernameHint, setUsernameHint] = useState('');
   const [usernameHintColor, setUsernameHintColor] = useState('var(--text3)');
   const [address, setAddress] = useState('');
-  const [userRank] = useState<number>(14);
+  const [userRank, setUserRank] = useState<number | null>(null);
   const [savedToast, setSavedToast] = useState(false);
   // copied state removed (wallet section removed)
   const [showUsernameConfirm, setShowUsernameConfirm] = useState(false);
@@ -54,6 +54,8 @@ export default function SettingsPage() {
     }
     const fallback = localStorage.getItem('proov_username');
     if (fallback && !username) setUsername(fallback);
+    const rank = parseInt(localStorage.getItem('proov_leaderboard_rank') || '0');
+    if (rank > 0) setUserRank(rank);
   }, []);
 
   useEffect(() => {
@@ -175,7 +177,7 @@ export default function SettingsPage() {
           <IconTrophy size={28} stroke={1.5} color="var(--accent-text)" />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Leaderboard</div>
-            <div style={{ fontSize: 12, color: 'var(--text2)' }}>You&apos;re #{userRank} globally</div>
+            <div style={{ fontSize: 12, color: 'var(--text2)' }}>{userRank ? `You're #${userRank} globally` : 'See how you rank globally'}</div>
           </div>
           <IconChevronRight size={16} stroke={2} color="var(--text3)" />
         </Link>
