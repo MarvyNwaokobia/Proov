@@ -359,78 +359,6 @@ export default function GrindTimerPage() {
         }} />
       )}
 
-      {/* RUNNING — full-screen focus overlay */}
-      {isRunning && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'var(--bg)',
-          display: 'flex', flexDirection: 'column', alignItems: 'center',
-          justifyContent: 'center', padding: 24, zIndex: 100,
-        }}>
-          <style>{`@keyframes tpulse{0%,100%{opacity:.4;transform:translate(-50%,-50%) scale(1)}50%{opacity:.9;transform:translate(-50%,-50%) scale(1.08)}}`}</style>
-          <div style={{
-            position: 'absolute', top: '50%', left: '50%',
-            width: 340, height: 340, borderRadius: '50%',
-            background: 'radial-gradient(circle,var(--accent-bg),transparent 70%)',
-            pointerEvents: 'none', animation: 'tpulse 2.5s ease-in-out infinite',
-          }} />
-          <button onClick={cancelTimer} style={{
-            position: 'absolute', top: 14, left: 18,
-            background: 'none', border: 'none', color: 'var(--accent-text)',
-            fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-            display: 'flex', alignItems: 'center', gap: 4,
-          }}>
-            <IconArrowLeft size={13} stroke={2.5} /> Change habit
-          </button>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 8, marginBottom: 26,
-            background: 'var(--accent-bg)', border: '1px solid var(--accent-border)',
-            borderRadius: 12, padding: '8px 14px', position: 'relative', zIndex: 1,
-          }}>
-            {selectedHabit ? (
-              <>
-                <span style={{ fontSize: 18 }}>{selectedHabit.emoji}</span>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-text)' }}>{sessionHabitName}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>Target: {fmtDur(sessionDuration)}</div>
-                </div>
-              </>
-            ) : (
-              <>
-                <IconClock size={18} stroke={1.8} color="var(--accent-text)" />
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-text)' }}>Custom session</div>
-                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>Target: {fmtDur(sessionDuration)}</div>
-                </div>
-              </>
-            )}
-          </div>
-          <div style={{ position: 'relative', width: 220, height: 220, marginBottom: 26, zIndex: 1 }}>
-            <svg viewBox="0 0 220 220" width="220" height="220" style={{ transform: 'rotate(-90deg)', position: 'relative', zIndex: 1 }}>
-              <circle cx="110" cy="110" r="94" fill="none" stroke="var(--border2)" strokeWidth="8" />
-              <circle cx="110" cy="110" r="94" fill="none" stroke="var(--accent)" strokeWidth="12"
-                strokeLinecap="round" strokeDasharray={CIRC_220} strokeDashoffset={strokeDashoffset220}
-                style={{ filter: 'drop-shadow(0 0 8px var(--accent))', transition: 'stroke-dashoffset 1s linear' }} />
-            </svg>
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontSize: 36, fontWeight: 900, color: 'var(--text)', letterSpacing: -2, lineHeight: 1 }}>
-                {fmtTime(secondsLeft)}
-              </span>
-              <span style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>remaining</span>
-            </div>
-          </div>
-          <p style={{ fontSize: 12, color: 'var(--text3)', textAlign: 'center', lineHeight: 1.6, marginBottom: 22, position: 'relative', zIndex: 1 }}>
-            Timer runs in the background.<br />Come back when you're done.
-          </p>
-          <button onClick={cancelTimer} style={{
-            padding: '11px 28px', borderRadius: 12, background: 'transparent',
-            border: '1px solid var(--border2)', color: 'var(--text2)',
-            fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-            position: 'relative', zIndex: 1,
-          }}>
-            Cancel session
-          </button>
-        </div>
-      )}
 
       {/* DONE — full-screen completion overlay */}
       {isDone && (
@@ -516,6 +444,62 @@ export default function GrindTimerPage() {
             Pick a habit or start a custom session
           </div>
         </div>
+
+        {/* Compact running ring — shown at top while timer is active */}
+        {isRunning && (
+          <div style={{
+            background: 'var(--card-bg)', border: '1px solid var(--accent-border)',
+            borderRadius: 20, padding: '20px 20px', marginBottom: 24,
+            position: 'relative', overflow: 'hidden',
+          }}>
+            <style>{`@keyframes tpulse{0%,100%{opacity:.25;transform:translate(-50%,-50%) scale(1)}50%{opacity:.55;transform:translate(-50%,-50%) scale(1.12)}}`}</style>
+            <div style={{
+              position: 'absolute', top: '50%', left: '50%',
+              width: 260, height: 260, borderRadius: '50%',
+              background: 'radial-gradient(circle,var(--accent-bg),transparent 70%)',
+              pointerEvents: 'none', animation: 'tpulse 2.5s ease-in-out infinite',
+            }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 20, position: 'relative', zIndex: 1 }}>
+              {/* Progress ring */}
+              <div style={{ position: 'relative', width: 120, height: 120, flexShrink: 0 }}>
+                <svg viewBox="0 0 220 220" width="120" height="120" style={{ transform: 'rotate(-90deg)' }}>
+                  <circle cx="110" cy="110" r="94" fill="none" stroke="var(--border2)" strokeWidth="10" />
+                  <circle cx="110" cy="110" r="94" fill="none" stroke="var(--accent)" strokeWidth="14"
+                    strokeLinecap="round" strokeDasharray={CIRC_220} strokeDashoffset={strokeDashoffset220}
+                    style={{ filter: 'drop-shadow(0 0 8px var(--accent))', transition: 'stroke-dashoffset 1s linear' }} />
+                </svg>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: 20, fontWeight: 900, color: 'var(--text)', letterSpacing: -1, lineHeight: 1 }}>
+                    {fmtTime(secondsLeft)}
+                  </span>
+                  <span style={{ fontSize: 9, color: 'var(--text3)', marginTop: 3 }}>remaining</span>
+                </div>
+              </div>
+              {/* Habit info + cancel */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+                  {selectedHabit
+                    ? <span style={{ fontSize: 20 }}>{selectedHabit.emoji}</span>
+                    : <IconClock size={18} stroke={1.8} color="var(--accent-text)" />}
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {sessionHabitName || 'Custom session'}
+                  </span>
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 14 }}>
+                  Target: {fmtDur(sessionDuration)} · In progress
+                </div>
+                <button onClick={cancelTimer} style={{
+                  padding: '7px 16px', borderRadius: 10, background: 'transparent',
+                  border: '1px solid var(--border2)', color: 'var(--text2)',
+                  fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                  display: 'flex', alignItems: 'center', gap: 5,
+                }}>
+                  <IconArrowLeft size={12} stroke={2.5} /> Cancel session
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* PICK HABIT */}
         {view === 'pick' && (
