@@ -86,9 +86,9 @@ export default function HabitDetailPage() {
     showToast('Habit updated ✓');
   };
 
-  const handleRemove = async () => {
+  const handleArchive = async () => {
     if (!habit) return;
-    if (!confirm(`Remove "${habit.name}"?`)) return;
+    if (!confirm(`Archive "${habit.name}"?`)) return;
     await deactivateHabit(habit.id);
     proovTx.removeHabit((habit as any)?.on_chain_id || 0);
     router.back();
@@ -329,25 +329,25 @@ export default function HabitDetailPage() {
         </button>
       )}
 
-      {/* Remove */}
+      {/* Archive */}
       <button
-        onClick={handleRemove}
+        onClick={handleArchive}
         style={{
           width: '100%', padding: 11, borderRadius: 12,
-          border: '2px solid #f43f5e', background: 'transparent',
-          color: '#f43f5e', fontSize: 13, fontWeight: 800,
+          border: '1px solid rgba(180, 100, 120, 0.28)', background: 'transparent',
+          color: '#a06070', fontSize: 13, fontWeight: 600,
           cursor: 'pointer', fontFamily: 'inherit',
-          transition: 'all 0.15s',
+          transition: 'background 0.15s, color 0.15s',
         }}
         onMouseEnter={e => {
-          (e.currentTarget as HTMLElement).style.background = '#f43f5e';
-          (e.currentTarget as HTMLElement).style.color = '#fff';
+          (e.currentTarget as HTMLElement).style.background = 'rgba(180, 100, 120, 0.1)';
+          (e.currentTarget as HTMLElement).style.color = '#8a4a5e';
         }}
         onMouseLeave={e => {
           (e.currentTarget as HTMLElement).style.background = 'transparent';
-          (e.currentTarget as HTMLElement).style.color = '#f43f5e';
+          (e.currentTarget as HTMLElement).style.color = '#a06070';
         }}>
-        Remove habit
+        Archive habit
       </button>
 
     </div>
