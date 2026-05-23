@@ -259,6 +259,7 @@ export interface TimerSession {
   ended_at: string | null;
   is_custom: boolean;
   completed: boolean;
+  is_archived?: boolean;
 }
 
 export async function saveTimerSession(session: Omit<TimerSession, 'id'>): Promise<TimerSession | null> {
@@ -275,6 +276,11 @@ export async function saveTimerSession(session: Omit<TimerSession, 'id'>): Promi
 export async function updateTimerSession(id: string, updates: Partial<TimerSession>): Promise<void> {
   if (!supabase) return;
   await supabase.from('timer_sessions').update(updates).eq('id', id);
+}
+
+export async function archiveTimerSession(id: string): Promise<void> {
+  if (!supabase) return;
+  await supabase.from('timer_sessions').update({ is_archived: true }).eq('id', id);
 }
 
 export async function getCustomSessionHistory(userAddress: string): Promise<TimerSession[]> {
@@ -316,8 +322,9 @@ export async function getAllSessionHistory(userAddress: string): Promise<TimerSe
     .select('*')
     .eq('user_address', userAddress.toLowerCase())
     .eq('completed', true)
+    .neq('is_archived', true)
     .order('started_at', { ascending: false })
-    .limit(10);
+    .limit(20);
   return data || [];
 }
 
