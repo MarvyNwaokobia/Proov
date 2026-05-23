@@ -13,6 +13,7 @@ import {
   IconChevronRight,
   IconLogout,
   IconBolt,
+  IconUser,
 } from '@tabler/icons-react';
 
 function fmtCountdown(secs: number): string {
@@ -29,6 +30,7 @@ export default function SettingsPage() {
 
   const proovTx = useProovTx();
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [editingUsername, setEditingUsername] = useState(false);
   const [newUsername, setNewUsername] = useState('');
   const [usernameHint, setUsernameHint] = useState('');
@@ -56,6 +58,8 @@ export default function SettingsPage() {
     if (fallback && !username) setUsername(fallback);
     const rank = parseInt(localStorage.getItem('proov_leaderboard_rank') || '0');
     if (rank > 0) setUserRank(rank);
+    const storedEmail = localStorage.getItem('proov_email') || '';
+    if (storedEmail) setEmail(storedEmail);
   }, []);
 
   useEffect(() => {
@@ -161,6 +165,15 @@ export default function SettingsPage() {
 
   if (!mounted) return null;
 
+  const sectionLabel: React.CSSProperties = {
+    fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
+    letterSpacing: '1.2px', color: 'var(--text3)', marginBottom: 8,
+  };
+  const listRow: React.CSSProperties = {
+    display: 'flex', alignItems: 'center', padding: '13px 0',
+    borderBottom: '1px solid var(--border)', cursor: 'pointer', textDecoration: 'none',
+  };
+
   return (
     <>
       <div className="blobs"><div className="blob b1" /><div className="blob b2" /></div>
@@ -169,143 +182,177 @@ export default function SettingsPage() {
       <div className="page-wrap" style={{ paddingTop: 18 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: '-.5px', marginBottom: '1.5rem' }}>Settings</h1>
 
-        {/* Leaderboard shortcut */}
-        <Link href="/leaderboard"
-          style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '1rem', background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', borderRadius: 16, textDecoration: 'none', marginBottom: '1.5rem', transition: 'transform .15s' }}
-          onMouseEnter={e => ((e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)')}
-          onMouseLeave={e => ((e.currentTarget as HTMLElement).style.transform = '')}>
-          <IconTrophy size={28} stroke={1.5} color="var(--accent-text)" />
+        {/* ── My Account ── */}
+        <p style={sectionLabel}>My Account</p>
+
+        {/* Profile row */}
+        <Link href="/profile" style={listRow}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 10,
+            background: 'var(--btn-primary-bg)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontWeight: 900, fontSize: 14, color: 'var(--btn-primary-text)',
+            flexShrink: 0, marginRight: 12,
+          }}>
+            {(username || 'P').slice(0, 1).toUpperCase()}
+          </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Leaderboard</div>
-            <div style={{ fontSize: 12, color: 'var(--text2)' }}>{userRank ? `You're #${userRank} globally` : 'See how you rank globally'}</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
+              {username ? `@${username}` : 'Set username'}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text3)' }}>View profile</div>
           </div>
           <IconChevronRight size={16} stroke={2} color="var(--text3)" />
         </Link>
 
-        {/* Profile */}
-        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '0.625rem' }}>Profile</p>
-        <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, overflow: 'hidden', marginBottom: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '1rem' }}>
-            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent), var(--accent2, var(--accent)))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, color: '#fff', flexShrink: 0 }}>
-              {(username || 'P').slice(0, 1).toUpperCase()}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              {editingUsername ? (
-                <div>
-                  <div style={{ position: 'relative', marginBottom: 4 }}>
-                    <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 14, fontWeight: 700, color: 'var(--accent)' }}>@</span>
-                    <input type="text" value={newUsername} onChange={e => checkNewUsername(e.target.value)} autoFocus placeholder={username}
-                      style={{ paddingLeft: 24, fontSize: 14, fontWeight: 600, padding: '7px 7px 7px 24px' }} />
-                  </div>
-                  {usernameHint && <p style={{ fontSize: 10, color: usernameHintColor, marginBottom: 6 }}>{usernameHint}</p>}
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <button onClick={saveUsername} disabled={usernameHint !== '✓ Available'}
-                      style={{ padding: '5px 14px', borderRadius: 8, border: 'none', background: usernameHint === '✓ Available' ? 'var(--btn-primary-bg)' : 'var(--bg3)', color: usernameHint === '✓ Available' ? 'var(--btn-primary-text)' : 'var(--text3)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                      Save username
-                    </button>
-                    <button onClick={() => { setEditingUsername(false); setNewUsername(''); setUsernameHint(''); }}
-                      style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text3)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>
-                    {username ? `@${username}` : 'Set your name'}
-                  </div>
-                  <button onClick={() => { setEditingUsername(true); setNewUsername(''); }}
-                    style={{ background: 'none', border: 'none', fontSize: 11, color: 'var(--accent-text)', cursor: 'pointer', fontFamily: 'inherit', padding: 0, marginTop: 2 }}>
-                    {username ? 'Edit username' : 'Pick a username →'}
-                  </button>
-                </div>
-              )}
+        {/* Leaderboard row */}
+        <Link href="/leaderboard" style={{ ...listRow, borderBottom: 'none' }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 10,
+            background: 'var(--accent-bg)', border: '1px solid var(--accent-border)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0, marginRight: 12, color: 'var(--accent-text)',
+          }}>
+            <IconTrophy size={16} stroke={1.5} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Leaderboard</div>
+            <div style={{ fontSize: 11, color: 'var(--text3)' }}>
+              {userRank ? `You're ranked #${userRank} globally` : 'See how you rank globally'}
             </div>
           </div>
+          <IconChevronRight size={16} stroke={2} color="var(--text3)" />
+        </Link>
+
+        {/* ── Account Details ── */}
+        <p style={{ ...sectionLabel, marginTop: 16 }}>Account Details</p>
+
+        {/* Username row */}
+        <div
+          onClick={() => { setEditingUsername(true); setNewUsername(''); setUsernameHint(''); }}
+          style={listRow}
+        >
+          <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>Username</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginRight: 8 }}>
+            {username ? `@${username}` : 'Not set'}
+          </span>
+          <IconChevronRight size={14} stroke={2} color="var(--text3)" />
         </div>
 
-        {/* Appearance */}
-        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '0.625rem' }}>Appearance</p>
-        <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, padding: '1rem', marginBottom: '1.25rem' }}>
+        {/* Inline username edit — expands below the row */}
+        {editingUsername && (
+          <div style={{ padding: '12px 0 16px', borderBottom: '1px solid var(--border)' }}>
+            <div style={{ position: 'relative', marginBottom: 6 }}>
+              <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 14, fontWeight: 700, color: 'var(--accent)' }}>@</span>
+              <input
+                type="text"
+                value={newUsername}
+                onChange={e => checkNewUsername(e.target.value)}
+                autoFocus
+                placeholder={username || 'username'}
+                style={{ paddingLeft: 26, fontSize: 14, fontWeight: 600 }}
+              />
+            </div>
+            {usernameHint && <p style={{ fontSize: 10, color: usernameHintColor, marginBottom: 8 }}>{usernameHint}</p>}
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button
+                onClick={saveUsername}
+                disabled={usernameHint !== '✓ Available'}
+                style={{
+                  padding: '6px 16px', borderRadius: 8, border: 'none',
+                  background: usernameHint === '✓ Available' ? 'var(--btn-primary-bg)' : 'var(--bg3)',
+                  color: usernameHint === '✓ Available' ? 'var(--btn-primary-text)' : 'var(--text3)',
+                  fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                Save
+              </button>
+              <button
+                onClick={() => { setEditingUsername(false); setNewUsername(''); setUsernameHint(''); }}
+                style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text3)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Email row */}
+        <div style={{ ...listRow, borderBottom: 'none', cursor: 'default' }}>
+          <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>Email</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginRight: 8 }}>
+            {email || '—'}
+          </span>
+          <IconChevronRight size={14} stroke={2} color="var(--text3)" />
+        </div>
+
+        {/* ── Appearance ── */}
+        <p style={{ ...sectionLabel, marginTop: 16 }}>Appearance</p>
+        <div style={{ marginBottom: 4 }}>
           <ThemeToggle />
         </div>
 
-        {/* Habits */}
-        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '0.625rem' }}>Habits</p>
-        <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, overflow: 'hidden', marginBottom: '1.25rem' }}>
-          <Link href="/habits" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1rem', textDecoration: 'none', borderBottom: '1px solid var(--border)' }}>
-            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>Manage habits</span>
-            <IconChevronRight size={16} stroke={2} color="var(--text3)" />
-          </Link>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1rem' }}>
-            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>Default privacy</span>
-            <span style={{ fontSize: 12, color: 'var(--text3)' }}>Private</span>
-          </div>
-        </div>
-
-        {/* Circle */}
-        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '0.625rem' }}>Circle</p>
-        <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, overflow: 'hidden', marginBottom: '1.25rem' }}>
-          <Link href="/circle" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1rem', textDecoration: 'none' }}>
-            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>Manage your circle</span>
-            <IconChevronRight size={16} stroke={2} color="var(--text3)" />
-          </Link>
-        </div>
-
-        {/* Fuel */}
-        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '0.625rem' }}>Fuel</p>
-        <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, overflow: 'hidden', marginBottom: '1.25rem' }}>
-          {/* Balance row */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1rem', borderBottom: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 9, background: 'linear-gradient(135deg, #f59e0b, #ef4444)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <IconBolt size={16} stroke={2} color="#fff" />
-              </div>
-              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>Balance</span>
-            </div>
-            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 5 }}>
-              <IconBolt size={14} stroke={2} color="#f59e0b" />
+        {/* ── Fuel ── */}
+        <p style={{ ...sectionLabel, marginTop: 16 }}>Fuel</p>
+        <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14, padding: 14, marginBottom: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <span style={{ fontSize: 13, color: 'var(--text2)' }}>Balance</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <IconBolt size={14} stroke={2} color="var(--accent-text)" />
               {Math.floor(celoBalance)} Fuel
             </span>
           </div>
-          {/* Daily status row */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1rem', borderBottom: '1px solid var(--border)' }}>
-            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>Daily Fuel</span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: canClaimFuel ? 'var(--accent-text)' : 'var(--text3)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <span style={{ fontSize: 13, color: 'var(--text2)' }}>Daily Fuel</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: canClaimFuel ? 'var(--accent-text)' : 'var(--text3)' }}>
               {canClaimFuel ? 'Claimable now' : fmtCountdown(secondsUntilClaim)}
             </span>
           </div>
-          {/* Claim button row */}
-          <div style={{ padding: '0.875rem 1rem' }}>
-            <button
-              onClick={handleClaimFuel}
-              disabled={!canClaimFuel || claimingFuel}
-              style={{
-                width: '100%', padding: '10px 0', borderRadius: 12, border: 'none',
-                background: canClaimFuel ? 'linear-gradient(135deg, #f59e0b, #ef4444)' : 'var(--bg3)',
-                color: canClaimFuel ? '#fff' : 'var(--text3)',
-                fontSize: 13, fontWeight: 700,
-                cursor: canClaimFuel && !claimingFuel ? 'pointer' : 'not-allowed',
-                fontFamily: 'inherit',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                transition: 'opacity 0.15s',
-                opacity: claimingFuel ? 0.7 : 1,
-              }}
-            >
-              <IconBolt size={15} stroke={2} />
-              {claimingFuel ? 'Claiming…' : 'Claim Daily Fuel'}
-            </button>
-          </div>
-        </div>
-
-        {/* Account */}
-        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '0.625rem' }}>Account</p>
-        <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, overflow: 'hidden', marginBottom: '2rem' }}>
-          <button onClick={handleSignOut}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', padding: '0.875rem 1rem', textAlign: 'left', background: 'transparent', border: 'none', fontSize: 13, fontWeight: 500, color: '#f43f5e', cursor: 'pointer', fontFamily: 'inherit' }}>
-            <IconLogout size={16} stroke={2} /> Sign out
+          <button
+            onClick={handleClaimFuel}
+            disabled={!canClaimFuel || claimingFuel}
+            style={{
+              width: '100%', padding: 12, borderRadius: 12, border: 'none',
+              background: canClaimFuel ? 'var(--btn-primary-bg)' : 'var(--bg3)',
+              color: canClaimFuel ? 'var(--btn-primary-text)' : 'var(--text3)',
+              fontSize: 13, fontWeight: 700,
+              cursor: canClaimFuel && !claimingFuel ? 'pointer' : 'not-allowed',
+              fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              opacity: claimingFuel ? 0.7 : 1,
+            }}
+          >
+            <IconBolt size={14} stroke={2} />
+            {claimingFuel ? 'Claiming…' : 'Claim Daily Fuel'}
           </button>
         </div>
+
+        {/* ── Notifications ── */}
+        <p style={{ ...sectionLabel, marginTop: 16 }}>Notifications</p>
+        {([
+          ['Daily reminder', '9:00 AM'],
+          ['Streak alerts', 'On'],
+          ['Circle activity', 'On'],
+        ] as [string, string][]).map(([label, value], i, arr) => (
+          <div key={label} style={{ ...listRow, borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }}>
+            <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>{label}</span>
+            <span style={{ fontSize: 13, color: 'var(--accent-text)', fontWeight: 600, marginRight: 8 }}>{value}</span>
+            <IconChevronRight size={14} stroke={2} color="var(--text3)" />
+          </div>
+        ))}
+
+        {/* ── Sign out ── */}
+        <button
+          onClick={handleSignOut}
+          style={{
+            width: '100%', padding: 13, borderRadius: 13, marginTop: 20, marginBottom: '2rem',
+            background: 'rgba(244,63,94,.08)', border: '1px solid rgba(244,63,94,.25)',
+            color: '#f43f5e', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+          }}
+        >
+          <IconLogout size={14} stroke={2} /> Sign out
+        </button>
+
       </div>
 
       <div className={`toast ${savedToast ? 'show' : ''}`} style={{ background: 'var(--success)' }}>✓ Saved</div>
