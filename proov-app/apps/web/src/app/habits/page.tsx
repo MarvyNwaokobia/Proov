@@ -530,6 +530,72 @@ export default function HabitsPage() {
     s => !existingNames.includes(s.name.toLowerCase())
   );
 
+  // ── Habit card renderer ─────────────────────────────────────────────────────
+  const renderHabit = (habit: Habit) => {
+    const isDone = completedToday.includes(habit.id);
+    return (
+      <div
+        key={habit.id}
+        onClick={() => router.push(`/habits/${habit.id}`)}
+        style={{
+          background: 'var(--card-bg)',
+          border: '1px solid var(--border)',
+          borderRadius: 14, padding: '12px 14px',
+          marginBottom: 8,
+          display: 'flex', gap: 12, alignItems: 'center',
+          cursor: 'pointer', transition: 'border-color 0.15s',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent-border)')}
+        onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}>
+        <span style={{ fontSize: 24 }}>{habit.emoji}</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{habit.name}</div>
+          <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2, fontWeight: 600 }}>
+            {habit.type === 'timed' ? `${habit.duration_minutes} min` : 'Tap'} · {habit.schedule} · {habit.category}
+          </div>
+          <div style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700, marginTop: 3, display: 'flex', alignItems: 'center', gap: 3 }}>
+            <IconFlame size={12} stroke={2} />{isDone ? 'Done today' : `${habitStreaks[habit.id] || 0} day streak`}
+          </div>
+        </div>
+        {habit.type === 'timed' && !isDone && (
+          <button
+            onClick={e => { e.stopPropagation(); router.push(`/timer?habitId=${habit.id}&autostart=1`); }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '7px 12px', borderRadius: 10, border: 'none',
+              background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)',
+              fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+              flexShrink: 0,
+            }}
+          >
+            <IconPlayerPlay size={13} stroke={2} /> Start
+          </button>
+        )}
+        <button
+          onClick={e => { e.stopPropagation(); handleArchive(habit.id); }}
+          title="Archive habit"
+          style={{
+            padding: '6px 7px', borderRadius: 9, flexShrink: 0,
+            border: '1px solid rgba(180, 100, 120, 0.28)',
+            background: 'transparent', color: '#a06070',
+            cursor: 'pointer', display: 'flex', alignItems: 'center',
+            transition: 'background 0.15s, color 0.15s',
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLElement).style.background = 'rgba(180, 100, 120, 0.1)';
+            (e.currentTarget as HTMLElement).style.color = '#8a4a5e';
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLElement).style.background = 'transparent';
+            (e.currentTarget as HTMLElement).style.color = '#a06070';
+          }}
+        >
+          <IconArchive size={15} stroke={1.8} />
+        </button>
+      </div>
+    );
+  };
+
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)" }}>
@@ -585,8 +651,8 @@ export default function HabitsPage() {
           </div>
         )}
 
-        {/* All habits / My habits tab */}
-        {(activeTab === "my" || activeTab === "all") && !showForm && (
+        {/* My Habits tab */}
+        {activeTab === "my" && !showForm && (
           <>
             {/* Category filter */}
             <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 6, marginBottom: 12 }}>
@@ -602,125 +668,85 @@ export default function HabitsPage() {
               <p style={{ textAlign: "center", color: "var(--text3)", fontSize: 13, padding: "2rem 0" }}>Loading habits…</p>
             )}
 
-            {/* Habits grid */}
-            {!loading && filteredHabits.length > 0 && (
-              <div>
-                <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: "var(--text3)", marginBottom: 8 }}>
-                  Active · {filteredHabits.length}
-                </p>
-                <div style={{ marginBottom: "1rem" }}>
-                  {filteredHabits.map(habit => {
-                    const isDone = completedToday.includes(habit.id);
-                    return (
-                      <div
-                        key={habit.id}
-                        onClick={() => router.push(`/habits/${habit.id}`)}
-                        style={{
-                          background: 'var(--card-bg)',
-                          border: '1px solid var(--border)',
-                          borderRadius: 14, padding: '12px 14px',
-                          marginBottom: 8,
-                          display: 'flex', gap: 12, alignItems: 'center',
-                          cursor: 'pointer', transition: 'border-color 0.15s',
-                        }}
-                        onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent-border)')}
-                        onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}>
-                        <span style={{ fontSize: 24 }}>{habit.emoji}</span>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{habit.name}</div>
-                          <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2, fontWeight: 600 }}>
-                            {habit.type === 'timed' ? `${habit.duration_minutes} min` : 'Tap'} · {habit.schedule} · {habit.category}
-                          </div>
-                          <div style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700, marginTop: 3, display: 'flex', alignItems: 'center', gap: 3 }}>
-                            <IconFlame size={12} stroke={2} />{isDone ? 'Done today' : `${habitStreaks[habit.id] || 0} day streak`}
-                          </div>
-                        </div>
-                        {habit.type === 'timed' && !isDone && (
-                          <button
-                            onClick={e => { e.stopPropagation(); router.push(`/timer?habitId=${habit.id}&autostart=1`); }}
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: 5,
-                              padding: '7px 12px', borderRadius: 10, border: 'none',
-                              background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)',
-                              fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-                              flexShrink: 0,
-                            }}
-                          >
-                            <IconPlayerPlay size={13} stroke={2} /> Start
-                          </button>
-                        )}
-                        <button
-                          onClick={e => { e.stopPropagation(); handleArchive(habit.id); }}
-                          title="Archive habit"
-                          style={{
-                            padding: '6px 7px', borderRadius: 9, flexShrink: 0,
-                            border: '1px solid rgba(180, 100, 120, 0.28)',
-                            background: 'transparent', color: '#a06070',
-                            cursor: 'pointer', display: 'flex', alignItems: 'center',
-                            transition: 'background 0.15s, color 0.15s',
-                          }}
-                          onMouseEnter={e => {
-                            (e.currentTarget as HTMLElement).style.background = 'rgba(180, 100, 120, 0.1)';
-                            (e.currentTarget as HTMLElement).style.color = '#8a4a5e';
-                          }}
-                          onMouseLeave={e => {
-                            (e.currentTarget as HTMLElement).style.background = 'transparent';
-                            (e.currentTarget as HTMLElement).style.color = '#a06070';
-                          }}
-                        >
-                          <IconArchive size={15} stroke={1.8} />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Empty state */}
+            {/* No habits at all */}
             {!loading && habits.length === 0 && (
-              <div style={{ textAlign: "center", padding: "2rem 0 1rem", color: "var(--text3)", fontSize: 13 }}>
-                <p style={{ marginBottom: 8, fontWeight: 500, color: "var(--text)" }}>No habits yet</p>
-                <p style={{ fontSize: 12, marginBottom: 0 }}>Add one from suggestions below or tap + New</p>
+              <div style={{ textAlign: "center", padding: "3rem 0 1rem", color: "var(--text3)" }}>
+                <p style={{ marginBottom: 6, fontWeight: 600, color: "var(--text)", fontSize: 15 }}>No habits yet</p>
+                <p style={{ fontSize: 12 }}>Tap + New to create one, or explore Discover.</p>
               </div>
             )}
 
-            {/* Suggestions — always visible */}
-            <div style={{ marginTop: habits.length > 0 ? '1.5rem' : '0.5rem' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '0.875rem' }}>
-                Add from suggestions
-              </div>
-
-              {/* Category pills */}
-              <div style={{ display: 'flex', gap: 6, overflowX: 'auto', marginBottom: '0.875rem', paddingBottom: 4 }}>
-                {SUGGESTION_CATS.map(cat => (
-                  <button key={cat} onClick={() => setSuggestionCategory(cat)} style={{ padding: '5px 12px', borderRadius: 20, border: '1px solid', borderColor: suggestionCategory === cat ? 'var(--accent)' : 'var(--border)', background: suggestionCategory === cat ? 'var(--accent-bg)' : 'transparent', color: suggestionCategory === cat ? 'var(--accent-text)' : 'var(--text2)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0, transition: 'all 0.15s ease' }}>
-                    {cat}
-                  </button>
-                ))}
-              </div>
-
-              {/* Suggestion cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                {filteredSuggestions.map(s => (
-                  <button key={s.name} onClick={() => handleAddSuggestion(s)} disabled={isSaving}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s ease' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent-border)'; (e.currentTarget as HTMLElement).style.background = 'var(--accent-bg)'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLElement).style.background = 'var(--card-bg)'; }}>
-                    <span style={{ fontSize: 20 }}>{s.emoji}</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</div>
-                      <div style={{ fontSize: 10, color: 'var(--text3)' }}>{s.type === 'timed' ? `${s.duration}m · Timed` : 'Checkbox'}</div>
+            {/* All categories — grouped with section headers */}
+            {!loading && habits.length > 0 && catFilter === "All" && (
+              <div>
+                {CATEGORY_FILTERS.filter(f => f.value !== "All").map(({ value, label, Icon: CatIcon }) => {
+                  const catHabits = habits.filter(h => h.category === value);
+                  if (catHabits.length === 0) return null;
+                  return (
+                    <div key={value} style={{ marginBottom: '1.5rem' }}>
+                      <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: "var(--text3)", marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+                        {CatIcon && <CatIcon size={12} stroke={2} />} {label}
+                      </p>
+                      {catHabits.map(renderHabit)}
                     </div>
-                    <span style={{ fontSize: 22, color: 'var(--accent-text)', fontWeight: 900, lineHeight: 1, flexShrink: 0, transition: 'transform 0.15s' }}>+</span>
-                  </button>
-                ))}
-                {filteredSuggestions.length === 0 && (
-                  <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '1.5rem', color: 'var(--text3)', fontSize: 13 }}>
-                    You have all {suggestionCategory} habits added ✓
-                  </div>
-                )}
+                  );
+                })}
               </div>
+            )}
+
+            {/* Filtered view — specific category selected, habits found */}
+            {!loading && habits.length > 0 && catFilter !== "All" && filteredHabits.length > 0 && (
+              <div style={{ marginBottom: "1rem" }}>
+                {filteredHabits.map(renderHabit)}
+              </div>
+            )}
+
+            {/* Per-category empty state */}
+            {!loading && habits.length > 0 && catFilter !== "All" && filteredHabits.length === 0 && (
+              <div style={{ textAlign: "center", padding: "3rem 0 1rem", color: "var(--text3)" }}>
+                <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 6 }}>No {catFilter} habits yet</p>
+                <p style={{ fontSize: 12 }}>No habits here yet — try Discover.</p>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Discover tab */}
+        {activeTab === "all" && !showForm && (
+          <>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '0.875rem' }}>
+              Add from suggestions
+            </div>
+
+            {/* Category pills */}
+            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', marginBottom: '0.875rem', paddingBottom: 4 }}>
+              {SUGGESTION_CATS.map(cat => (
+                <button key={cat} onClick={() => setSuggestionCategory(cat)} style={{ padding: '5px 12px', borderRadius: 20, border: '1px solid', borderColor: suggestionCategory === cat ? 'var(--accent)' : 'var(--border)', background: suggestionCategory === cat ? 'var(--accent-bg)' : 'transparent', color: suggestionCategory === cat ? 'var(--accent-text)' : 'var(--text2)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0, transition: 'all 0.15s ease' }}>
+                  {cat}
+                </button>
+              ))}
+            </div>
+
+            {/* Suggestion cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {filteredSuggestions.map(s => (
+                <button key={s.name} onClick={() => handleAddSuggestion(s)} disabled={isSaving}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s ease' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent-border)'; (e.currentTarget as HTMLElement).style.background = 'var(--accent-bg)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLElement).style.background = 'var(--card-bg)'; }}>
+                  <span style={{ fontSize: 20 }}>{s.emoji}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text3)' }}>{s.type === 'timed' ? `${s.duration}m · Timed` : 'Checkbox'}</div>
+                  </div>
+                  <span style={{ fontSize: 22, color: 'var(--accent-text)', fontWeight: 900, lineHeight: 1, flexShrink: 0, transition: 'transform 0.15s' }}>+</span>
+                </button>
+              ))}
+              {filteredSuggestions.length === 0 && (
+                <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '1.5rem', color: 'var(--text3)', fontSize: 13 }}>
+                  You have all {suggestionCategory} habits added ✓
+                </div>
+              )}
             </div>
           </>
         )}
