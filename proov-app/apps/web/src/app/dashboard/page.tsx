@@ -325,7 +325,7 @@ export default function DashboardPage() {
               </div>
             )}
             <button
-              onClick={() => router.push('/settings')}
+              onClick={() => { const addr = localStorage.getItem('proov_address'); if (addr) router.push(`/profile/${addr}`); }}
               style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid var(--accent-border)', overflow: 'hidden', cursor: 'pointer', background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 }}
             >
               {avatarUrl
