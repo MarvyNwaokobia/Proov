@@ -84,6 +84,7 @@ export default function DashboardPage() {
   const [verifiedHabits, setVerifiedHabits] = useState<string[]>([]);
   const [proofSheet, setProofSheet] = useState<{ habitId: string; habitName: string } | null>(null);
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [pendingHabits, setPendingHabits] = useState<Set<string>>(new Set());
   const proovTx = useProovTx();
   const { isConnected } = useAccount();
 
@@ -252,18 +253,26 @@ export default function DashboardPage() {
 
   const handleToggleHabit = async (habitId: string) => {
     if (completedToday.includes(habitId)) return;
+    if (pendingHabits.has(habitId)) return;
     if (!isConnected) {
       showToast('Session expired — please sign out and back in');
       return;
     }
     const addr = localStorage.getItem('proov_address') || '';
+    const habit = habits.find(h => h.id === habitId);
+
+    setPendingHabits(prev => new Set(prev).add(habitId));
+    const txOk = await proovTx.completeHabit((habit as any)?.on_chain_id || 0);
+    setPendingHabits(prev => { const s = new Set(prev); s.delete(habitId); return s; });
+
+    if (!txOk) return;
+
     const newCompleted = [...completedToday, habitId];
     setCompletedToday(newCompleted);
     setHabitStreaks(prev => ({ ...prev, [habitId]: (prev[habitId] || 0) + 1 }));
     showToast('Done ✓');
     await saveHabitCompletion(habitId, addr, currentStreak).catch(() => {});
-    const habit = habits.find(h => h.id === habitId);
-    proovTx.completeHabit((habit as any)?.on_chain_id || 0);
+
     const allDone = habits.every(h => newCompleted.includes(h.id));
     if (allDone && habits.length > 0) {
       const newStreak = await updateDailyStreak(addr).catch(() => currentStreak + 1);
@@ -460,20 +469,21 @@ export default function DashboardPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 8 }}>
               {habits.map(habit => {
                 const isDone = completedToday.includes(habit.id);
+                const isPending = pendingHabits.has(habit.id);
                 const isVerified = verifiedHabits.includes(habit.id);
                 const habitStreak = habitStreaks[habit.id] || 0;
                 return (
                   <div
                     key={habit.id}
                     onClick={() => {
-                      if (habit.type === 'checkbox') { if (!isDone) handleToggleHabit(habit.id); }
+                      if (habit.type === 'checkbox') { if (!isDone && !isPending) handleToggleHabit(habit.id); }
                       else { isDone ? router.push(`/habits/${habit.id}`) : router.push(`/timer?habitId=${habit.id}&autostart=1`); }
                     }}
                     style={{
                       background: 'var(--card-bg)',
                       border: `1px solid ${isVerified ? 'rgba(5,150,105,0.35)' : isDone ? 'var(--accent-border)' : 'var(--card-border)'}`,
                       borderRadius: 14, padding: 11,
-                      cursor: isDone && habit.type === 'checkbox' ? 'default' : 'pointer',
+                      cursor: (isDone || isPending) && habit.type === 'checkbox' ? 'default' : 'pointer',
                       opacity: isDone ? 0.78 : 1,
                       display: 'flex', flexDirection: 'column',
                     }}>
@@ -497,21 +507,23 @@ export default function DashboardPage() {
                       <button
                         onClick={e => {
                           e.stopPropagation();
-                          if (habit.type === 'checkbox') { if (!isDone) handleToggleHabit(habit.id); }
+                          if (habit.type === 'checkbox') { if (!isDone && !isPending) handleToggleHabit(habit.id); }
                           else { isDone ? router.push(`/habits/${habit.id}`) : router.push(`/timer?habitId=${habit.id}&autostart=1`); }
                         }}
                         style={{
                           width: '100%', padding: '6px 0', borderRadius: 8, fontSize: 10, fontWeight: 700,
-                          cursor: isDone && habit.type === 'checkbox' ? 'default' : 'pointer',
-                          border: isDone ? 'none' : '1.5px solid var(--border2)',
-                          background: isDone ? 'var(--accent)' : 'transparent',
-                          color: isDone ? '#fff' : 'var(--text2)',
+                          cursor: (isDone || isPending) && habit.type === 'checkbox' ? 'default' : 'pointer',
+                          border: isDone ? 'none' : isPending ? 'none' : '1.5px solid var(--border2)',
+                          background: isDone ? 'var(--accent)' : isPending ? 'var(--bg3)' : 'transparent',
+                          color: isDone ? '#fff' : isPending ? 'var(--text3)' : 'var(--text2)',
                           fontFamily: 'inherit',
                           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
                         }}
                       >
                         {isDone ? (
                           <><IconCheck size={11} stroke={2.5} /> Done</>
+                        ) : isPending ? (
+                          <>Submitting…</>
                         ) : habit.type === 'timed' ? (
                           <><IconPlayerPlay size={11} stroke={2} /> Start</>
                         ) : (

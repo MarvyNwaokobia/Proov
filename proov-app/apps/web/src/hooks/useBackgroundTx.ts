@@ -13,7 +13,6 @@ function parseError(err: unknown): string {
     return 'Transaction failed: network error. Check your connection.';
   if (/network changed|chain.*mismatch/i.test(msg)) return 'Network mismatch. Please refresh.';
   if (/nonce/i.test(msg)) return 'Transaction conflict. Please try again.';
-  // Strip internal viem/wagmi stack noise and return a clean fallback
   const short = msg.split('\n')[0].slice(0, 120);
   return `Transaction failed: ${short}`;
 }
@@ -22,26 +21,33 @@ export function useBackgroundTx() {
   const { writeContract } = useWriteContract();
   const { showError, showSuccess } = useTxToast();
 
+  // Returns true when the tx is accepted by the bundler, false on any error.
+  // Callers must await this before writing anything to Supabase.
   const sendTx = useCallback(
-    (config: Parameters<typeof writeContract>[0]) => {
-      try {
-        writeContract(
-          withCeloFee(config) as Parameters<typeof writeContract>[0],
-          {
-            onSuccess: (hash) => {
-              console.log('[tx] submitted:', hash);
-              showSuccess('Transaction submitted');
-            },
-            onError: (err) => {
-              console.error('[tx] failed:', err);
-              showError(parseError(err));
-            },
-          }
-        );
-      } catch (e) {
-        console.error('[tx] sync error:', e);
-        showError(parseError(e));
-      }
+    (config: Parameters<typeof writeContract>[0]): Promise<boolean> => {
+      return new Promise((resolve) => {
+        try {
+          writeContract(
+            withCeloFee(config) as Parameters<typeof writeContract>[0],
+            {
+              onSuccess: (hash) => {
+                console.log('[tx] submitted:', hash);
+                showSuccess('Transaction submitted');
+                resolve(true);
+              },
+              onError: (err) => {
+                console.error('[tx] failed:', err);
+                showError(parseError(err));
+                resolve(false);
+              },
+            }
+          );
+        } catch (e) {
+          console.error('[tx] sync error:', e);
+          showError(parseError(e));
+          resolve(false);
+        }
+      });
     },
     [writeContract, showError, showSuccess]
   );
