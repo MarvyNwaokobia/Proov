@@ -14,7 +14,28 @@ import { useProovTx } from "@/hooks/useProovTx";
 import { HABIT_CATEGORIES, getCategoryById, Frequency } from "@/lib/constants";
 import { HABIT_TEMPLATES, ARCHETYPE_LABELS, type Archetype } from "@/lib/habitTemplates";
 
-// ── Suggestions data ─────────────────────────────────────────────────────────
+// ── AI suggestions types + static popular habits ──────────────────────────────
+
+type AiSuggestion = {
+  name: string;
+  emoji: string;
+  category: string;
+  type: 'timed' | 'checkbox';
+  duration_minutes: number | null;
+  reason?: string;
+  schedule: string;
+};
+
+const POPULAR_HABITS: AiSuggestion[] = [
+  { name: 'Read 30 minutes',             emoji: '📖', category: 'learning', type: 'checkbox', duration_minutes: null, schedule: 'Daily' },
+  { name: 'Morning run',                 emoji: '🏃', category: 'fitness',  type: 'timed',    duration_minutes: 30,   schedule: 'Daily' },
+  { name: 'Meditate',                    emoji: '🧘', category: 'wellness', type: 'timed',    duration_minutes: 10,   schedule: 'Daily' },
+  { name: 'Drink 2L water',              emoji: '💧', category: 'wellness', type: 'checkbox', duration_minutes: null, schedule: 'Daily' },
+  { name: 'No social media before 10am', emoji: '🌿', category: 'focus',    type: 'checkbox', duration_minutes: null, schedule: 'Weekdays' },
+  { name: 'Creative practice',           emoji: '🎨', category: 'creative', type: 'timed',    duration_minutes: 20,   schedule: 'Weekends' },
+];
+
+// ── Legacy suggestions data (used by old discover tab) ────────────────────────
 
 type SuggestionItem = { name: string; emoji: string; type: 'checkbox' | 'timed'; duration?: number };
 const SUGGESTIONS: Record<string, SuggestionItem[]> = {
@@ -394,6 +415,10 @@ export default function HabitsPage() {
   const [catFilter, setCatFilter] = useState("All");
   const [suggestionCategory, setSuggestionCategory] = useState('Focus');
   const [habitStreaks, setHabitStreaks] = useState<Record<string, number>>({});
+  const [aiSuggestions, setAiSuggestions] = useState<AiSuggestion[]>([]);
+  const [aiSuggestionsLoading, setAiSuggestionsLoading] = useState(false);
+  const [aiSuggestionsGeneratedAt, setAiSuggestionsGeneratedAt] = useState<string | null>(null);
+  const [addedSuggestions, setAddedSuggestions] = useState<Set<string>>(new Set());
   const proovTx = useProovTx();
 
   // ── Load from Supabase ──────────────────────────────────────────────────────
@@ -529,6 +554,80 @@ export default function HabitsPage() {
       setActiveTab('my');
     }
     setIsSaving(false);
+  };
+
+  // ── Add AI suggestion directly ──────────────────────────────────────────────
+  const handleAddAiSuggestion = async (s: AiSuggestion) => {
+    const address = localStorage.getItem('proov_address') || '';
+    const saved = await saveHabit({
+      user_address: address.toLowerCase(),
+      name: s.name,
+      emoji: s.emoji,
+      category: s.category.toLowerCase(),
+      type: s.type,
+      duration_minutes: s.duration_minutes || 0,
+      schedule: s.schedule === 'Weekdays' || s.schedule === 'Weekends' ? 'weekly' : 'daily',
+      visibility: 'private',
+      visible_to: [],
+      active: true,
+    });
+    if (saved) {
+      proovTx.createHabit(s.name, s.category.toLowerCase(), s.type === 'timed', s.duration_minutes || 0);
+      setHabits(prev => [...prev, saved]);
+      const cached = JSON.parse(localStorage.getItem('proov_habits_cache') || '[]');
+      localStorage.setItem('proov_habits_cache', JSON.stringify([...cached, saved]));
+      showToast(`${s.emoji} ${s.name} added ✓`);
+      setAddedSuggestions(prev => new Set([...prev, s.name]));
+    }
+  };
+
+  // ── Fetch AI suggestions when Discover tab opens ────────────────────────────
+  useEffect(() => {
+    if (activeTab !== 'all' || loading || aiSuggestions.length > 0) return;
+    const address = localStorage.getItem('proov_address') || '';
+    if (!address) return;
+    setAiSuggestionsLoading(true);
+    const existingHabits = habits.map(h => ({ name: h.name, category: h.category, type: h.type, schedule: h.schedule }));
+    fetch('/api/habit-suggestions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ userAddress: address, existingHabits }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data.suggestions)) {
+          setAiSuggestions(data.suggestions);
+          setAiSuggestionsGeneratedAt(data.generatedAt || new Date().toISOString());
+        }
+      })
+      .catch(() => {})
+      .finally(() => setAiSuggestionsLoading(false));
+  }, [activeTab, loading, aiSuggestions.length, habits]);
+
+  const aiSuggestionsStale = aiSuggestionsGeneratedAt
+    ? Date.now() - new Date(aiSuggestionsGeneratedAt).getTime() > 24 * 60 * 60 * 1000
+    : false;
+
+  const handleRefreshSuggestions = () => {
+    const address = localStorage.getItem('proov_address') || '';
+    if (!address) return;
+    setAiSuggestionsLoading(true);
+    setAiSuggestions([]);
+    const existingHabits = habits.map(h => ({ name: h.name, category: h.category, type: h.type, schedule: h.schedule }));
+    fetch('/api/habit-suggestions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ userAddress: address, existingHabits, forceRefresh: true }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data.suggestions)) {
+          setAiSuggestions(data.suggestions);
+          setAiSuggestionsGeneratedAt(data.generatedAt || new Date().toISOString());
+        }
+      })
+      .catch(() => {})
+      .finally(() => setAiSuggestionsLoading(false));
   };
 
   // ── Toggle completion ───────────────────────────────────────────────────────
@@ -757,40 +856,112 @@ export default function HabitsPage() {
         {/* Discover tab */}
         {activeTab === "all" && !showForm && (
           <>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: '0.875rem' }}>
-              Add from suggestions
-            </div>
-
-            {/* Category pills */}
-            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', marginBottom: '0.875rem', paddingBottom: 4 }}>
-              {SUGGESTION_CATS.map(cat => (
-                <button key={cat} onClick={() => setSuggestionCategory(cat)} style={{ padding: '5px 12px', borderRadius: 20, border: '1px solid', borderColor: suggestionCategory === cat ? 'var(--accent)' : 'var(--border)', background: suggestionCategory === cat ? 'var(--accent-bg)' : 'transparent', color: suggestionCategory === cat ? 'var(--accent-text)' : 'var(--text2)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0, transition: 'all 0.15s ease' }}>
-                  {cat}
+            {/* Header row */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.2px', color: 'var(--text3)' }}>
+                Suggested for you
+              </span>
+              {aiSuggestionsStale && !aiSuggestionsLoading && (
+                <button onClick={handleRefreshSuggestions} style={{ fontSize: 10, color: 'var(--text3)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0, textDecoration: 'underline' }}>
+                  Refresh
                 </button>
-              ))}
-            </div>
-
-            {/* Suggestion cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {filteredSuggestions.map(s => (
-                <button key={s.name} onClick={() => handleAddSuggestion(s)} disabled={isSaving}
-                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s ease' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent-border)'; (e.currentTarget as HTMLElement).style.background = 'var(--accent-bg)'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLElement).style.background = 'var(--card-bg)'; }}>
-                  <span style={{ fontSize: 20 }}>{s.emoji}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</div>
-                    <div style={{ fontSize: 10, color: 'var(--text3)' }}>{s.type === 'timed' ? `${s.duration}m · Timed` : 'Checkbox'}</div>
-                  </div>
-                  <span style={{ fontSize: 22, color: 'var(--accent-text)', fontWeight: 900, lineHeight: 1, flexShrink: 0, transition: 'transform 0.15s' }}>+</span>
-                </button>
-              ))}
-              {filteredSuggestions.length === 0 && (
-                <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '1.5rem', color: 'var(--text3)', fontSize: 13 }}>
-                  You have all {suggestionCategory} habits added ✓
-                </div>
               )}
             </div>
+
+            {/* Skeleton loading */}
+            {aiSuggestionsLoading && (
+              <>
+                <style>{`@keyframes suggest-pulse { 0%,100% { opacity:0.5 } 50% { opacity:1 } }`}</style>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} style={{ background: 'var(--bg2)', borderRadius: 14, padding: 14, marginBottom: 10, animation: 'suggest-pulse 1.5s ease-in-out infinite', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--border)', flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ height: 14, background: 'var(--border)', borderRadius: 6, width: '55%', marginBottom: 7 }} />
+                      <div style={{ height: 11, background: 'var(--border)', borderRadius: 6, width: '35%', marginBottom: 8 }} />
+                      <div style={{ height: 12, background: 'var(--border)', borderRadius: 6, width: '90%' }} />
+                    </div>
+                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--border)', flexShrink: 0 }} />
+                  </div>
+                ))}
+              </>
+            )}
+
+            {/* AI suggestion cards */}
+            {!aiSuggestionsLoading && aiSuggestions.map(s => {
+              const isAdded = addedSuggestions.has(s.name);
+              return (
+                <div key={s.name} style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: 14, padding: 14, marginBottom: 10, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                  <span style={{ fontSize: 36, lineHeight: 1, flexShrink: 0 }}>{s.emoji}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>{s.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: s.reason ? 6 : 0 }}>
+                      {s.category} · {s.type === 'timed' && s.duration_minutes ? `${s.duration_minutes} min` : s.schedule}
+                    </div>
+                    {s.reason && (
+                      <div style={{ fontSize: 12, color: 'var(--text2)', fontStyle: 'italic', lineHeight: 1.5 }}>{s.reason}</div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => { if (!isAdded) handleAddAiSuggestion(s); }}
+                    disabled={isAdded}
+                    style={{
+                      width: 32, height: 32, borderRadius: '50%', flexShrink: 0, border: 'none',
+                      background: isAdded ? 'rgba(5,150,105,0.15)' : 'var(--accent-bg)',
+                      outline: `1px solid ${isAdded ? 'rgba(5,150,105,0.35)' : 'var(--accent-border)'}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: isAdded ? 'default' : 'pointer',
+                      color: isAdded ? '#059669' : 'var(--accent-text)',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    {isAdded ? <IconCheck size={14} stroke={2.5} /> : <IconPlus size={14} stroke={2} />}
+                  </button>
+                </div>
+              );
+            })}
+
+            {/* Empty state */}
+            {!aiSuggestionsLoading && aiSuggestions.length === 0 && (
+              <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: 14, padding: '1.5rem', textAlign: 'center', marginBottom: 10 }}>
+                <p style={{ fontSize: 13, color: 'var(--text3)', margin: 0 }}>Come back soon — suggestions refresh every few days</p>
+              </div>
+            )}
+
+            {/* Popular habits */}
+            <div style={{ height: 1, background: 'var(--border)', margin: '14px 0' }} />
+            <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.2px', color: 'var(--text3)', marginBottom: 12 }}>
+              Popular habits
+            </div>
+            {POPULAR_HABITS.map(s => {
+              const isAdded = addedSuggestions.has(s.name) || habits.some(h => h.name.toLowerCase() === s.name.toLowerCase());
+              const catLabel = s.category.charAt(0).toUpperCase() + s.category.slice(1);
+              return (
+                <div key={s.name} style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: 14, padding: 14, marginBottom: 10, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                  <span style={{ fontSize: 36, lineHeight: 1, flexShrink: 0 }}>{s.emoji}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>{s.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text3)' }}>
+                      {catLabel} · {s.type === 'timed' && s.duration_minutes ? `${s.duration_minutes} min` : s.schedule}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { if (!isAdded) handleAddAiSuggestion(s); }}
+                    disabled={isAdded}
+                    style={{
+                      width: 32, height: 32, borderRadius: '50%', flexShrink: 0, border: 'none',
+                      background: isAdded ? 'rgba(5,150,105,0.15)' : 'var(--accent-bg)',
+                      outline: `1px solid ${isAdded ? 'rgba(5,150,105,0.35)' : 'var(--accent-border)'}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: isAdded ? 'default' : 'pointer',
+                      color: isAdded ? '#059669' : 'var(--accent-text)',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    {isAdded ? <IconCheck size={14} stroke={2.5} /> : <IconPlus size={14} stroke={2} />}
+                  </button>
+                </div>
+              );
+            })}
           </>
         )}
 
