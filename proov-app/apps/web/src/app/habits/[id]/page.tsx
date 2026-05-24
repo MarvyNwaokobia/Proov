@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
   IconArrowLeft, IconPencil, IconArchive,
-  IconPlayerPlay, IconCheck, IconLock, IconUsers, IconWorld, IconFlame,
+  IconPlayerPlay, IconCheck, IconLock, IconUsers, IconWorld, IconFlame, IconShieldCheck,
 } from '@tabler/icons-react';
 import {
   getUserHabits,
@@ -15,8 +15,10 @@ import {
   getHabitStreak,
   getCircleRequests,
   getUsernamesForAddresses,
+  getVerifiedHabitsToday,
   type Habit,
 } from '@/lib/supabase';
+import { ProofSheet } from '@/components/shared/ProofSheet';
 import { useProovTx } from '@/hooks/useProovTx';
 
 function fmtDur(mins: number) {
@@ -32,6 +34,8 @@ export default function HabitDetailPage() {
 
   const [habit, setHabit] = useState<Habit | null>(null);
   const [isDoneToday, setIsDoneToday] = useState(false);
+  const [isVerifiedToday, setIsVerifiedToday] = useState(false);
+  const [proofSheetOpen, setProofSheetOpen] = useState(false);
   const [habitStreak, setHabitStreak] = useState(0);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
@@ -50,11 +54,13 @@ export default function HabitDetailPage() {
       getTodayCompletions(address),
       getHabitStreak(id, address),
       getCircleRequests(address),
-    ]).then(async ([habits, todayDone, streak, circle]) => {
+      getVerifiedHabitsToday(address),
+    ]).then(async ([habits, todayDone, streak, circle, verifiedIds]) => {
       const found = habits.find(h => h.id === id);
       if (!found) { router.back(); return; }
       setHabit(found);
       setIsDoneToday(todayDone.includes(found.id));
+      setIsVerifiedToday((verifiedIds as string[]).includes(found.id));
       setHabitStreak(streak);
       setEditName(found.name);
       setEditDuration(found.duration_minutes);
@@ -152,6 +158,7 @@ export default function HabitDetailPage() {
     : habit.visibility === 'circle' ? 'Circle' : 'Everyone';
 
   return (
+    <>
     <div style={{ padding: '1rem 1rem 6rem', maxWidth: 480, margin: '0 auto' }}>
 
       {/* Back */}
@@ -279,6 +286,32 @@ export default function HabitDetailPage() {
             <IconCheck size={15} stroke={2} /> Mark as done
           </button>
         )
+      )}
+
+      {/* Proov it — shown when not done today and not already verified */}
+      {!isDoneToday && !isVerifiedToday && (
+        <button
+          onClick={() => setProofSheetOpen(true)}
+          style={{
+            width: '100%', padding: 11, borderRadius: 13, marginBottom: 12,
+            border: '1.5px solid var(--accent-border)', background: 'var(--accent-bg)',
+            color: 'var(--accent-text)', fontSize: 13, fontWeight: 700,
+            cursor: 'pointer', fontFamily: 'inherit',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+          }}
+        >
+          <IconShieldCheck size={15} stroke={2} /> Proov it · +3 leaderboard pts
+        </button>
+      )}
+      {isVerifiedToday && (
+        <div style={{
+          width: '100%', padding: 11, borderRadius: 13, marginBottom: 12,
+          background: 'rgba(5,150,105,0.1)', border: '1px solid rgba(5,150,105,0.3)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+          fontSize: 13, fontWeight: 700, color: '#059669',
+        }}>
+          <IconShieldCheck size={15} stroke={2} /> Verified today
+        </div>
       )}
 
       {/* Divider */}
@@ -471,5 +504,17 @@ export default function HabitDetailPage() {
       )}
 
     </div>
+
+    {proofSheetOpen && habit && (
+      <ProofSheet
+        habitId={habit.id}
+        habitName={habit.name}
+        userAddress={localStorage.getItem('proov_address') || ''}
+        onVerified={() => { setIsVerifiedToday(true); setIsDoneToday(true); }}
+        onSelfReport={() => handleMarkDone()}
+        onClose={() => setProofSheetOpen(false)}
+      />
+    )}
+    </>
   );
 }

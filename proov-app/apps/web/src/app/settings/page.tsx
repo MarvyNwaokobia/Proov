@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
 import { validateUsername, isUsernameTaken, registerUsername } from '@/lib/username';
 import { setIdentityUsername } from '@/lib/auth';
-import { updateUsername as updateSupabaseUsername } from '@/lib/supabase';
+import { updateUsername as updateSupabaseUsername, getAiVerificationUsage } from '@/lib/supabase';
 import { useProovTx } from '@/hooks/useProovTx';
 import {
   IconTrophy,
@@ -16,6 +16,7 @@ import {
   IconUser,
   IconCopy,
   IconCheck,
+  IconShieldCheck,
 } from '@tabler/icons-react';
 
 function fmtCountdown(secs: number): string {
@@ -50,6 +51,7 @@ export default function SettingsPage() {
   const [canClaimFuel, setCanClaimFuel] = useState(false);
   const [secondsUntilClaim, setSecondsUntilClaim] = useState(0);
   const [claimingFuel, setClaimingFuel] = useState(false);
+  const [verificationUsed, setVerificationUsed] = useState(0);
 
   // Notification preferences
   const [notifTime, setNotifTime] = useState('09:00');
@@ -83,6 +85,11 @@ export default function SettingsPage() {
     // Check notification permission
     if (typeof window !== 'undefined' && 'Notification' in window) {
       setNotifPermission(Notification.permission);
+    }
+
+    // Load AI verification usage
+    if (addr) {
+      getAiVerificationUsage(addr.toLowerCase()).then(({ used }) => setVerificationUsed(used)).catch(() => {});
     }
   }, []);
 
@@ -454,6 +461,27 @@ export default function SettingsPage() {
             <IconBolt size={14} stroke={2} />
             {claimingFuel ? 'Claiming…' : 'Claim Daily Fuel'}
           </button>
+        </div>
+
+        {/* ── Proov Verification ── */}
+        <p style={{ ...sectionLabel, marginTop: 16 }}>Proov Verification</p>
+        <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14, padding: 14, marginBottom: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <IconShieldCheck size={16} stroke={2} color="var(--accent-text)" />
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>AI Verification</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <span style={{ fontSize: 13, color: 'var(--text2)' }}>Used this month</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{verificationUsed} of 20</span>
+          </div>
+          <div style={{ height: 6, background: 'var(--bg2)', borderRadius: 3, marginBottom: 8 }}>
+            <div style={{ height: '100%', width: `${Math.min(100, (verificationUsed / 20) * 100)}%`, background: 'var(--accent)', borderRadius: 3, transition: 'width .4s ease' }} />
+          </div>
+          <p style={{ fontSize: 11, color: 'var(--text3)', margin: 0, lineHeight: 1.5 }}>
+            {20 - verificationUsed > 0
+              ? `${20 - verificationUsed} free verifications remaining. Each accepted proof adds +3 to your leaderboard score.`
+              : 'Monthly limit reached. Resets in 30 days.'}
+          </p>
         </div>
 
         {/* ── Notifications ── */}

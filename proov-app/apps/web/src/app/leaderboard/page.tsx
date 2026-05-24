@@ -4,13 +4,13 @@ import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   getCircleRequests, getUsernamesForAddresses, getStreakData,
-  getGlobalLeaderboard,
+  getVerifiedLeaderboard,
 } from "@/lib/supabase";
-import { IconArrowLeft, IconFlame } from "@tabler/icons-react";
+import { IconArrowLeft, IconFlame, IconShieldCheck } from "@tabler/icons-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Entry = { address: string; streak: number; username: string };
+type Entry = { address: string; streak: number; username: string; verifiedCount: number; score: number };
 
 // ─── Podium config ────────────────────────────────────────────────────────────
 
@@ -69,10 +69,16 @@ function PodiumCol({ entry, cfg, isMe }: {
         <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
           <IconFlame size={goldBlock ? 13 : 11} stroke={2} color="#f59e0b" />
           <span style={{ fontSize: goldBlock ? 22 : 17, fontWeight: 900, color: goldBlock ? '#f59e0b' : 'var(--text)', lineHeight: 1 }}>
-            {entry.streak}
+            {entry.score}
           </span>
         </div>
-        <span style={{ fontSize: 9, color: 'var(--text3)' }}>day streak</span>
+        <span style={{ fontSize: 9, color: 'var(--text3)' }}>score</span>
+        {entry.verifiedCount > 0 && (
+          <span style={{ fontSize: 9, color: 'var(--accent-text)', display: 'flex', alignItems: 'center', gap: 2 }}>
+            <IconShieldCheck size={9} stroke={2} />
+            {entry.verifiedCount}
+          </span>
+        )}
       </div>
     </div>
   );
@@ -92,18 +98,18 @@ export default function LeaderboardPage() {
 
   const [tab, setTab] = useState<'global' | 'circle'>('global');
 
-  const [globalRaw, setGlobalRaw] = useState<{ address: string; streak: number }[]>([]);
+  const [globalRaw, setGlobalRaw] = useState<{ address: string; streak: number; verifiedCount: number; score: number }[]>([]);
   const [usernameMap, setUsernameMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
   const [circleEntries, setCircleEntries] = useState<Entry[]>([]);
   const [circleLoading, setCircleLoading] = useState(false);
 
-  // Load global leaderboard from Supabase streaks table
+  // Load global leaderboard using verified scoring
   useEffect(() => {
     if (!myAddress) return;
     setLoading(true);
-    getGlobalLeaderboard(100).then(async rows => {
+    getVerifiedLeaderboard(100).then(async rows => {
       setGlobalRaw(rows);
       const addrs = rows.map(r => r.address);
       if (addrs.length > 0) {
@@ -130,32 +136,25 @@ export default function LeaderboardPage() {
       const entries: Entry[] = allAddrs.map((addr, i) => ({
         address: addr,
         streak: streaks[i]?.currentStreak ?? 0,
+        verifiedCount: 0,
+        score: (streaks[i]?.currentStreak ?? 0) * 10,
         username: usernames[addr] || addr.slice(0, 8),
       }));
-      setCircleEntries(entries.sort((a, b) => b.streak - a.streak));
+      setCircleEntries(entries.sort((a, b) => b.score - a.score));
       setCircleLoading(false);
     }).catch(() => setCircleLoading(false));
   }, [tab, myAddress]);
 
   const globalEntries: Entry[] = useMemo(() => {
-    const myUsername = localStorage.getItem('proov_username') || myAddress.slice(0, 8);
-    const myStreak = parseInt(localStorage.getItem('proov_streak_count') || '0');
-
     const mapped: Entry[] = globalRaw.map(r => ({
       address: r.address,
       streak: r.streak,
+      verifiedCount: r.verifiedCount,
+      score: r.score,
       username: usernameMap[r.address] || r.address.slice(0, 8),
     }));
-
-    // Include current user if not already present (e.g., streak = 0 was filtered out)
-    if (myAddress && !mapped.some(e => e.address === myAddress)) {
-      if (myStreak > 0) {
-        mapped.push({ address: myAddress, streak: myStreak, username: myUsername });
-      }
-    }
-
-    return mapped.sort((a, b) => b.streak - a.streak);
-  }, [globalRaw, usernameMap, myAddress]);
+    return mapped.sort((a, b) => b.score - a.score);
+  }, [globalRaw, usernameMap]);
 
   const entries = tab === 'global' ? globalEntries : circleEntries;
   const isLoading = tab === 'global' ? loading : circleLoading;
@@ -205,7 +204,7 @@ export default function LeaderboardPage() {
           </button>
           <div>
             <p style={{ fontWeight: 800, color: 'var(--text)', fontSize: 16, margin: 0, letterSpacing: '-.3px' }}>Leaderboard</p>
-            <p style={{ fontSize: 11, color: 'var(--text3)', margin: 0 }}>Ranked by streak</p>
+            <p style={{ fontSize: 11, color: 'var(--text3)', margin: 0 }}>Ranked by Proov score</p>
           </div>
         </div>
       </div>
@@ -284,9 +283,13 @@ export default function LeaderboardPage() {
                   <p style={{ flex: 1, fontSize: 13, fontWeight: 600, color: isMe ? 'var(--accent-text)' : 'var(--text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     @{entry.username}
                   </p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                    <IconFlame size={13} stroke={2} color="#f59e0b" />
-                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{entry.streak}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                    {entry.verifiedCount > 0 && (
+                      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent-text)', display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <IconShieldCheck size={12} stroke={2} />{entry.verifiedCount}
+                      </span>
+                    )}
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{entry.score}</span>
                   </div>
                 </div>
               );
@@ -317,9 +320,13 @@ export default function LeaderboardPage() {
                       {isMe && <span style={{ fontSize: 10, marginLeft: 6, color: 'var(--text3)', fontWeight: 400 }}>you</span>}
                     </p>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                    <IconFlame size={13} stroke={2} color="#f59e0b" />
-                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{entry.streak}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                    {entry.verifiedCount > 0 && (
+                      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent-text)', display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <IconShieldCheck size={12} stroke={2} />{entry.verifiedCount}
+                      </span>
+                    )}
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{entry.score}</span>
                   </div>
                 </div>
               );
@@ -349,9 +356,13 @@ export default function LeaderboardPage() {
                 </p>
                 <p style={{ fontSize: 10, color: 'var(--text3)', margin: 0 }}>You</p>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                <IconFlame size={14} stroke={2} color="#f59e0b" />
-                <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{me.streak}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                {me.verifiedCount > 0 && (
+                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent-text)', display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <IconShieldCheck size={12} stroke={2} />{me.verifiedCount}
+                  </span>
+                )}
+                <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{me.score}</span>
               </div>
             </div>
           </div>
