@@ -73,7 +73,19 @@ export default function SettingsPage() {
     const rank = parseInt(localStorage.getItem('proov_leaderboard_rank') || '0');
     if (rank > 0) setUserRank(rank);
     const storedEmail = localStorage.getItem('proov_email') || '';
-    if (storedEmail) setEmail(storedEmail);
+    if (storedEmail) {
+      setEmail(storedEmail);
+    } else {
+      import('@/lib/wagmi-config').then(({ getWeb3Auth }) =>
+        getWeb3Auth().getUserInfo().catch(() => null)
+      ).then(info => {
+        const w3Email = (info as any)?.email;
+        if (w3Email) {
+          localStorage.setItem('proov_email', w3Email);
+          setEmail(w3Email);
+        }
+      }).catch(() => {});
+    }
 
     // Load notification prefs from localStorage
     const t = localStorage.getItem('proov_notif_time');
