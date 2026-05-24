@@ -45,6 +45,8 @@ interface CircleMember {
   lastCompletionDate: string | null;
   activityName: string | null;
   activityTime: string | null;
+  habitVisibility: string;
+  habitVisibleTo: string[];
 }
 
 function getGreeting(): string {
@@ -159,6 +161,8 @@ export default function DashboardPage() {
         lastCompletionDate: streaks[i]?.lastCompletionDate ?? null,
         activityName: activities[i]?.habitName ?? null,
         activityTime: activities[i]?.completedAt ?? null,
+        habitVisibility: activities[i]?.habitVisibility ?? 'private',
+        habitVisibleTo: activities[i]?.habitVisibleTo ?? [],
       })));
       if (nudgedToday.length > 0) {
         setNudgedMap(prev => { const n = { ...prev }; nudgedToday.forEach(a => { n[a] = true; }); return n; });
@@ -551,6 +555,10 @@ export default function DashboardPage() {
               const activeToday = member.lastCompletionDate === todayIso;
               const alreadyCheered = cheered[member.address];
               const alreadyNudged = nudgedMap[member.address];
+              const myAddress = (localStorage.getItem('proov_address') || '').toLowerCase();
+              const habitIsVisible = member.habitVisibility === 'public'
+                || (member.habitVisibility === 'circle'
+                  && (member.habitVisibleTo.length === 0 || member.habitVisibleTo.includes(myAddress)));
               return (
                 <div key={member.address} style={{
                   display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px',
@@ -571,7 +579,9 @@ export default function DashboardPage() {
                       @{member.username}
                     </div>
                     <div style={{ fontSize: 10, color: activeToday ? 'var(--accent-text)' : 'var(--text3)', marginTop: 1 }}>
-                      {activeToday ? (member.activityName ? `${member.activityName} done` : 'Done today') : 'No activity yet today'}
+                      {activeToday
+                        ? (habitIsVisible && member.activityName ? `${member.activityName} done` : 'Completed their habits today')
+                        : 'No activity yet today'}
                     </div>
                   </div>
                   {/* Action */}

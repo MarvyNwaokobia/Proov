@@ -57,6 +57,8 @@ type MemberInfo = {
   lastCompletionDate: string | null;
   activityName: string | null;
   activityTime: string | null;
+  habitVisibility: string;
+  habitVisibleTo: string[];
 };
 
 // ─── Page ────────────────────────────────────────────────────────────────────
@@ -140,6 +142,8 @@ export default function CirclePage() {
           lastCompletionDate: s?.lastCompletionDate ?? null,
           activityName: act?.habitName ?? null,
           activityTime: act?.completedAt ?? null,
+          habitVisibility: act?.habitVisibility ?? 'private',
+          habitVisibleTo: act?.habitVisibleTo ?? [],
         };
       });
       setMemberData(infoMap);
@@ -427,12 +431,23 @@ export default function CirclePage() {
               const alreadyCheered = wasCheerAlready(otherAddr);
               const alreadyNudged = nudgedMap[otherAddr];
 
-              // Activity line
+              // Determine if the completed habit's name is visible to the current user
+              const habitIsVisible = info?.habitVisibility === 'public'
+                || (info?.habitVisibility === 'circle'
+                  && (info.habitVisibleTo.length === 0 || info.habitVisibleTo.includes(myAddress)));
+
+              // Activity line — show habit name only if the habit is visible to viewer
               let activityLine = 'No activity yet today';
-              if (info?.activityTime) {
+              if (activeToday) {
+                if (habitIsVisible && info?.activityName) {
+                  activityLine = `${info.activityName} done · ${info.activityTime ? timeAgo(info.activityTime) : 'today'}`;
+                } else {
+                  activityLine = 'Completed their habits today';
+                }
+              } else if (info?.activityTime) {
                 const actDate = info.activityTime.split('T')[0];
-                if (actDate === today || actDate === yesterday) {
-                  activityLine = `${info.activityName || 'Habit'} done · ${timeAgo(info.activityTime)}`;
+                if (actDate === yesterday && habitIsVisible && info?.activityName) {
+                  activityLine = `${info.activityName} done · ${timeAgo(info.activityTime)}`;
                 }
               }
 
@@ -459,7 +474,7 @@ export default function CirclePage() {
                       )}
                     </div>
                   </div>
-                  {/* Action button row */}
+                  {/* Action button row — cheer if streak completed today, nudge if not */}
                   <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
                     {activeToday ? (
                       alreadyCheered ? (
