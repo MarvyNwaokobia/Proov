@@ -932,20 +932,44 @@ export default function HabitsPage() {
             <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.2px', color: 'var(--text3)', marginBottom: 12 }}>
               Popular habits
             </div>
-            {POPULAR_HABITS.map(s => {
-              const isAdded = addedSuggestions.has(s.name) || habits.some(h => h.name.toLowerCase() === s.name.toLowerCase());
-              const catLabel = s.category.charAt(0).toUpperCase() + s.category.slice(1);
+
+            {/* Category tabs */}
+            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 8, marginBottom: 12 }}>
+              {SUGGESTION_CATS.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setSuggestionCategory(cat)}
+                  style={{
+                    flexShrink: 0, padding: '5px 12px', borderRadius: 14, fontSize: 10, fontWeight: 600,
+                    cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                    border: `1px solid ${suggestionCategory === cat ? 'var(--accent)' : 'var(--border)'}`,
+                    background: suggestionCategory === cat ? 'var(--accent-bg)' : 'transparent',
+                    color: suggestionCategory === cat ? 'var(--accent-text)' : 'var(--text3)',
+                  }}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+
+            {/* Habits for selected category */}
+            {filteredSuggestions.length === 0 ? (
+              <p style={{ fontSize: 12, color: 'var(--text3)', textAlign: 'center', padding: '1rem 0' }}>
+                You already have all the {suggestionCategory} habits!
+              </p>
+            ) : filteredSuggestions.map(s => {
+              const isAdded = addedSuggestions.has(s.name);
               return (
-                <div key={s.name} style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: 14, padding: 14, marginBottom: 10, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <div key={s.name} style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: 14, padding: 14, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
                   <span style={{ fontSize: 36, lineHeight: 1, flexShrink: 0 }}>{s.emoji}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>{s.name}</div>
                     <div style={{ fontSize: 11, color: 'var(--text3)' }}>
-                      {catLabel} · {s.type === 'timed' && s.duration_minutes ? `${s.duration_minutes} min` : s.schedule}
+                      {s.type === 'timed' && s.duration ? `${s.duration} min` : 'Checkbox'} · {suggestionCategory}
                     </div>
                   </div>
                   <button
-                    onClick={() => { if (!isAdded) handleAddAiSuggestion(s); }}
+                    onClick={() => { if (!isAdded) handleAddSuggestion(s); }}
                     disabled={isAdded}
                     style={{
                       width: 32, height: 32, borderRadius: '50%', flexShrink: 0, border: 'none',
