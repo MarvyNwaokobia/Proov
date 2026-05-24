@@ -576,3 +576,91 @@ export async function getProfileCreatedAt(address: string): Promise<string | nul
     .maybeSingle();
   return data?.created_at || null;
 }
+
+// ── AI VERIFICATION ──────────────────────────────────────────────────────────
+
+async function getVerifiedCountsForAddresses(addresses: string[]): Promise<Record<string, number>> {
+  if (!supabase || addresses.length === 0) return {};
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 30);
+  const { data } = await supabase
+    .from('habit_completions')
+    .select('user_address')
+    .eq('verified', true)
+    .gte('completed_at', cutoff.toISOString())
+    .in('user_address', addresses);
+  const counts: Record<string, number> = {};
+  (data || []).forEach((r: any) => { counts[r.user_address] = (counts[r.user_address] || 0) + 1; });
+  return counts;
+}
+
+export async function getVerifiedLeaderboard(limit = 100): Promise<{ address: string; streak: number; verifiedCount: number; score: number }[]> {
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from('streaks')
+    .select('user_address, current_streak')
+    .gt('current_streak', 0)
+    .order('current_streak', { ascending: false })
+    .limit(limit * 2);
+  const rows = (data || []) as { user_address: string; current_streak: number }[];
+  const addresses = rows.map(r => r.user_address);
+  const verifiedCounts = await getVerifiedCountsForAddresses(addresses).catch(() => ({} as Record<string, number>));
+  return rows
+    .map(r => ({
+      address: r.user_address,
+      streak: r.current_streak,
+      verifiedCount: verifiedCounts[r.user_address] || 0,
+      score: r.current_streak * 10 + (verifiedCounts[r.user_address] || 0) * 3,
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
+}
+
+export async function getVerifiedHabitsToday(userAddress: string): Promise<string[]> {
+  if (!supabase || !userAddress) return [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const { data } = await supabase
+    .from('habit_completions')
+    .select('habit_id')
+    .eq('user_address', userAddress.toLowerCase())
+    .eq('verified', true)
+    .gte('completed_at', today.toISOString());
+  return (data || []).map((d: any) => d.habit_id);
+}
+
+export async function markHabitVerified(habitId: string, userAddress: string, aiReasoning: string): Promise<void> {
+  if (!supabase) return;
+  const addr = userAddress.toLowerCase();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const now = new Date().toISOString();
+  const { data: existing } = await supabase
+    .from('habit_completions')
+    .select('id')
+    .eq('habit_id', habitId)
+    .eq('user_address', addr)
+    .gte('completed_at', today.toISOString())
+    .maybeSingle();
+  if (existing) {
+    await supabase.from('habit_completions')
+      .update({ verified: true, verified_at: now, ai_reasoning: aiReasoning })
+      .eq('id', (existing as any).id);
+  } else {
+    await supabase.from('habit_completions')
+      .insert({ habit_id: habitId, user_address: addr, verified: true, verified_at: now, ai_reasoning: aiReasoning, streak_at_time: 0 });
+  }
+}
+
+export async function getAiVerificationUsage(userAddress: string): Promise<{ used: number; resetDate: string | null }> {
+  if (!supabase) return { used: 0, resetDate: null };
+  const { data } = await supabase
+    .from('profiles')
+    .select('ai_verifications_used_this_month, ai_verifications_reset_date')
+    .eq('address', userAddress.toLowerCase())
+    .maybeSingle();
+  return {
+    used: (data as any)?.ai_verifications_used_this_month || 0,
+    resetDate: (data as any)?.ai_verifications_reset_date || null,
+  };
+}

@@ -7,10 +7,12 @@ import {
   getStreakData, updateDailyStreak, getAllHabitStreaks,
   getCircleRequests, getUsernamesForAddresses, getLatestActivityForAddress,
   sendNudge, getTodayNudgesSent, getGlobalLeaderboard,
+  getVerifiedHabitsToday,
   type Habit,
 } from '@/lib/supabase';
 import { useProovTx } from '@/hooks/useProovTx';
 import { Walkthrough } from '@/components/shared/Walkthrough';
+import { ProofSheet } from '@/components/shared/ProofSheet';
 import {
   IconFlame,
   IconUsers,
@@ -22,6 +24,7 @@ import {
   IconBell,
   IconCheck,
   IconBolt,
+  IconShieldCheck,
 } from '@tabler/icons-react';
 
 const STREAK_MILESTONES = [7, 14, 21, 30, 60, 90];
@@ -76,6 +79,8 @@ export default function DashboardPage() {
   const [streakFlipped, setStreakFlipped] = useState(false);
   const [habitStreaks, setHabitStreaks] = useState<Record<string, number>>({});
   const [fuelBalance, setFuelBalance] = useState(0);
+  const [verifiedHabits, setVerifiedHabits] = useState<string[]>([]);
+  const [proofSheet, setProofSheet] = useState<{ habitId: string; habitName: string } | null>(null);
   const proovTx = useProovTx();
 
   useEffect(() => {
@@ -183,10 +188,11 @@ export default function DashboardPage() {
     setMounted(true);
     const addr = localStorage.getItem('proov_address') || '';
     if (addr) {
-      Promise.all([getUserHabits(addr), getTodayCompletions(addr)])
-        .then(([userHabits, todayDone]) => {
+      Promise.all([getUserHabits(addr), getTodayCompletions(addr), getVerifiedHabitsToday(addr)])
+        .then(([userHabits, todayDone, verifiedIds]) => {
           setHabits(userHabits);
           setCompletedToday(todayDone);
+          setVerifiedHabits(verifiedIds);
           localStorage.setItem('proov_habits_cache', JSON.stringify(userHabits));
           // If every habit was already completed today (e.g. via timer / habits page),
           // fire the streak update now so the daily streak accumulates correctly.
@@ -429,6 +435,7 @@ export default function DashboardPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 8 }}>
               {habits.map(habit => {
                 const isDone = completedToday.includes(habit.id);
+                const isVerified = verifiedHabits.includes(habit.id);
                 const habitStreak = habitStreaks[habit.id] || 0;
                 return (
                   <div
@@ -439,15 +446,16 @@ export default function DashboardPage() {
                     }}
                     style={{
                       background: 'var(--card-bg)',
-                      border: `1px solid ${isDone ? 'var(--accent-border)' : 'var(--card-border)'}`,
+                      border: `1px solid ${isVerified ? 'rgba(5,150,105,0.35)' : isDone ? 'var(--accent-border)' : 'var(--card-border)'}`,
                       borderRadius: 14, padding: 11,
                       cursor: isDone && habit.type === 'checkbox' ? 'default' : 'pointer',
                       opacity: isDone ? 0.78 : 1,
                       display: 'flex', flexDirection: 'column',
                     }}>
-                    {/* Emoji icon */}
-                    <div style={{ marginBottom: 5, fontSize: 22, color: 'var(--accent-text)', lineHeight: 1 }}>
-                      {habit.emoji}
+                    {/* Emoji + verified badge row */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                      <span style={{ fontSize: 22, color: 'var(--accent-text)', lineHeight: 1 }}>{habit.emoji}</span>
+                      {isVerified && <IconShieldCheck size={13} stroke={2} color="#059669" />}
                     </div>
                     {/* Name */}
                     <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -473,6 +481,7 @@ export default function DashboardPage() {
                         color: isDone ? '#fff' : 'var(--text2)',
                         fontFamily: 'inherit',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                        marginBottom: !isDone ? 5 : 0,
                       }}
                     >
                       {isDone ? (
@@ -483,6 +492,23 @@ export default function DashboardPage() {
                         'Mark done'
                       )}
                     </button>
+                    {/* Proov it button — only when not done */}
+                    {!isDone && (
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          setProofSheet({ habitId: habit.id, habitName: habit.name });
+                        }}
+                        style={{
+                          width: '100%', padding: '5px 0', borderRadius: 8, fontSize: 9, fontWeight: 700, cursor: 'pointer',
+                          border: '1px solid var(--accent-border)', background: 'var(--accent-bg)',
+                          color: 'var(--accent-text)', fontFamily: 'inherit',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
+                        }}
+                      >
+                        <IconShieldCheck size={9} stroke={2} /> Proov it
+                      </button>
+                    )}
                   </div>
                 );
               })}
@@ -615,6 +641,20 @@ export default function DashboardPage() {
 
       {showWalkthrough && (
         <Walkthrough onComplete={() => { setShowWalkthrough(false); localStorage.removeItem('proov_is_new_user'); }} />
+      )}
+
+      {proofSheet && (
+        <ProofSheet
+          habitId={proofSheet.habitId}
+          habitName={proofSheet.habitName}
+          userAddress={localStorage.getItem('proov_address') || ''}
+          onVerified={() => {
+            setVerifiedHabits(prev => [...prev, proofSheet.habitId]);
+            setCompletedToday(prev => prev.includes(proofSheet.habitId) ? prev : [...prev, proofSheet.habitId]);
+          }}
+          onSelfReport={() => handleToggleHabit(proofSheet.habitId)}
+          onClose={() => setProofSheet(null)}
+        />
       )}
     </>
   );
