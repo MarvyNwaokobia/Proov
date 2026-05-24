@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useAccount } from 'wagmi';
 import { useProovTx } from '@/hooks/useProovTx';
 import {
   IconArrowLeft,
@@ -42,7 +41,6 @@ function fmtTime(secs: number) {
 
 export default function GrindTimerPage() {
   const searchParams = useSearchParams();
-  const { isConnected } = useAccount();
   const proovTx = useProovTx();
 
   const [view, setView] = useState<TimerView>('pick');
@@ -137,7 +135,7 @@ export default function GrindTimerPage() {
                 sessionId: saved?.id || null,
               }));
               if (saved) setSessionId(saved.id);
-              if (isConnected) proovTx.startSession((found as any)?.on_chain_id || 0, dur);
+              proovTx.startSession((found as any)?.on_chain_id || 0, dur);
             } else {
               setView('setup');
             }
@@ -217,11 +215,9 @@ export default function GrindTimerPage() {
       } catch {}
 
       // Silent background endSession
-      if (isConnected) {
-        proovTx.endSession(0, true);
-      }
+      proovTx.endSession(0, true);
     }
-  }, [view, selectedHabit, duration, isConnected]);
+  }, [view, selectedHabit, duration]);
 
   // Countdown
   useEffect(() => {
@@ -245,8 +241,6 @@ export default function GrindTimerPage() {
   }, [view]);
 
   const startTimer = async () => {
-    if (!isConnected) return;
-
     const now = Date.now();
     setSessionHabitName(selectedHabit?.name || '');
     setSessionDuration(duration);
@@ -288,7 +282,6 @@ export default function GrindTimerPage() {
   };
 
   const confirmDone = async () => {
-    if (!isConnected) return;
     const address = userAddress || localStorage.getItem('proov_address') || '';
     const streak = parseInt(localStorage.getItem('proov_streak_count') || '0');
 
@@ -325,10 +318,8 @@ export default function GrindTimerPage() {
   const cancelTimer = () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     localStorage.removeItem('proov_active_timer');
-    if (isConnected) {
-      if (isCustom) proovTx.endCustomSession(0, false);
-      else proovTx.cancelSession(0);
-    }
+    if (isCustom) proovTx.endCustomSession(0, false);
+    else proovTx.cancelSession(0);
     setView('pick');
   };
 
