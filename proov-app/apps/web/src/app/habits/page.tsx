@@ -111,7 +111,9 @@ const CATEGORY_FILTERS: FilterEntry[] = [
 
 function DurationPicker({ value, onChange }: { value: number; onChange: (n: number) => void }) {
   const [mode, setMode] = useState<"slider" | "manual">("slider");
-  const [live, setLive] = useState(value);
+  // Use index into STOPS so thumb position aligns exactly with tick labels
+  const stopIdx = STOPS.reduce((best, s, i) =>
+    Math.abs(s - value) < Math.abs(STOPS[best] - value) ? i : best, 0);
   return (
     <div>
       <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
@@ -123,14 +125,20 @@ function DurationPicker({ value, onChange }: { value: number; onChange: (n: numb
       </div>
       {mode === "slider" ? (
         <div>
-          <p style={{ textAlign: "center", fontSize: 22, fontWeight: 800, color: "var(--text)", letterSpacing: -1, marginBottom: 10 }}>{fmtDur(live)}</p>
-          <input type="range" min={1} max={240} value={live}
-            onInput={(e) => setLive(parseInt((e.target as HTMLInputElement).value))}
-            onChange={(e) => { const s = snapToStop(parseInt(e.target.value)); onChange(s); setLive(s); }}
-            className="duration-slider" style={{ width: "100%" }} />
+          <p style={{ textAlign: "center", fontSize: 22, fontWeight: 800, color: "var(--text)", letterSpacing: -1, marginBottom: 10 }}>{fmtDur(value)}</p>
+          <input
+            type="range"
+            min={0}
+            max={STOPS.length - 1}
+            step={1}
+            value={stopIdx}
+            onChange={(e) => onChange(STOPS[parseInt(e.target.value)])}
+            className="duration-slider"
+            style={{ width: "100%" }}
+          />
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
             {STOPS.map(s => (
-              <button key={s} onClick={() => { onChange(s); setLive(s); }} style={{ fontSize: 9, padding: "2px 1px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", color: value === s ? "var(--accent-text)" : "var(--text3)", fontWeight: value === s ? 700 : 400 }}>
+              <button key={s} onClick={() => onChange(s)} style={{ fontSize: 9, padding: "2px 1px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", color: value === s ? "var(--accent-text)" : "var(--text3)", fontWeight: value === s ? 700 : 400 }}>
                 {s < 60 ? `${s}m` : `${s / 60}h`}
               </button>
             ))}
