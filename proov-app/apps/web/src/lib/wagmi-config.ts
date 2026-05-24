@@ -1,6 +1,5 @@
 "use client";
 
-import { Web3AuthConnector } from "@web3auth/web3auth-wagmi-connector";
 import { Web3Auth } from "@web3auth/modal";
 import { CHAIN_NAMESPACES, WEB3AUTH_NETWORK } from "@web3auth/base";
 import { EthereumPrivateKeyProvider } from "@web3auth/ethereum-provider";
@@ -26,6 +25,9 @@ export function getWeb3Auth(): Web3Auth {
   if (_web3auth) return _web3auth;
   if (typeof window === "undefined") throw new Error("getWeb3Auth: browser only");
 
+  // EthereumPrivateKeyProvider drives the Web3Auth auth flow (social login,
+  // session caching, key derivation). The AA connector wraps it afterward to
+  // derive the Safe Smart Account address.
   const privateKeyProvider = new EthereumPrivateKeyProvider({ config: { chainConfig } });
 
   _web3auth = new Web3Auth({
@@ -43,9 +45,11 @@ function buildConnectors() {
     return [mock({ accounts: ["0x0000000000000000000000000000000000000001"] as const })];
   }
   try {
-    return [Web3AuthConnector({ web3AuthInstance: getWeb3Auth() })];
+    // Lazy import to avoid SSR issues
+    const { createAAConnector } = require("./aa-provider");
+    return [createAAConnector({ web3AuthInstance: getWeb3Auth() })];
   } catch {
-    // Web3Auth failed to initialise — fall back to mock so the app still loads
+    // AA connector failed to initialise — fall back to mock so the app still loads
     return [mock({ accounts: ["0x0000000000000000000000000000000000000001"] as const })];
   }
 }
@@ -57,7 +61,7 @@ export const wagmiConfig = createConfig({
     [celo.id]: http("https://forno.celo.org"),
     [celoSepolia.id]: http("https://forno.celo-sepolia.celo-testnet.org"),
   },
-  // ssr: false — server uses mock connectors, client uses Web3Auth.
+  // ssr: false — server uses mock connectors, client uses AA connector.
   // Setting ssr: true causes wagmi to attempt state reconciliation between
   // those two different connector sets, which throws on hydration.
   ssr: false,

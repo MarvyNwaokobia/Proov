@@ -123,6 +123,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.0.0
         version: 5.100.10(react@18.3.1)
+      '@web3auth/account-abstraction-provider':
+        specifier: 9.7.0
+        version: 9.7.0(@babel/runtime@7.29.2)(typescript@5.9.3)
       '@web3auth/base':
         specifier: ^9.7.0
         version: 9.7.0(@babel/runtime@7.29.2)
@@ -5336,6 +5339,32 @@ packages:
       tslib: 1.14.1
     dev: false
 
+  /@web3auth/account-abstraction-provider@9.7.0(@babel/runtime@7.29.2)(typescript@5.9.3):
+    resolution: {integrity: sha512-YQsi52qzf7P/cDJTrFBoYmAjFyFWZex3K9k6L4PnLhYj6/3nDCqFmgdJeJijrz3iTeWN6pz2mJ3HOrjhSI7RUw==}
+    engines: {node: '>=18.x', npm: '>=9.x'}
+    peerDependencies:
+      '@babel/runtime': 7.x
+    dependencies:
+      '@babel/runtime': 7.29.2
+      '@ethereumjs/util': 9.1.0
+      '@toruslabs/base-controllers': 7.4.0(@babel/runtime@7.29.2)
+      '@web3auth/auth': 9.6.4(@babel/runtime@7.29.2)
+      '@web3auth/base': 9.7.0(@babel/runtime@7.29.2)
+      '@web3auth/base-provider': 9.7.0(@babel/runtime@7.29.2)
+      '@web3auth/ethereum-provider': 9.7.0(@babel/runtime@7.29.2)(typescript@5.9.3)
+      ethers: 6.16.0
+      permissionless: 0.2.57(viem@2.49.3)
+      viem: 2.49.3(typescript@5.9.3)
+    transitivePeerDependencies:
+      - '@sentry/types'
+      - bufferutil
+      - ox
+      - supports-color
+      - typescript
+      - utf-8-validate
+      - zod
+    dev: false
+
   /@web3auth/auth-adapter@9.7.0(@babel/runtime@7.29.2):
     resolution: {integrity: sha512-pjjaTZcn593avmpBvF4sKWEaxpr/eTQjuGqq6/o0RKi67IfD5HTsSREqgiBU1eM+ytPaKglKdPbKwXRgy7oHyQ==}
     engines: {node: '>=18.x', npm: '>=9.x'}
@@ -9986,6 +10015,18 @@ packages:
       sha.js: 2.4.12
       to-buffer: 1.2.2
     dev: true
+
+  /permissionless@0.2.57(viem@2.49.3):
+    resolution: {integrity: sha512-QrzAoQGYPV/NJ2x5Sj18h7qed6f+kCyQAojrncN091UPiGqHjFNjgdsgreiv8pxlQgF4UcpuJUvsHLpOEBd6cQ==}
+    peerDependencies:
+      ox: ^0.8.0
+      viem: ^2.28.1
+    peerDependenciesMeta:
+      ox:
+        optional: true
+    dependencies:
+      viem: 2.49.3(typescript@5.9.3)
+    dev: false
 
   /picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
