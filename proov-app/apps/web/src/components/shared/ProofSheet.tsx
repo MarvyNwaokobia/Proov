@@ -107,13 +107,13 @@ export function ProofSheet({ habitId, habitName, userAddress, onVerified, onSelf
   };
 
   const btnBg = isApproved
-    ? 'rgba(5,150,105,0.15)'
+    ? 'var(--success-bg)'
     : canSubmit && !loading
     ? 'var(--btn-primary-bg)'
     : 'var(--bg3)';
 
   const btnColor = isApproved
-    ? '#059669'
+    ? 'var(--success-text)'
     : canSubmit && !loading
     ? 'var(--btn-primary-text)'
     : 'var(--text3)';
@@ -144,7 +144,7 @@ export function ProofSheet({ habitId, habitName, userAddress, onVerified, onSelf
             transition={{ type: 'spring', stiffness: 340, damping: 32 }}
             style={{
               position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 201,
-              background: 'var(--card-bg)',
+              background: 'var(--modal-surface)',
               borderTop: '1px solid var(--card-border)',
               borderRadius: '20px 20px 0 0',
               padding: '0 20px 36px',
@@ -180,7 +180,7 @@ export function ProofSheet({ habitId, habitName, userAddress, onVerified, onSelf
                   style={{
                     flex: 1, padding: '7px 0', borderRadius: 8, border: 'none', cursor: 'pointer',
                     fontFamily: 'inherit', fontSize: 12, fontWeight: tab === t ? 700 : 500,
-                    background: tab === t ? 'var(--card-bg)' : 'transparent',
+                    background: tab === t ? 'var(--bg3)' : 'transparent',
                     color: tab === t ? 'var(--text)' : 'var(--text3)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
                     boxShadow: tab === t ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
@@ -251,10 +251,10 @@ export function ProofSheet({ habitId, habitName, userAddress, onVerified, onSelf
             {result && (
               <div style={{
                 marginTop: 12, padding: '10px 12px', borderRadius: 10,
-                background: result.verdict === 'approved' ? 'rgba(5,150,105,0.1)' : 'rgba(239,68,68,0.1)',
-                border: `1px solid ${result.verdict === 'approved' ? 'rgba(5,150,105,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                background: result.verdict === 'approved' ? 'var(--success-bg)' : 'rgba(239,68,68,0.1)',
+                border: `1px solid ${result.verdict === 'approved' ? 'var(--success)' : 'rgba(239,68,68,0.3)'}`,
               }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: result.verdict === 'approved' ? '#059669' : '#dc2626', marginBottom: 4 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: result.verdict === 'approved' ? 'var(--success-text)' : '#dc2626', marginBottom: 4 }}>
                   {result.verdict === 'approved' ? '✓ Approved' : '✗ Not approved'}
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text2)', lineHeight: 1.5 }}>{result.reasoning}</div>

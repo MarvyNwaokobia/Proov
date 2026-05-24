@@ -78,7 +78,7 @@ export function Walkthrough({ onComplete }: WalkthroughProps) {
         transition={{ type: 'spring', stiffness: 380, damping: 28 }}
         onClick={e => e.stopPropagation()}
         style={{
-          background: 'var(--card-bg)',
+          background: 'var(--modal-surface)',
           border: '1.5px solid var(--border2)',
           borderRadius: 22,
           padding: '1.75rem 1.5rem',
