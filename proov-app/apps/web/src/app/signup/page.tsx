@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAccount, useConnect } from 'wagmi';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { getPostLoginRoute, resolveIdentity } from '@/lib/auth';
 import { isMiniPay, connectMiniPay } from '@/lib/minipay';
 import { clearWeb3AuthSession } from '@/lib/clearSession';
@@ -36,6 +37,12 @@ export default function SignUpPage() {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState('');
   const [showMoreSocial, setShowMoreSocial] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+
+  // Reset overlay if user cancels the Web3Auth popup
+  useEffect(() => {
+    if (!isPending) setConnecting(false);
+  }, [isPending]);
 
   useEffect(() => {
     if (isMiniPay()) {
@@ -69,6 +76,7 @@ export default function SignUpPage() {
   }, [isConnected, connectedAddress, router]);
 
   const triggerConnect = async () => {
+    setConnecting(true);
     await clearWeb3AuthSession();
     try {
       const { getWeb3Auth } = await import('@/lib/wagmi-config');
@@ -76,6 +84,7 @@ export default function SignUpPage() {
     } catch {}
     const c = connectors[0];
     if (c) connect({ connector: c });
+    else setConnecting(false);
   };
 
   const inputValue = emailMethod === 'number' ? phone : email;
@@ -112,6 +121,42 @@ export default function SignUpPage() {
 
   return (
     <>
+      {/* Loading overlay — shown while Web3Auth OAuth + AA provider init are running */}
+      {(connecting || isPending) && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 100,
+          background: 'var(--bg)',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          gap: 24,
+        }}>
+          <div style={{
+            width: 60, height: 60, borderRadius: 18,
+            background: 'var(--btn-primary-bg)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <span style={{ fontSize: 30, fontWeight: 800, color: '#fff' }}>P</span>
+          </div>
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1.1, repeat: Infinity, ease: 'linear' }}
+            style={{
+              width: 36, height: 36, borderRadius: '50%',
+              border: '3px solid var(--border2)',
+              borderTopColor: 'var(--accent)',
+            }}
+          />
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
+              Setting up your wallet
+            </p>
+            <p style={{ fontSize: 13, color: 'var(--text2)' }}>
+              This takes a moment on first sign-in
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="blobs"><div className="blob b1" /><div className="blob b2" /></div>
       <div className="top-bar" />
 
