@@ -57,14 +57,21 @@ export default function SignInPage() {
   useEffect(() => {
     if (!isConnected || !connectedAddress) return;
 
-    const emailVal = localStorage.getItem('proov_email') || '';
-    resolveIdentity(connectedAddress, emailVal, 'google', 'web3auth');
+    import('@/lib/wagmi-config').then(({ getWeb3Auth }) =>
+      getWeb3Auth().getUserInfo().catch(() => null)
+    ).then(info => {
+      if ((info as any)?.email) {
+        localStorage.setItem('proov_email', (info as any).email);
+      }
+      const emailVal = localStorage.getItem('proov_email') || '';
+      resolveIdentity(connectedAddress, emailVal, 'google', 'web3auth');
 
-    import('@/lib/supabase').then(({ getUsernameForAddress }) =>
-      getUsernameForAddress(connectedAddress)
-    ).then(existingUsername => {
+      return import('@/lib/supabase').then(({ getUsernameForAddress }) =>
+        getUsernameForAddress(connectedAddress)
+      );
+    }).then(existingUsername => {
       if (existingUsername) {
-        localStorage.setItem('proov_username', existingUsername);
+        localStorage.setItem('proov_username', existingUsername as string);
         localStorage.setItem('proov_tutorial_done', '1');
         router.push('/dashboard');
       } else {
