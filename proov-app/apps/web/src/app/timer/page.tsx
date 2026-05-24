@@ -898,7 +898,11 @@ export default function GrindTimerPage() {
               max={240}
               step={1}
               value={duration}
-              onChange={e => setDuration(parseInt(e.target.value))}
+              onChange={e => {
+                const v = parseInt(e.target.value);
+                const stops = [5,10,15,20,25,30,45,60,90,120,180,240];
+                setDuration(stops.reduce((p,c) => Math.abs(c-v)<Math.abs(p-v)?c:p));
+              }}
               style={{ width: '100%', marginBottom: 16, accentColor: 'var(--accent)' }}
             />
 
