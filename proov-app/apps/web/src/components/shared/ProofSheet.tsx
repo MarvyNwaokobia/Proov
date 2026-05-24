@@ -207,7 +207,7 @@ export function ProofSheet({ habitId, habitName, userAddress, onVerified, onSelf
                   }}
                 />
                 <div style={{ fontSize: 10, color: text.length >= 20 ? 'var(--accent-text)' : 'var(--text3)', textAlign: 'right', marginTop: 4 }}>
-                  {text.length} / 20 chars {text.length < 20 && `(${20 - text.length} more)`}
+                  {text.length} chars {text.length < 20 ? `· ${20 - text.length} more to unlock` : '· min reached ✓'}
                 </div>
               </div>
             ) : (
@@ -304,7 +304,7 @@ export function ProofSheet({ habitId, habitName, userAddress, onVerified, onSelf
 
             {!canSubmit && !loading && !result && (
               <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text3)', marginTop: 8 }}>
-                {tab === 'text' ? `Add ${20 - text.trim().length} more characters to enable` : 'Choose a photo to enable'}
+                {tab === 'text' ? `Write at least ${20 - text.trim().length} more characters to verify` : 'Choose a photo to verify'}
               </p>
             )}
 
