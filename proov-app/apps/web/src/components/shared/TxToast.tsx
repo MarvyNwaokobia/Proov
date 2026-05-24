@@ -1,67 +1,106 @@
-"use client";
+'use client';
 
-import { useWaitForTransactionReceipt } from "wagmi";
-import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  ReactNode,
+} from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-interface TxToastProps {
-  hash?: `0x${string}`;
-  pendingText: string;
-  successText: string;
+type ToastState = { kind: 'error' | 'success'; message: string } | null;
+
+const Ctx = createContext<{
+  showError: (msg: string) => void;
+  showSuccess: (msg: string) => void;
+} | null>(null);
+
+export function useTxToast() {
+  const ctx = useContext(Ctx);
+  if (!ctx) throw new Error('useTxToast must be used inside TxToastProvider');
+  return ctx;
 }
 
-export function TxToast({ hash, pendingText, successText }: TxToastProps) {
-  const { isLoading, isSuccess } = useWaitForTransactionReceipt({ hash });
-  const [visible, setVisible] = useState(false);
+export function TxToastProvider({ children }: { children: ReactNode }) {
+  const [toast, setToast] = useState<ToastState>(null);
+
+  const dismiss = useCallback(() => setToast(null), []);
+
+  const showError = useCallback((msg: string) => {
+    setToast({ kind: 'error', message: msg });
+  }, []);
+
+  const showSuccess = useCallback((msg: string) => {
+    setToast({ kind: 'success', message: msg });
+  }, []);
 
   useEffect(() => {
-    if (isLoading || isSuccess) setVisible(true);
-    if (isSuccess) {
-      const t = setTimeout(() => setVisible(false), 3500);
-      return () => clearTimeout(t);
-    }
-  }, [isLoading, isSuccess]);
+    if (!toast) return;
+    const t = setTimeout(dismiss, toast.kind === 'error' ? 5000 : 3500);
+    return () => clearTimeout(t);
+  }, [toast, dismiss]);
 
   return (
-    <AnimatePresence>
-      {visible && hash && (
-        <motion.div
-          initial={{ opacity: 0, y: 20, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 16, scale: 0.95 }}
-          transition={{ type: "spring", stiffness: 400, damping: 30 }}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50"
-        >
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 12,
-            padding: '10px 20px', borderRadius: 24,
-            fontSize: 13, fontWeight: 600,
-            backdropFilter: 'blur(12px)',
-            background: isSuccess ? 'var(--success-bg)' : 'var(--accent-bg)',
-            border: `1px solid ${isSuccess ? 'var(--success)' : 'var(--accent-border)'}`,
-            color: isSuccess ? 'var(--success-text)' : 'var(--accent-text)',
-            boxShadow: '0 8px 32px rgba(0,0,0,.25)',
-          }}>
-            {isSuccess ? (
-              <motion.span
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 600, damping: 20 }}
-                style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--success)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-              >
-                <span style={{ color: '#fff', fontSize: 10, fontWeight: 900 }}>✓</span>
-              </motion.span>
-            ) : (
-              <motion.span
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
-                style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid var(--accent-border)', borderTopColor: 'var(--accent)', display: 'flex', flexShrink: 0 }}
-              />
-            )}
-            <span>{isSuccess ? successText : pendingText}</span>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <Ctx.Provider value={{ showError, showSuccess }}>
+      {children}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            key={toast.message + toast.kind}
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 16, scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            style={{
+              position: 'fixed',
+              bottom: 96,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 9999,
+              pointerEvents: 'none',
+            }}
+          >
+            <div
+              onClick={dismiss}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '10px 18px',
+                borderRadius: 24,
+                fontSize: 13,
+                fontWeight: 600,
+                backdropFilter: 'blur(12px)',
+                background:
+                  toast.kind === 'error'
+                    ? 'rgba(239,68,68,.15)'
+                    : 'var(--success-bg)',
+                border: `1px solid ${
+                  toast.kind === 'error'
+                    ? 'rgba(239,68,68,.4)'
+                    : 'var(--success)'
+                }`,
+                color:
+                  toast.kind === 'error' ? '#ef4444' : 'var(--success-text)',
+                boxShadow: '0 8px 32px rgba(0,0,0,.3)',
+                maxWidth: 340,
+                whiteSpace: 'nowrap',
+                pointerEvents: 'auto',
+                cursor: 'pointer',
+              }}
+            >
+              <span style={{ fontSize: 15, flexShrink: 0 }}>
+                {toast.kind === 'error' ? '⚠' : '✓'}
+              </span>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {toast.message}
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </Ctx.Provider>
   );
 }

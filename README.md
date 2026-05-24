@@ -9,7 +9,7 @@ Proov is a habit-tracking and personal accountability dApp built on [Celo](https
 
 ## Live Demo
 
-> [_Deploy link added after mainnet launch_](https://proov-one.vercel.app/)
+[https://proov-one.vercel.app](https://proov-one.vercel.app)
 
 ---
 
@@ -70,6 +70,11 @@ All three contracts are deployed behind **UUPS upgradeable proxies**. The proxy 
 - Log daily entries — content stored as a `keccak256` hash onchain (private, verifiable)
 - A journal entry counts as daily activity and keeps your streak alive
 
+### Profile
+- Upload a profile picture during onboarding or from settings
+- Avatar shown in the dashboard header and on public profile pages
+- Username and visibility settings stored onchain via `ProovCore`
+
 ---
 
 ## Tech Stack
@@ -79,12 +84,14 @@ All three contracts are deployed behind **UUPS upgradeable proxies**. The proxy 
 | Blockchain | [Celo](https://celo.org) (L2, post-March 2025 migration) |
 | Smart contracts | Solidity 0.8.28, Hardhat, OpenZeppelin UUPS Upgradeable |
 | Frontend | Next.js 14, TypeScript, Tailwind CSS |
-| Wallet auth | [Web3Auth](https://web3auth.io) (social login) + injected wallet (MetaMask) |
+| Wallet auth | [Web3Auth](https://web3auth.io) (social login — Google, Email OTP) |
+| Smart account | [Safe Smart Account](https://safe.global) v1.4.1 via `@web3auth/account-abstraction-provider` |
+| Gasless txs | [Pimlico](https://pimlico.io) bundler + paymaster (ERC-4337, sponsored policy) |
 | Onchain reads/writes | [wagmi](https://wagmi.sh) v2 + [viem](https://viem.sh) v2 |
-| AI agent | Google Gemini 2.5 Flash Lite via `@google/generative-ai` |
+| AI verification | [Claude Sonnet 4.6](https://anthropic.com) via Anthropic API |
+| AI reports | Google Gemini 2.5 Flash Lite via `@google/generative-ai` |
 | Animations | [Framer Motion](https://www.framer.com/motion/) |
 | State | [Zustand](https://zustand-demo.pmnd.rs/) |
-| Fee abstraction | USDm (cUSD) — `feeCurrency` on every tx |
 
 ---
 
@@ -114,7 +121,7 @@ packages/
     │   ├── profile/[address]/   ← Public profile
     │   └── api/agent/           ← Claude AI routes (verify + report)
     ├── hooks/                  ← useHabits, useSession, useStreak, useCircle
-    ├── lib/                    ← wagmi config, ABIs, constants
+    ├── lib/                    ← wagmi-config, aa-provider, ABIs, constants
     └── components/shared/      ← TxToast (used on every write)
 ```
 
@@ -175,6 +182,17 @@ Fill in `apps/web/.env.local`:
 ```bash
 # Web3Auth — dashboard.web3auth.io
 NEXT_PUBLIC_WEB3AUTH_CLIENT_ID=your_client_id
+
+# Celo RPC — Alchemy (alchemy.com, Celo Mainnet app)
+NEXT_PUBLIC_CELO_RPC_URL=https://celo-mainnet.g.alchemy.com/v2/your_key
+
+# Pimlico — dashboard.pimlico.io (bundler + paymaster)
+NEXT_PUBLIC_BUNDLER_URL=https://api.pimlico.io/v2/42220/rpc?apikey=your_key
+NEXT_PUBLIC_PAYMASTER_URL=https://api.pimlico.io/v2/42220/rpc?apikey=your_key
+NEXT_PUBLIC_PAYMASTER_POLICY_ID=your_sponsorship_policy_id
+
+# Anthropic — console.anthropic.com
+ANTHROPIC_API_KEY=your_anthropic_key
 
 # Google Gemini — aistudio.google.com (free tier: 1,000 req/day)
 GEMINI_API_KEY=your_gemini_api_key
@@ -256,7 +274,8 @@ SessionManager  ·  18 tests  (+ SessionEnded, UUPS upgrade)
 
 | Rule | Implementation |
 |------|---------------|
-| Fee abstraction | Every `writeContract` call includes `feeCurrency: "0x765DE816845861e75A25fCA122bb6898B8B1282a"` (USDm) via `withCeloFee()` helper |
+| Gasless transactions | All user transactions sponsored via Pimlico paymaster (ERC-4337 UserOperations) — users pay zero gas |
+| Smart account | Every user gets a Safe Smart Account (v1.4.1, EntryPoint v0.7) derived from their Web3Auth EOA |
 | EVM version | `evmVersion: "cancun"` in `hardhat.config.ts` — required since Celo's L2 migration (March 2025) |
 | Solidity version | `0.8.28` — per celopedia-skills spec |
 | No ETH accepted | `receive() external payable { revert(); }` on all 3 contracts |
@@ -266,11 +285,11 @@ SessionManager  ·  18 tests  (+ SessionEnded, UUPS upgrade)
 
 ## AI Agent
 
-The Proov agent is registered onchain via [ERC-8004](https://github.com/celo-org/CIPs/blob/main/CIPs/cip-0064.md) and performs two tasks, powered by **Google Gemini 2.5 Flash Lite** (free tier — 1,000 requests/day):
+The Proov agent is registered onchain via [ERC-8004](https://github.com/celo-org/CIPs/blob/main/CIPs/cip-0064.md) and performs two tasks:
 
-1. **Fitness verification** (`POST /api/agent/verify`) — Gemini judges user workout descriptions before they can submit a completion. Vague claims ("did it", "yes", "done") are rejected; specific, effort-filled descriptions are accepted.
+1. **Fitness verification** (`POST /api/agent/verify`) — Powered by **Claude Sonnet 4.6** (Anthropic API). Claude judges user workout descriptions before they can submit a completion. Vague claims ("did it", "yes", "done") are rejected; specific, effort-filled descriptions are accepted. The verification hash is stored in the transaction.
 
-2. **Sunday circle report** (`POST /api/agent/report`, Vercel cron `0 8 * * 0`) — Weekly plain-text summary for each accountability circle: who showed up, who needs encouragement, one practical tip for next week.
+2. **Sunday circle report** (`POST /api/agent/report`, Vercel cron `0 8 * * 0`) — Powered by **Google Gemini 2.5 Flash Lite** (free tier — 1,000 requests/day). Weekly plain-text summary for each accountability circle: who showed up, who needs encouragement, one practical tip for next week.
 
 ---
 
@@ -278,7 +297,7 @@ The Proov agent is registered onchain via [ERC-8004](https://github.com/celo-org
 
 | # | Route | Description |
 |---|-------|-------------|
-| 1 | `/` | Onboarding — dual login (Email/Social via Web3Auth, or Connect Wallet) |
+| 1 | `/` | Onboarding — social login via Web3Auth (Google, Email OTP) |
 | 2 | `/dashboard` | Home — streak hero, today's habits, active session banner, quick nav |
 | 3 | `/habits` | Habit manager — create, browse, deactivate; starter habits for new users |
 | 4 | `/timer` | Focus timer — SVG ring, contract-reconstructed elapsed time, 25min enforcement |
