@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 150,
         system: "You are a motivational coach for Proov, a habit tracking app. You write short, warm, specific daily summaries about a user's accountability circle. Write like a friend giving a morning briefing — specific, encouraging, never generic. Maximum 2 sentences. Never use the word 'insights'. Never start with 'Your circle'.",
         messages: [{ role: 'user', content: userMessage }],

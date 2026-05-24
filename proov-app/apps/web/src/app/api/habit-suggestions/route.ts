@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 400,
         system: `You are a habit coach for Proov, a habit tracking app. Based on the user's existing habits, suggest 4 new habits they don't already have. Be specific and practical. Consider balance — if they have focus habits, suggest recovery. If they have fitness, suggest nutrition or sleep. Never suggest something they already do. Respond ONLY with valid JSON, no other text:
 { "suggestions": [

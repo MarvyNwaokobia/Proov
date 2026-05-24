@@ -668,3 +668,26 @@ export async function getAiVerificationUsage(userAddress: string): Promise<{ use
     resetDate: (data as any)?.ai_verifications_reset_date || null,
   };
 }
+
+export async function saveAvatarUrl(userAddress: string, avatarUrl: string): Promise<void> {
+  if (!supabase || !userAddress) return;
+  try {
+    await supabase
+      .from('profiles')
+      .upsert({ address: userAddress.toLowerCase(), avatar_url: avatarUrl }, { onConflict: 'address' });
+  } catch {}
+}
+
+export async function getAvatarUrl(userAddress: string): Promise<string | null> {
+  if (!supabase || !userAddress) return null;
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('avatar_url')
+      .eq('address', userAddress.toLowerCase())
+      .maybeSingle();
+    return (data as any)?.avatar_url || null;
+  } catch {
+    return null;
+  }
+}

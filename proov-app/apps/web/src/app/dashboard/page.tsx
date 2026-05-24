@@ -7,7 +7,7 @@ import {
   getStreakData, updateDailyStreak, getAllHabitStreaks,
   getCircleRequests, getUsernamesForAddresses, getLatestActivityForAddress,
   sendNudge, getTodayNudgesSent, getGlobalLeaderboard,
-  getVerifiedHabitsToday,
+  getVerifiedHabitsToday, getAvatarUrl,
   type Habit,
 } from '@/lib/supabase';
 import { useProovTx } from '@/hooks/useProovTx';
@@ -18,7 +18,6 @@ import {
   IconUsers,
   IconPlus,
   IconPlayerPlay,
-  IconSettings2,
   IconTarget,
   IconHeart,
   IconBell,
@@ -83,6 +82,7 @@ export default function DashboardPage() {
   const [fuelBalance, setFuelBalance] = useState(0);
   const [verifiedHabits, setVerifiedHabits] = useState<string[]>([]);
   const [proofSheet, setProofSheet] = useState<{ habitId: string; habitName: string } | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState('');
   const proovTx = useProovTx();
 
   useEffect(() => {
@@ -191,6 +191,15 @@ export default function DashboardPage() {
   useEffect(() => {
     setMounted(true);
     const addr = localStorage.getItem('proov_address') || '';
+    // Load avatar — localStorage first, then Supabase
+    const storedAvatar = localStorage.getItem('proov_avatar');
+    if (storedAvatar) {
+      setAvatarUrl(storedAvatar);
+    } else if (addr) {
+      getAvatarUrl(addr).then(url => {
+        if (url) { setAvatarUrl(url); localStorage.setItem('proov_avatar', url); }
+      }).catch(() => {});
+    }
     if (addr) {
       Promise.all([getUserHabits(addr), getTodayCompletions(addr), getVerifiedHabitsToday(addr)])
         .then(([userHabits, todayDone, verifiedIds]) => {
@@ -306,8 +315,14 @@ export default function DashboardPage() {
                 {Math.floor(fuelBalance)} Fuel
               </div>
             )}
-            <button onClick={() => router.push('/settings')} style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--bg2)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)', cursor: 'pointer' }}>
-              <IconSettings2 size={14} stroke={1.8} />
+            <button
+              onClick={() => router.push('/settings')}
+              style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid var(--accent-border)', overflow: 'hidden', cursor: 'pointer', background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 }}
+            >
+              {avatarUrl
+                ? <img src={avatarUrl} alt="profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent-text)', lineHeight: 1 }}>{(username || 'P').slice(0, 1).toUpperCase()}</span>
+              }
             </button>
           </div>
         </div>
@@ -471,48 +486,49 @@ export default function DashboardPage() {
                       {habitStreak > 0 && <> · <IconFlame size={8} stroke={2} color="#f59e0b" />{habitStreak}d</>}
                       {isDone && ' · Done'}
                     </div>
-                    {/* Action button */}
-                    <button
-                      onClick={e => {
-                        e.stopPropagation();
-                        if (habit.type === 'checkbox') { if (!isDone) handleToggleHabit(habit.id); }
-                        else { isDone ? router.push(`/habits/${habit.id}`) : router.push(`/timer?habitId=${habit.id}&autostart=1`); }
-                      }}
-                      style={{
-                        width: '100%', padding: '6px 0', borderRadius: 8, fontSize: 10, fontWeight: 700, cursor: isDone && habit.type === 'checkbox' ? 'default' : 'pointer',
-                        border: isDone ? 'none' : '1.5px solid var(--border2)',
-                        background: isDone ? 'var(--accent)' : 'transparent',
-                        color: isDone ? '#fff' : 'var(--text2)',
-                        fontFamily: 'inherit',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-                        marginBottom: !isDone ? 5 : 0,
-                      }}
-                    >
-                      {isDone ? (
-                        <><IconCheck size={11} stroke={2.5} /> Done</>
-                      ) : habit.type === 'timed' ? (
-                        <><IconPlayerPlay size={11} stroke={2} /> Start</>
-                      ) : (
-                        'Mark done'
-                      )}
-                    </button>
-                    {/* Proov it button — only when not done */}
-                    {!isDone && (
+                    {/* Action buttons — pushed to card bottom */}
+                    <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 5 }}>
                       <button
                         onClick={e => {
                           e.stopPropagation();
-                          setProofSheet({ habitId: habit.id, habitName: habit.name });
+                          if (habit.type === 'checkbox') { if (!isDone) handleToggleHabit(habit.id); }
+                          else { isDone ? router.push(`/habits/${habit.id}`) : router.push(`/timer?habitId=${habit.id}&autostart=1`); }
                         }}
                         style={{
-                          width: '100%', padding: '5px 0', borderRadius: 8, fontSize: 9, fontWeight: 700, cursor: 'pointer',
-                          border: '1px solid var(--accent-border)', background: 'var(--accent-bg)',
-                          color: 'var(--accent-text)', fontFamily: 'inherit',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
+                          width: '100%', padding: '6px 0', borderRadius: 8, fontSize: 10, fontWeight: 700,
+                          cursor: isDone && habit.type === 'checkbox' ? 'default' : 'pointer',
+                          border: isDone ? 'none' : '1.5px solid var(--border2)',
+                          background: isDone ? 'var(--accent)' : 'transparent',
+                          color: isDone ? '#fff' : 'var(--text2)',
+                          fontFamily: 'inherit',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
                         }}
                       >
-                        <IconShieldCheck size={9} stroke={2} /> Proov it
+                        {isDone ? (
+                          <><IconCheck size={11} stroke={2.5} /> Done</>
+                        ) : habit.type === 'timed' ? (
+                          <><IconPlayerPlay size={11} stroke={2} /> Start</>
+                        ) : (
+                          'Mark done'
+                        )}
                       </button>
-                    )}
+                      {!isDone && (
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            setProofSheet({ habitId: habit.id, habitName: habit.name });
+                          }}
+                          style={{
+                            width: '100%', padding: '5px 0', borderRadius: 8, fontSize: 9, fontWeight: 700, cursor: 'pointer',
+                            border: '1px solid var(--accent-border)', background: 'var(--accent-bg)',
+                            color: 'var(--accent-text)', fontFamily: 'inherit',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
+                          }}
+                        >
+                          <IconShieldCheck size={9} stroke={2} /> Proov it
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
