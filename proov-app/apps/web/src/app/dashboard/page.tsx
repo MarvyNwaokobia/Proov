@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAccount } from 'wagmi';
 import Link from 'next/link';
 import {
   getUsernameForAddress, getUserHabits, getTodayCompletions, saveHabitCompletion,
@@ -86,7 +85,6 @@ export default function DashboardPage() {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [pendingHabits, setPendingHabits] = useState<Set<string>>(new Set());
   const proovTx = useProovTx();
-  const { isConnected } = useAccount();
 
   useEffect(() => {
     const isAuth = localStorage.getItem('proov_authenticated') === 'true';
@@ -254,10 +252,6 @@ export default function DashboardPage() {
   const handleToggleHabit = async (habitId: string) => {
     if (completedToday.includes(habitId)) return;
     if (pendingHabits.has(habitId)) return;
-    if (!isConnected) {
-      showToast('Session expired — please sign out and back in');
-      return;
-    }
     const addr = localStorage.getItem('proov_address') || '';
     const habit = habits.find(h => h.id === habitId);
 
