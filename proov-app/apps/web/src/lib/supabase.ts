@@ -388,45 +388,43 @@ export async function updateDailyStreak(userAddress: string): Promise<number> {
   if (!supabase || !userAddress) return 0;
 
   const addr = userAddress.toLowerCase();
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD UTC
 
+  // maybeSingle() returns null data (no error) when zero rows exist
   const { data: existing } = await supabase
     .from('streaks')
     .select('*')
     .eq('user_address', addr)
-    .single();
+    .maybeSingle();
 
   if (!existing) {
-    await supabase.from('streaks').insert({
+    await supabase.from('streaks').upsert({
       user_address: addr,
       current_streak: 1,
       longest_streak: 1,
       last_completion_date: today,
-    });
+    }, { onConflict: 'user_address' });
     return 1;
   }
 
-  const lastDate = existing.last_completion_date;
+  // Normalize: Postgres DATE columns can come back as full timestamp strings
+  const lastDate = (existing.last_completion_date as string).split('T')[0];
 
   if (lastDate === today) {
-    return existing.current_streak;
+    // Already counted today — return current value without touching the DB
+    return existing.current_streak as number;
   }
 
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-  let newStreak: number;
-  if (lastDate === yesterdayStr) {
-    newStreak = existing.current_streak + 1;
-  } else {
-    // Check 24h grace period
-    const lastDateTime = new Date(lastDate + 'T23:59:59');
-    const hoursSince = (Date.now() - lastDateTime.getTime()) / (1000 * 60 * 60);
-    newStreak = hoursSince <= 24 ? existing.current_streak + 1 : 1;
-  }
+  // Consecutive day → increment; gap → reset to 1
+  const newStreak: number = lastDate === yesterdayStr
+    ? (existing.current_streak as number) + 1
+    : 1;
 
-  const newLongest = Math.max(newStreak, existing.longest_streak);
+  const newLongest = Math.max(newStreak, existing.longest_streak as number);
 
   await supabase.from('streaks').update({
     current_streak: newStreak,

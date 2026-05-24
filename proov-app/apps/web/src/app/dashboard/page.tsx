@@ -188,6 +188,14 @@ export default function DashboardPage() {
           setHabits(userHabits);
           setCompletedToday(todayDone);
           localStorage.setItem('proov_habits_cache', JSON.stringify(userHabits));
+          // If every habit was already completed today (e.g. via timer / habits page),
+          // fire the streak update now so the daily streak accumulates correctly.
+          if (userHabits.length > 0 && userHabits.every((h: any) => todayDone.includes(h.id))) {
+            updateDailyStreak(addr).then(newStreak => {
+              setCurrentStreak(newStreak);
+              setLongestStreak(prev => Math.max(prev, newStreak));
+            }).catch(() => {});
+          }
         })
         .catch(() => {
           const cached = JSON.parse(localStorage.getItem('proov_habits_cache') || '[]');
