@@ -507,17 +507,9 @@ export default function SettingsPage() {
           <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>Streak alerts</span>
           <button
             onClick={handleToggleStreak}
-            style={{
-              width: 44, height: 26, borderRadius: 13, border: 'none',
-              background: notifStreak ? 'var(--accent)' : 'var(--border2)',
-              cursor: 'pointer', position: 'relative', transition: 'background .2s', flexShrink: 0,
-            }}
+            className={`notif-toggle${notifStreak ? ' is-on' : ''}`}
           >
-            <div style={{
-              position: 'absolute', top: 3, left: notifStreak ? 21 : 3,
-              width: 20, height: 20, borderRadius: '50%', background: '#fff',
-              transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.3)',
-            }} />
+            <span className="notif-toggle-thumb" style={{ left: notifStreak ? 21 : 3 }} />
           </button>
         </div>
 
@@ -526,17 +518,9 @@ export default function SettingsPage() {
           <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>Circle activity</span>
           <button
             onClick={handleToggleCircle}
-            style={{
-              width: 44, height: 26, borderRadius: 13, border: 'none',
-              background: notifCircle ? 'var(--accent)' : 'var(--border2)',
-              cursor: 'pointer', position: 'relative', transition: 'background .2s', flexShrink: 0,
-            }}
+            className={`notif-toggle${notifCircle ? ' is-on' : ''}`}
           >
-            <div style={{
-              position: 'absolute', top: 3, left: notifCircle ? 21 : 3,
-              width: 20, height: 20, borderRadius: '50%', background: '#fff',
-              transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.3)',
-            }} />
+            <span className="notif-toggle-thumb" style={{ left: notifCircle ? 21 : 3 }} />
           </button>
         </div>
 
