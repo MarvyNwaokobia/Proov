@@ -137,7 +137,7 @@ export default function GrindTimerPage() {
                 sessionId: saved?.id || null,
               }));
               if (saved) setSessionId(saved.id);
-              proovTx.startSession((found as any)?.on_chain_id || 0, dur);
+              if (isConnected) proovTx.startSession((found as any)?.on_chain_id || 0, dur);
             } else {
               setView('setup');
             }
