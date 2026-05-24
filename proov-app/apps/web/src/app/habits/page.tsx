@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   IconBrain, IconRun, IconYoga, IconBook, IconSalad, IconPalette,
-  IconArrowLeft, IconFlame, IconClock, IconCheck, IconArchive, IconPlayerPlay,
+  IconArrowLeft, IconFlame, IconClock, IconCheck, IconArchive, IconPlayerPlay, IconPlus,
   type Icon as TablerIcon,
 } from '@tabler/icons-react';
 import {
@@ -554,75 +554,91 @@ export default function HabitsPage() {
   // ── Habit card renderer ─────────────────────────────────────────────────────
   const renderHabit = (habit: Habit) => {
     const isDone = completedToday.includes(habit.id);
+    const streak = habitStreaks[habit.id] || 0;
     return (
       <div
         key={habit.id}
         onClick={() => router.push(`/habits/${habit.id}`)}
         style={{
           background: 'var(--card-bg)',
-          border: '1px solid var(--border)',
-          borderRadius: 14, padding: '12px 14px',
-          marginBottom: 8,
-          display: 'flex', gap: 12, alignItems: 'center',
-          cursor: 'pointer', transition: 'border-color 0.15s',
+          border: `1px solid ${isDone ? 'var(--accent-border)' : 'var(--border)'}`,
+          borderRadius: 16, padding: '14px 12px',
+          display: 'flex', flexDirection: 'column',
+          position: 'relative', cursor: 'pointer',
+          transition: 'border-color 0.15s',
         }}
-        onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent-border)')}
-        onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}>
-        <span style={{ fontSize: 24 }}>{habit.emoji}</span>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{habit.name}</div>
-          <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2, fontWeight: 600 }}>
-            {habit.type === 'timed' ? `${habit.duration_minutes} min` : 'Tap'} · {habit.schedule} · {habit.category}
-          </div>
-          <div style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700, marginTop: 3, display: 'flex', alignItems: 'center', gap: 3 }}>
-            <IconFlame size={12} stroke={2} />{isDone ? 'Done today' : `${habitStreaks[habit.id] || 0} day streak`}
-          </div>
-        </div>
-        {habit.type === 'timed' && !isDone && (
-          <button
-            onClick={e => { e.stopPropagation(); router.push(`/timer?habitId=${habit.id}&autostart=1`); }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 5,
-              padding: '7px 12px', borderRadius: 10, border: 'none',
-              background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)',
-              fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-              flexShrink: 0,
-            }}
-          >
-            <IconPlayerPlay size={13} stroke={2} /> Start
-          </button>
-        )}
-        {habit.type === 'timed' && isDone && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 4,
-            padding: '7px 12px', borderRadius: 10, flexShrink: 0,
-            background: 'var(--accent-bg)', color: 'var(--accent-text)',
-            fontSize: 12, fontWeight: 700,
-          }}>
-            <IconCheck size={13} stroke={2} /> Done
-          </div>
-        )}
+      >
+        {/* Archive button */}
         <button
           onClick={e => { e.stopPropagation(); handleArchive(habit.id); }}
           title="Archive habit"
           style={{
-            padding: '6px 7px', borderRadius: 9, flexShrink: 0,
-            border: '1px solid rgba(180, 100, 120, 0.28)',
-            background: 'transparent', color: '#a06070',
+            position: 'absolute', top: 10, right: 10,
+            padding: 5, borderRadius: 8, border: 'none',
+            background: 'transparent', color: 'var(--text3)',
             cursor: 'pointer', display: 'flex', alignItems: 'center',
-            transition: 'background 0.15s, color 0.15s',
-          }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLElement).style.background = 'rgba(180, 100, 120, 0.1)';
-            (e.currentTarget as HTMLElement).style.color = '#8a4a5e';
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLElement).style.background = 'transparent';
-            (e.currentTarget as HTMLElement).style.color = '#a06070';
           }}
         >
-          <IconArchive size={15} stroke={1.8} />
+          <IconArchive size={13} stroke={1.8} />
         </button>
+
+        {/* Emoji */}
+        <span style={{ fontSize: 26, marginBottom: 8 }}>{habit.emoji}</span>
+
+        {/* Name */}
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 4, paddingRight: 20, lineHeight: 1.3 }}>
+          {habit.name}
+        </div>
+
+        {/* Detail line */}
+        <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
+          {habit.type === 'timed' ? `${habit.duration_minutes}m` : 'Checkbox'}
+          {streak > 0 && <><span>·</span><IconFlame size={10} stroke={2} color="#f59e0b" /><span style={{ color: '#f59e0b', fontWeight: 700 }}>{streak}d</span></>}
+          {isDone && <><span>·</span><span style={{ color: 'var(--accent-text)', fontWeight: 700 }}>Done</span></>}
+        </div>
+
+        {/* Action button */}
+        {habit.type === 'timed' && !isDone && (
+          <button
+            onClick={e => { e.stopPropagation(); router.push(`/timer?habitId=${habit.id}&autostart=1`); }}
+            style={{
+              width: '100%', padding: '8px 0', borderRadius: 10, border: 'none',
+              background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)',
+              fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              marginTop: 'auto',
+            }}
+          >
+            <IconPlayerPlay size={12} stroke={2} /> Start
+          </button>
+        )}
+        {habit.type === 'checkbox' && !isDone && (
+          <button
+            onClick={e => { e.stopPropagation(); handleToggleCompletion(habit.id); }}
+            style={{
+              width: '100%', padding: '8px 0', borderRadius: 10, border: 'none',
+              background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)',
+              fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              marginTop: 'auto',
+            }}
+          >
+            <IconCheck size={12} stroke={2} /> Mark done
+          </button>
+        )}
+        {isDone && (
+          <div
+            style={{
+              width: '100%', padding: '8px 0', borderRadius: 10,
+              background: 'var(--accent-bg)', color: 'var(--accent-text)',
+              fontSize: 12, fontWeight: 700,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              marginTop: 'auto',
+            }}
+          >
+            <IconCheck size={12} stroke={2} /> Done
+          </div>
+        )}
       </div>
     );
   };
@@ -699,44 +715,40 @@ export default function HabitsPage() {
               <p style={{ textAlign: "center", color: "var(--text3)", fontSize: 13, padding: "2rem 0" }}>Loading habits…</p>
             )}
 
-            {/* No habits at all */}
-            {!loading && habits.length === 0 && (
-              <div style={{ textAlign: "center", padding: "3rem 0 1rem", color: "var(--text3)" }}>
-                <p style={{ marginBottom: 6, fontWeight: 600, color: "var(--text)", fontSize: 15 }}>No habits yet</p>
-                <p style={{ fontSize: 12 }}>Tap + New to create one, or explore Discover.</p>
-              </div>
-            )}
-
-            {/* All categories — grouped with section headers */}
-            {!loading && habits.length > 0 && catFilter === "All" && (
-              <div>
-                {CATEGORY_FILTERS.filter(f => f.value !== "All").map(({ value, label, Icon: CatIcon }) => {
-                  const catHabits = habits.filter(h => h.category === value);
-                  if (catHabits.length === 0) return null;
-                  return (
-                    <div key={value} style={{ marginBottom: '1.5rem' }}>
-                      <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: "var(--text3)", marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
-                        {CatIcon && <CatIcon size={12} stroke={2} />} {label}
-                      </p>
-                      {catHabits.map(renderHabit)}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Filtered view — specific category selected, habits found */}
-            {!loading && habits.length > 0 && catFilter !== "All" && filteredHabits.length > 0 && (
-              <div style={{ marginBottom: "1rem" }}>
+            {/* Habits grid */}
+            {!loading && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 {filteredHabits.map(renderHabit)}
-              </div>
-            )}
 
-            {/* Per-category empty state */}
-            {!loading && habits.length > 0 && catFilter !== "All" && filteredHabits.length === 0 && (
-              <div style={{ textAlign: "center", padding: "3rem 0 1rem", color: "var(--text3)" }}>
-                <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 6 }}>No {catFilter} habits yet</p>
-                <p style={{ fontSize: 12 }}>No habits here yet — try Discover.</p>
+                {/* Empty states */}
+                {filteredHabits.length === 0 && habits.length === 0 && (
+                  <div style={{ gridColumn: '1/-1', textAlign: "center", padding: "2rem 0 1rem", color: "var(--text3)" }}>
+                    <p style={{ marginBottom: 4, fontWeight: 600, color: "var(--text)", fontSize: 15 }}>No habits yet</p>
+                    <p style={{ fontSize: 12 }}>Add one below or explore Discover.</p>
+                  </div>
+                )}
+                {filteredHabits.length === 0 && habits.length > 0 && (
+                  <div style={{ gridColumn: '1/-1', textAlign: "center", padding: "2rem 0 1rem", color: "var(--text3)" }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>No {catFilter} habits yet</p>
+                    <p style={{ fontSize: 12 }}>Try Discover to add some.</p>
+                  </div>
+                )}
+
+                {/* Add habit dashed button */}
+                <button
+                  onClick={() => { setPrefill(undefined); setShowForm(true); }}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    gap: 6, padding: '20px 0', borderRadius: 16,
+                    border: '1.5px dashed var(--border2)',
+                    background: 'transparent', color: 'var(--text3)',
+                    cursor: 'pointer', fontFamily: 'inherit', fontSize: 12,
+                    minHeight: 100,
+                  }}
+                >
+                  <IconPlus size={20} stroke={1.5} />
+                  Add habit
+                </button>
               </div>
             )}
           </>
