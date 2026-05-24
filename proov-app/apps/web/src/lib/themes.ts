@@ -17,6 +17,7 @@ export interface ThemeVariant {
   '--accent-text': string;
   '--card-bg': string;
   '--card-border': string;
+  '--modal-surface': string;
   '--pink': string;
   '--pink-bg': string;
   '--pink-border': string;
@@ -55,6 +56,7 @@ export const THEMES: Record<ThemeId, Theme> = {
       '--accent': '#059669', '--accent2': '#047857',
       '--accent-bg': 'rgba(5,150,105,.1)', '--accent-border': 'rgba(5,150,105,.25)', '--accent-text': '#065f46',
       '--card-bg': '#ffffff', '--card-border': 'rgba(16,185,129,.15)',
+      '--modal-surface': '#ffffff',
       '--pink': '#ec4899', '--pink-bg': 'rgba(236,72,153,.08)', '--pink-border': 'rgba(236,72,153,.2)', '--pink-text': '#be185d',
       '--amber': '#d97706', '--input-bg': 'rgba(5,150,105,.05)', '--input-border': 'rgba(5,150,105,.2)',
       '--nav-bg': 'rgba(240,253,244,.9)', '--btn-primary-bg': '#059669', '--btn-primary-text': '#ffffff', '--btn-primary-shadow': 'rgba(5,150,105,.3)',
@@ -68,6 +70,7 @@ export const THEMES: Record<ThemeId, Theme> = {
       '--accent': '#10b981', '--accent2': '#059669',
       '--accent-bg': 'rgba(16,185,129,.12)', '--accent-border': 'rgba(16,185,129,.3)', '--accent-text': '#6ee7b7',
       '--card-bg': 'rgba(16,185,129,.07)', '--card-border': 'rgba(16,185,129,.15)',
+      '--modal-surface': '#152b1e',
       '--pink': '#f472b6', '--pink-bg': 'rgba(244,114,182,.08)', '--pink-border': 'rgba(244,114,182,.2)', '--pink-text': '#f9a8d4',
       '--amber': '#f59e0b', '--input-bg': 'rgba(16,185,129,.06)', '--input-border': 'rgba(16,185,129,.2)',
       '--nav-bg': 'rgba(10,31,20,.9)', '--btn-primary-bg': '#10b981', '--btn-primary-text': '#ffffff', '--btn-primary-shadow': 'rgba(16,185,129,.4)',
@@ -84,6 +87,7 @@ export const THEMES: Record<ThemeId, Theme> = {
       '--accent': '#6366f1', '--accent2': '#4f46e5',
       '--accent-bg': 'rgba(99,102,241,.1)', '--accent-border': 'rgba(99,102,241,.25)', '--accent-text': '#4338ca',
       '--card-bg': '#ffffff', '--card-border': 'rgba(99,102,241,.15)',
+      '--modal-surface': '#ffffff',
       '--pink': '#ec4899', '--pink-bg': 'rgba(236,72,153,.08)', '--pink-border': 'rgba(236,72,153,.2)', '--pink-text': '#be185d',
       '--amber': '#d97706', '--input-bg': 'rgba(99,102,241,.05)', '--input-border': 'rgba(99,102,241,.2)',
       '--nav-bg': 'rgba(248,247,255,.9)', '--btn-primary-bg': '#6366f1', '--btn-primary-text': '#ffffff', '--btn-primary-shadow': 'rgba(99,102,241,.3)',
@@ -97,6 +101,7 @@ export const THEMES: Record<ThemeId, Theme> = {
       '--accent': '#6366f1', '--accent2': '#8b5cf6',
       '--accent-bg': 'rgba(99,102,241,.12)', '--accent-border': 'rgba(99,102,241,.25)', '--accent-text': '#a5b4fc',
       '--card-bg': 'rgba(255,255,255,.04)', '--card-border': 'rgba(255,255,255,.08)',
+      '--modal-surface': '#16162e',
       '--pink': '#ec4899', '--pink-bg': 'rgba(236,72,153,.08)', '--pink-border': 'rgba(236,72,153,.2)', '--pink-text': '#f9a8d4',
       '--amber': '#f59e0b', '--input-bg': 'rgba(255,255,255,.05)', '--input-border': 'rgba(255,255,255,.12)',
       '--nav-bg': 'rgba(9,9,15,.9)', '--btn-primary-bg': '#6366f1', '--btn-primary-text': '#ffffff', '--btn-primary-shadow': 'rgba(99,102,241,.4)',
@@ -113,6 +118,7 @@ export const THEMES: Record<ThemeId, Theme> = {
       '--accent': '#f43f5e', '--accent2': '#e11d48',
       '--accent-bg': 'rgba(244,63,94,.1)', '--accent-border': 'rgba(244,63,94,.25)', '--accent-text': '#9f1239',
       '--card-bg': '#ffffff', '--card-border': 'rgba(244,63,94,.15)',
+      '--modal-surface': '#ffffff',
       '--pink': '#f43f5e', '--pink-bg': 'rgba(244,63,94,.08)', '--pink-border': 'rgba(244,63,94,.2)', '--pink-text': '#9f1239',
       '--amber': '#d97706', '--input-bg': 'rgba(244,63,94,.05)', '--input-border': 'rgba(244,63,94,.2)',
       '--nav-bg': 'rgba(255,241,242,.9)', '--btn-primary-bg': '#f43f5e', '--btn-primary-text': '#ffffff', '--btn-primary-shadow': 'rgba(244,63,94,.3)',
@@ -126,6 +132,7 @@ export const THEMES: Record<ThemeId, Theme> = {
       '--accent': '#f43f5e', '--accent2': '#e11d48',
       '--accent-bg': 'rgba(244,63,94,.12)', '--accent-border': 'rgba(244,63,94,.3)', '--accent-text': '#fda4af',
       '--card-bg': 'rgba(244,63,94,.06)', '--card-border': 'rgba(244,63,94,.12)',
+      '--modal-surface': '#2d1122',
       '--pink': '#f43f5e', '--pink-bg': 'rgba(244,63,94,.1)', '--pink-border': 'rgba(244,63,94,.25)', '--pink-text': '#fda4af',
       '--amber': '#f59e0b', '--input-bg': 'rgba(244,63,94,.06)', '--input-border': 'rgba(244,63,94,.2)',
       '--nav-bg': 'rgba(26,8,18,.9)', '--btn-primary-bg': '#f43f5e', '--btn-primary-text': '#ffffff', '--btn-primary-shadow': 'rgba(244,63,94,.4)',
@@ -142,6 +149,7 @@ export const THEMES: Record<ThemeId, Theme> = {
       '--accent': '#7c3aed', '--accent2': '#6d28d9',
       '--accent-bg': 'rgba(124,58,237,.1)', '--accent-border': 'rgba(124,58,237,.25)', '--accent-text': '#4c1d95',
       '--card-bg': '#ffffff', '--card-border': 'rgba(124,58,237,.15)',
+      '--modal-surface': '#ffffff',
       '--pink': '#ec4899', '--pink-bg': 'rgba(236,72,153,.08)', '--pink-border': 'rgba(236,72,153,.2)', '--pink-text': '#be185d',
       '--amber': '#d97706', '--input-bg': 'rgba(124,58,237,.05)', '--input-border': 'rgba(124,58,237,.2)',
       '--nav-bg': 'rgba(245,243,255,.9)', '--btn-primary-bg': '#7c3aed', '--btn-primary-text': '#ffffff', '--btn-primary-shadow': 'rgba(124,58,237,.3)',
@@ -155,6 +163,7 @@ export const THEMES: Record<ThemeId, Theme> = {
       '--accent': '#7c3aed', '--accent2': '#6d28d9',
       '--accent-bg': 'rgba(124,58,237,.12)', '--accent-border': 'rgba(124,58,237,.3)', '--accent-text': '#c4b5fd',
       '--card-bg': 'rgba(139,92,246,.06)', '--card-border': 'rgba(139,92,246,.12)',
+      '--modal-surface': '#1a0a36',
       '--pink': '#ec4899', '--pink-bg': 'rgba(236,72,153,.08)', '--pink-border': 'rgba(236,72,153,.2)', '--pink-text': '#f9a8d4',
       '--amber': '#f59e0b', '--input-bg': 'rgba(139,92,246,.06)', '--input-border': 'rgba(139,92,246,.2)',
       '--nav-bg': 'rgba(13,2,33,.9)', '--btn-primary-bg': '#7c3aed', '--btn-primary-text': '#ffffff', '--btn-primary-shadow': 'rgba(124,58,237,.4)',
@@ -171,6 +180,7 @@ export const THEMES: Record<ThemeId, Theme> = {
       '--accent': '#d97706', '--accent2': '#b45309',
       '--accent-bg': 'rgba(217,119,6,.1)', '--accent-border': 'rgba(217,119,6,.25)', '--accent-text': '#78350f',
       '--card-bg': '#ffffff', '--card-border': 'rgba(217,119,6,.15)',
+      '--modal-surface': '#ffffff',
       '--pink': '#ec4899', '--pink-bg': 'rgba(236,72,153,.08)', '--pink-border': 'rgba(236,72,153,.2)', '--pink-text': '#be185d',
       '--amber': '#d97706', '--input-bg': 'rgba(217,119,6,.05)', '--input-border': 'rgba(217,119,6,.2)',
       '--nav-bg': 'rgba(255,251,235,.9)', '--btn-primary-bg': '#d97706', '--btn-primary-text': '#ffffff', '--btn-primary-shadow': 'rgba(217,119,6,.3)',
@@ -184,6 +194,7 @@ export const THEMES: Record<ThemeId, Theme> = {
       '--accent': '#f59e0b', '--accent2': '#d97706',
       '--accent-bg': 'rgba(245,158,11,.12)', '--accent-border': 'rgba(245,158,11,.3)', '--accent-text': '#fcd34d',
       '--card-bg': 'rgba(217,119,6,.07)', '--card-border': 'rgba(217,119,6,.15)',
+      '--modal-surface': '#2c1a0c',
       '--pink': '#f472b6', '--pink-bg': 'rgba(244,114,182,.08)', '--pink-border': 'rgba(244,114,182,.2)', '--pink-text': '#f9a8d4',
       '--amber': '#f59e0b', '--input-bg': 'rgba(217,119,6,.06)', '--input-border': 'rgba(217,119,6,.2)',
       '--nav-bg': 'rgba(28,16,8,.9)', '--btn-primary-bg': '#f59e0b', '--btn-primary-text': '#1c1008', '--btn-primary-shadow': 'rgba(245,158,11,.4)',
