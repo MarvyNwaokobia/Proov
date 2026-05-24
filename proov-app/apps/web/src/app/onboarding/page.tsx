@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
 const THEMES = [
@@ -16,11 +16,34 @@ const MODES = [
   { id: 'system', label: 'Auto',  emoji: '⚙️', desc: 'Follows your device' },
 ];
 
+async function compressAvatar(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 200; canvas.height = 200;
+        const ctx = canvas.getContext('2d')!;
+        const min = Math.min(img.width, img.height);
+        ctx.drawImage(img, (img.width - min) / 2, (img.height - min) / 2, min, min, 0, 0, 200, 200);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = reject;
+      img.src = ev.target?.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function OnboardingPage() {
   const router = useRouter();
   const [selectedTheme, setSelectedTheme] = useState('bloom');
   const [selectedMode, setSelectedMode] = useState('light');
-  const [step, setStep] = useState<'theme' | 'mode'>('theme');
+  const [step, setStep] = useState<'theme' | 'mode' | 'photo'>('theme');
+  const [avatarDataUrl, setAvatarDataUrl] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const applyPreview = (themeId: string, mode: string) => {
     localStorage.setItem('proov_theme', themeId);
@@ -43,15 +66,24 @@ export default function OnboardingPage() {
     localStorage.setItem('proov_theme', selectedTheme);
     localStorage.setItem('proov_mode', selectedMode);
     localStorage.setItem('proov_onboarding_done', '1');
+    if (avatarDataUrl) localStorage.setItem('proov_avatar', avatarDataUrl);
     router.push('/dashboard');
   };
 
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const dataUrl = await compressAvatar(file);
+      setAvatarDataUrl(dataUrl);
+    } catch {}
+    e.target.value = '';
+  };
+
   const handleContinue = () => {
-    if (step === 'theme') {
-      setStep('mode');
-    } else {
-      finish();
-    }
+    if (step === 'theme') { setStep('mode'); return; }
+    if (step === 'mode')  { setStep('photo'); return; }
+    finish();
   };
 
   return (
@@ -69,28 +101,35 @@ export default function OnboardingPage() {
           {/* Header */}
           <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
             <div style={{ fontSize: 40, marginBottom: 10 }}>
-              {step === 'theme' ? '🎨' : '✨'}
+              {step === 'theme' ? '🎨' : step === 'mode' ? '✨' : '📸'}
             </div>
             <h2 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)', letterSpacing: '-.5px', marginBottom: 6 }}>
-              {step === 'theme' ? 'Pick your vibe' : 'Light or dark?'}
+              {step === 'theme' ? 'Pick your vibe' : step === 'mode' ? 'Light or dark?' : 'Add a profile photo'}
             </h2>
             <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.6 }}>
               {step === 'theme'
                 ? 'Choose a look that feels like you. You can change it anytime.'
-                : 'How do you like your apps?'}
+                : step === 'mode'
+                ? 'How do you like your apps?'
+                : 'Put a face to your name. Totally optional — you can add it later in settings.'}
             </p>
           </div>
 
           {/* Step dots */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: '1.5rem' }}>
-            {(['theme', 'mode'] as const).map((s, i) => (
-              <div key={s} style={{
-                height: 4, borderRadius: 2,
-                width: s === step ? 20 : 6,
-                background: s === step || (step === 'mode' && i === 0) ? 'var(--accent)' : 'var(--border2)',
-                transition: 'all .2s ease',
-              }} />
-            ))}
+            {(['theme', 'mode', 'photo'] as const).map((s, i) => {
+              const stepOrder = { theme: 0, mode: 1, photo: 2 };
+              const done = stepOrder[step] > i;
+              const active = s === step;
+              return (
+                <div key={s} style={{
+                  height: 4, borderRadius: 2,
+                  width: active ? 20 : 6,
+                  background: active || done ? 'var(--accent)' : 'var(--border2)',
+                  transition: 'all .2s ease',
+                }} />
+              );
+            })}
           </div>
 
           {/* Theme options */}
@@ -153,10 +192,38 @@ export default function OnboardingPage() {
             </div>
           )}
 
+          {/* Photo step UI */}
+          {step === 'photo' && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, marginBottom: '1.5rem' }}>
+              {/* Avatar preview */}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  width: 120, height: 120, borderRadius: '50%', border: `3px dashed ${avatarDataUrl ? 'var(--accent)' : 'var(--border2)'}`,
+                  background: avatarDataUrl ? 'transparent' : 'var(--bg2)',
+                  overflow: 'hidden', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'border-color .2s',
+                }}
+              >
+                {avatarDataUrl
+                  ? <img src={avatarDataUrl} alt="avatar preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <span style={{ fontSize: 40 }}>👤</span>
+                }
+              </button>
+              <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                style={{ padding: '10px 24px', borderRadius: 12, border: '1.5px solid var(--accent-border)', background: 'var(--accent-bg)', color: 'var(--accent-text)', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                {avatarDataUrl ? 'Choose a different photo' : 'Choose a photo'}
+              </button>
+            </div>
+          )}
+
           {/* Continue */}
           <button onClick={handleContinue} className="btn-primary"
             style={{ width: '100%', padding: 14, borderRadius: 14, border: 'none', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-            {step === 'theme' ? 'Next →' : 'Looks good →'}
+            {step === 'photo' ? (avatarDataUrl ? 'Look good! →' : 'Skip for now →') : 'Next →'}
           </button>
 
           {step === 'theme' && (

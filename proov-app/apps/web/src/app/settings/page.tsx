@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
 import { validateUsername, isUsernameTaken, registerUsername } from '@/lib/username';
 import { setIdentityUsername } from '@/lib/auth';
-import { updateUsername as updateSupabaseUsername, getAiVerificationUsage } from '@/lib/supabase';
+import { updateUsername as updateSupabaseUsername, getAiVerificationUsage, saveAvatarUrl, getAvatarUrl } from '@/lib/supabase';
 import { useProovTx } from '@/hooks/useProovTx';
 import {
   IconTrophy,
@@ -52,6 +52,7 @@ export default function SettingsPage() {
   const [secondsUntilClaim, setSecondsUntilClaim] = useState(0);
   const [claimingFuel, setClaimingFuel] = useState(false);
   const [verificationUsed, setVerificationUsed] = useState(0);
+  const [avatarUrl, setAvatarUrl] = useState('');
 
   // Notification preferences
   const [notifTime, setNotifTime] = useState('09:00');
@@ -90,6 +91,16 @@ export default function SettingsPage() {
     // Load AI verification usage
     if (addr) {
       getAiVerificationUsage(addr.toLowerCase()).then(({ used }) => setVerificationUsed(used)).catch(() => {});
+    }
+
+    // Load avatar — localStorage first, then Supabase
+    const storedAvatar = localStorage.getItem('proov_avatar');
+    if (storedAvatar) {
+      setAvatarUrl(storedAvatar);
+    } else if (addr) {
+      getAvatarUrl(addr).then(url => {
+        if (url) { setAvatarUrl(url); localStorage.setItem('proov_avatar', url); }
+      }).catch(() => {});
     }
   }, []);
 
@@ -156,6 +167,36 @@ export default function SettingsPage() {
     setNewUsername('');
     setUsernameHint('');
     showToast('✓ Username saved');
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = 200; canvas.height = 200;
+          const ctx = canvas.getContext('2d')!;
+          const min = Math.min(img.width, img.height);
+          ctx.drawImage(img, (img.width - min) / 2, (img.height - min) / 2, min, min, 0, 0, 200, 200);
+          resolve(canvas.toDataURL('image/jpeg', 0.82));
+        };
+        img.onerror = reject;
+        img.src = ev.target?.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    localStorage.setItem('proov_avatar', dataUrl);
+    setAvatarUrl(dataUrl);
+    const addr = localStorage.getItem('proov_address') || '';
+    if (addr) saveAvatarUrl(addr, dataUrl).catch(() => {});
+    showToast('✓ Photo saved');
+    // reset input so the same file can be re-picked
+    e.target.value = '';
   };
 
   const handleSignOut = async () => {
@@ -298,6 +339,23 @@ export default function SettingsPage() {
 
         {/* ── Account Details ── */}
         <p style={{ ...sectionLabel, marginTop: 16 }}>Account Details</p>
+
+        {/* Profile photo row */}
+        <div style={{ display: 'flex', alignItems: 'center', padding: '13px 0', borderBottom: '1px solid var(--border)' }}>
+          <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>Profile photo</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 38, height: 38, borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--accent-border)', background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              {avatarUrl
+                ? <img src={avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent-text)' }}>{(username || 'P').slice(0, 1).toUpperCase()}</span>
+              }
+            </div>
+            <label style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid var(--border2)', background: 'transparent', color: 'var(--text2)', fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              {avatarUrl ? 'Change' : 'Upload'}
+              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} />
+            </label>
+          </div>
+        </div>
 
         {/* Username row */}
         <div

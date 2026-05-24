@@ -7,7 +7,7 @@ import {
   getStreakData, updateDailyStreak, getAllHabitStreaks,
   getCircleRequests, getUsernamesForAddresses, getLatestActivityForAddress,
   sendNudge, getTodayNudgesSent, getGlobalLeaderboard,
-  getVerifiedHabitsToday,
+  getVerifiedHabitsToday, getAvatarUrl,
   type Habit,
 } from '@/lib/supabase';
 import { useProovTx } from '@/hooks/useProovTx';
@@ -18,7 +18,6 @@ import {
   IconUsers,
   IconPlus,
   IconPlayerPlay,
-  IconSettings2,
   IconTarget,
   IconHeart,
   IconBell,
@@ -83,6 +82,7 @@ export default function DashboardPage() {
   const [fuelBalance, setFuelBalance] = useState(0);
   const [verifiedHabits, setVerifiedHabits] = useState<string[]>([]);
   const [proofSheet, setProofSheet] = useState<{ habitId: string; habitName: string } | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState('');
   const proovTx = useProovTx();
 
   useEffect(() => {
@@ -191,6 +191,15 @@ export default function DashboardPage() {
   useEffect(() => {
     setMounted(true);
     const addr = localStorage.getItem('proov_address') || '';
+    // Load avatar — localStorage first, then Supabase
+    const storedAvatar = localStorage.getItem('proov_avatar');
+    if (storedAvatar) {
+      setAvatarUrl(storedAvatar);
+    } else if (addr) {
+      getAvatarUrl(addr).then(url => {
+        if (url) { setAvatarUrl(url); localStorage.setItem('proov_avatar', url); }
+      }).catch(() => {});
+    }
     if (addr) {
       Promise.all([getUserHabits(addr), getTodayCompletions(addr), getVerifiedHabitsToday(addr)])
         .then(([userHabits, todayDone, verifiedIds]) => {
@@ -306,8 +315,14 @@ export default function DashboardPage() {
                 {Math.floor(fuelBalance)} Fuel
               </div>
             )}
-            <button onClick={() => router.push('/settings')} style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--bg2)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)', cursor: 'pointer' }}>
-              <IconSettings2 size={14} stroke={1.8} />
+            <button
+              onClick={() => router.push('/settings')}
+              style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid var(--accent-border)', overflow: 'hidden', cursor: 'pointer', background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 }}
+            >
+              {avatarUrl
+                ? <img src={avatarUrl} alt="profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent-text)', lineHeight: 1 }}>{(username || 'P').slice(0, 1).toUpperCase()}</span>
+              }
             </button>
           </div>
         </div>
