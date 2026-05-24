@@ -299,11 +299,13 @@ export async function getCustomSessionHistory(userAddress: string): Promise<Time
 export async function getLatestActivityForAddress(address: string): Promise<{
   habitName: string;
   completedAt: string;
+  habitVisibility: string;
+  habitVisibleTo: string[];
 } | null> {
   if (!supabase || !address) return null;
   const { data } = await supabase
     .from('habit_completions')
-    .select('completed_at, habits(name)')
+    .select('completed_at, habits(name, visibility, visible_to)')
     .eq('user_address', address.toLowerCase())
     .order('completed_at', { ascending: false })
     .limit(1)
@@ -312,6 +314,8 @@ export async function getLatestActivityForAddress(address: string): Promise<{
   return {
     habitName: (data as any).habits?.name || 'a habit',
     completedAt: (data as any).completed_at,
+    habitVisibility: (data as any).habits?.visibility || 'private',
+    habitVisibleTo: (data as any).habits?.visible_to || [],
   };
 }
 
