@@ -23,6 +23,7 @@ export default function ProfilePage() {
   const [habitStreaks, setHabitStreaks] = useState<Record<string, number>>({});
   const [completionDates, setCompletionDates] = useState<string[]>([]);
   const [memberSince, setMemberSince] = useState('');
+  const [joinDate, setJoinDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const address = (rawAddress || '').toLowerCase();
@@ -57,6 +58,7 @@ export default function ProfilePage() {
       if (createdAt) {
         const d = new Date(createdAt as string);
         setMemberSince(d.toLocaleString('default', { month: 'short', year: 'numeric' }));
+        setJoinDate(createdAt as string);
       }
 
       setLoading(false);
@@ -72,7 +74,20 @@ export default function ProfilePage() {
   const displayName = username ? `@${username}` : address.slice(0, 8) + '…';
   const initial = (username || address).slice(0, 1).toUpperCase();
 
-  // Build 7-row × 8-col heatmap (last 56 days, row=day-of-week, col=week)
+  // Weeks to show: grows from 1 (current week only) as the user builds history, up to 8 max
+  const weeksToShow = (() => {
+    if (!joinDate) return 1;
+    const join = new Date(joinDate);
+    join.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const daysSince = Math.floor((today.getTime() - join.getTime()) / 86400000);
+    return Math.min(Math.max(1, Math.ceil((daysSince + 1) / 7)), 8);
+  })();
+
+  const historyLabel = weeksToShow === 1 ? 'this week' : `last ${weeksToShow} week${weeksToShow > 1 ? 's' : ''}`;
+
+  // Build 7-row × weeksToShow-col heatmap (row=day-of-week, col=week, newest on right)
   const heatmap = (() => {
     const dateSet = new Set(completionDates);
     const today = new Date();
@@ -80,8 +95,8 @@ export default function ProfilePage() {
     const rows: { date: string; done: boolean; future: boolean }[][] = [];
     for (let row = 0; row < 7; row++) {
       rows.push([]);
-      for (let col = 0; col < 8; col++) {
-        const daysAgo = (6 - row) + (7 - col) * 7;
+      for (let col = 0; col < weeksToShow; col++) {
+        const daysAgo = (6 - row) + (weeksToShow - 1 - col) * 7;
         const d = new Date(today);
         d.setDate(today.getDate() - daysAgo);
         const dateStr = d.toISOString().split('T')[0];
@@ -202,7 +217,7 @@ export default function ProfilePage() {
         {/* Heatmap */}
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.2px', color: 'var(--text3)', marginBottom: 10 }}>
-            Streak history · last 8 weeks
+            Streak history · {historyLabel}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             {heatmap.map((row, ri) => (
