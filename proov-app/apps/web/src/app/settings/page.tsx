@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
 import { validateUsername, isUsernameTaken, registerUsername } from '@/lib/username';
 import { setIdentityUsername } from '@/lib/auth';
-import { updateUsername as updateSupabaseUsername, getAiVerificationUsage, saveAvatarUrl, getAvatarUrl } from '@/lib/supabase';
+import { updateUsername as updateSupabaseUsername, getAiVerificationUsage, updateAvatarUrl, getAvatarUrl } from '@/lib/supabase';
 import { useProovTx } from '@/hooks/useProovTx';
 import {
   IconTrophy,
@@ -193,7 +193,7 @@ export default function SettingsPage() {
     localStorage.setItem('proov_avatar', dataUrl);
     setAvatarUrl(dataUrl);
     const addr = localStorage.getItem('proov_address') || '';
-    if (addr) saveAvatarUrl(addr, dataUrl).catch(() => {});
+    if (addr) updateAvatarUrl(addr, dataUrl).catch(() => {});
     showToast('✓ Photo saved');
     // reset input so the same file can be re-picked
     e.target.value = '';
