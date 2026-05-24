@@ -486,48 +486,49 @@ export default function DashboardPage() {
                       {habitStreak > 0 && <> · <IconFlame size={8} stroke={2} color="#f59e0b" />{habitStreak}d</>}
                       {isDone && ' · Done'}
                     </div>
-                    {/* Action button */}
-                    <button
-                      onClick={e => {
-                        e.stopPropagation();
-                        if (habit.type === 'checkbox') { if (!isDone) handleToggleHabit(habit.id); }
-                        else { isDone ? router.push(`/habits/${habit.id}`) : router.push(`/timer?habitId=${habit.id}&autostart=1`); }
-                      }}
-                      style={{
-                        width: '100%', padding: '6px 0', borderRadius: 8, fontSize: 10, fontWeight: 700, cursor: isDone && habit.type === 'checkbox' ? 'default' : 'pointer',
-                        border: isDone ? 'none' : '1.5px solid var(--border2)',
-                        background: isDone ? 'var(--accent)' : 'transparent',
-                        color: isDone ? '#fff' : 'var(--text2)',
-                        fontFamily: 'inherit',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-                        marginBottom: !isDone ? 5 : 0,
-                      }}
-                    >
-                      {isDone ? (
-                        <><IconCheck size={11} stroke={2.5} /> Done</>
-                      ) : habit.type === 'timed' ? (
-                        <><IconPlayerPlay size={11} stroke={2} /> Start</>
-                      ) : (
-                        'Mark done'
-                      )}
-                    </button>
-                    {/* Proov it button — only when not done */}
-                    {!isDone && (
+                    {/* Action buttons — pushed to card bottom */}
+                    <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 5 }}>
                       <button
                         onClick={e => {
                           e.stopPropagation();
-                          setProofSheet({ habitId: habit.id, habitName: habit.name });
+                          if (habit.type === 'checkbox') { if (!isDone) handleToggleHabit(habit.id); }
+                          else { isDone ? router.push(`/habits/${habit.id}`) : router.push(`/timer?habitId=${habit.id}&autostart=1`); }
                         }}
                         style={{
-                          width: '100%', padding: '5px 0', borderRadius: 8, fontSize: 9, fontWeight: 700, cursor: 'pointer',
-                          border: '1px solid var(--accent-border)', background: 'var(--accent-bg)',
-                          color: 'var(--accent-text)', fontFamily: 'inherit',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
+                          width: '100%', padding: '6px 0', borderRadius: 8, fontSize: 10, fontWeight: 700,
+                          cursor: isDone && habit.type === 'checkbox' ? 'default' : 'pointer',
+                          border: isDone ? 'none' : '1.5px solid var(--border2)',
+                          background: isDone ? 'var(--accent)' : 'transparent',
+                          color: isDone ? '#fff' : 'var(--text2)',
+                          fontFamily: 'inherit',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
                         }}
                       >
-                        <IconShieldCheck size={9} stroke={2} /> Proov it
+                        {isDone ? (
+                          <><IconCheck size={11} stroke={2.5} /> Done</>
+                        ) : habit.type === 'timed' ? (
+                          <><IconPlayerPlay size={11} stroke={2} /> Start</>
+                        ) : (
+                          'Mark done'
+                        )}
                       </button>
-                    )}
+                      {!isDone && (
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            setProofSheet({ habitId: habit.id, habitName: habit.name });
+                          }}
+                          style={{
+                            width: '100%', padding: '5px 0', borderRadius: 8, fontSize: 9, fontWeight: 700, cursor: 'pointer',
+                            border: '1px solid var(--accent-border)', background: 'var(--accent-bg)',
+                            color: 'var(--accent-text)', fontFamily: 'inherit',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
+                          }}
+                        >
+                          <IconShieldCheck size={9} stroke={2} /> Proov it
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}

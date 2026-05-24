@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 200,
         system: 'You are a habit verification assistant for Proov, a habit tracking app. Your job is to evaluate whether submitted proof (photo or text) reasonably demonstrates that a user completed their stated habit. Be encouraging but honest. Always respond with valid JSON only.',
         messages: [{ role: 'user', content: userContent }],
