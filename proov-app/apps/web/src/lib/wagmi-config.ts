@@ -9,10 +9,12 @@ import { celo, celoSepolia } from "viem/chains";
 export const clientId = process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID || "";
 export const hasWeb3AuthClientId = !!clientId;
 
+const CELO_RPC = process.env.NEXT_PUBLIC_CELO_RPC_URL || "https://forno.celo.org";
+
 const chainConfig = {
   chainNamespace: CHAIN_NAMESPACES.EIP155,
   chainId: "0xA4EC",
-  rpcTarget: "https://forno.celo.org",
+  rpcTarget: CELO_RPC,
   displayName: "Celo",
   ticker: "CELO",
   tickerName: "Celo",
@@ -58,7 +60,7 @@ export const wagmiConfig = createConfig({
   chains: [celo, celoSepolia],
   connectors: buildConnectors(),
   transports: {
-    [celo.id]: http("https://forno.celo.org"),
+    [celo.id]: http(CELO_RPC),
     [celoSepolia.id]: http("https://forno.celo-sepolia.celo-testnet.org"),
   },
   // ssr: false — server uses mock connectors, client uses AA connector.
