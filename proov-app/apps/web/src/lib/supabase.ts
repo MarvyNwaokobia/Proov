@@ -545,3 +545,36 @@ export async function getAllHabitStreaks(
   );
   return streakMap;
 }
+
+export async function getTotalCompletions(userAddress: string): Promise<number> {
+  if (!supabase) return 0;
+  const { count } = await supabase
+    .from('habit_completions')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_address', userAddress.toLowerCase());
+  return count || 0;
+}
+
+export async function getCompletionDates(userAddress: string): Promise<string[]> {
+  if (!supabase) return [];
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 56);
+  const { data } = await supabase
+    .from('habit_completions')
+    .select('completed_at')
+    .eq('user_address', userAddress.toLowerCase())
+    .gte('completed_at', cutoff.toISOString());
+  const dateSet = new Set<string>();
+  (data || []).forEach((c: any) => dateSet.add(c.completed_at.split('T')[0]));
+  return Array.from(dateSet);
+}
+
+export async function getProfileCreatedAt(address: string): Promise<string | null> {
+  if (!supabase) return null;
+  const { data } = await supabase
+    .from('profiles')
+    .select('created_at')
+    .eq('address', address.toLowerCase())
+    .maybeSingle();
+  return data?.created_at || null;
+}
