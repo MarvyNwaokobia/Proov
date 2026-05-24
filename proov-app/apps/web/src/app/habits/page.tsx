@@ -477,6 +477,11 @@ export default function HabitsPage() {
   const handleSave = async (data: SaveData) => {
     if (!isConnected) { showToast('Session expired — please sign out and back in'); return; }
     setIsSaving(true);
+
+    // tx must be submitted before we write to Supabase
+    const txOk = await proovTx.createHabit(data.name, data.catId, data.hasTimer, data.hasTimer ? data.duration : 0);
+    if (!txOk) { setIsSaving(false); return; }
+
     const address = localStorage.getItem('proov_address') || '';
     const saved = await saveHabit({
       user_address: address.toLowerCase(),
@@ -491,7 +496,6 @@ export default function HabitsPage() {
       active: true,
     });
     if (saved) {
-      proovTx.createHabit(data.name, data.catId, data.hasTimer, data.hasTimer ? data.duration : 0);
       setHabits(prev => [...prev, saved]);
       const cached = JSON.parse(localStorage.getItem('proov_habits_cache') || '[]');
       localStorage.setItem('proov_habits_cache', JSON.stringify([...cached, saved]));
@@ -507,8 +511,9 @@ export default function HabitsPage() {
   const handleArchive = async (habitId: string) => {
     if (!isConnected) { showToast('Session expired — please sign out and back in'); return; }
     const habit = habits.find(h => h.id === habitId);
+    const txOk = await proovTx.removeHabit((habit as any)?.on_chain_id || 0);
+    if (!txOk) return;
     await supabaseDeactivate(habitId);
-    proovTx.removeHabit((habit as any)?.on_chain_id || 0);
     setHabits(prev => prev.filter(h => h.id !== habitId));
     const cached = JSON.parse(localStorage.getItem('proov_habits_cache') || '[]');
     localStorage.setItem('proov_habits_cache', JSON.stringify(cached.filter((h: any) => h.id !== habitId)));
@@ -545,6 +550,8 @@ export default function HabitsPage() {
   const handleAddSuggestion = async (s: SuggestionItem) => {
     if (!isConnected) { showToast('Session expired — please sign out and back in'); return; }
     setIsSaving(true);
+    const txOk = await proovTx.createHabit(s.name, suggestionCategory.toLowerCase(), s.type === 'timed', s.duration || 0);
+    if (!txOk) { setIsSaving(false); return; }
     const address = localStorage.getItem('proov_address') || '';
     const saved = await saveHabit({
       user_address: address.toLowerCase(),
@@ -559,7 +566,6 @@ export default function HabitsPage() {
       active: true,
     });
     if (saved) {
-      proovTx.createHabit(s.name, suggestionCategory.toLowerCase(), s.type === 'timed', s.duration || 0);
       setHabits(prev => [...prev, saved]);
       const cached = JSON.parse(localStorage.getItem('proov_habits_cache') || '[]');
       localStorage.setItem('proov_habits_cache', JSON.stringify([...cached, saved]));
@@ -572,6 +578,8 @@ export default function HabitsPage() {
   // ── Add AI suggestion directly ──────────────────────────────────────────────
   const handleAddAiSuggestion = async (s: AiSuggestion) => {
     if (!isConnected) { showToast('Session expired — please sign out and back in'); return; }
+    const txOk = await proovTx.createHabit(s.name, s.category.toLowerCase(), s.type === 'timed', s.duration_minutes || 0);
+    if (!txOk) return;
     const address = localStorage.getItem('proov_address') || '';
     const saved = await saveHabit({
       user_address: address.toLowerCase(),
@@ -586,7 +594,6 @@ export default function HabitsPage() {
       active: true,
     });
     if (saved) {
-      proovTx.createHabit(s.name, s.category.toLowerCase(), s.type === 'timed', s.duration_minutes || 0);
       setHabits(prev => [...prev, saved]);
       const cached = JSON.parse(localStorage.getItem('proov_habits_cache') || '[]');
       localStorage.setItem('proov_habits_cache', JSON.stringify([...cached, saved]));

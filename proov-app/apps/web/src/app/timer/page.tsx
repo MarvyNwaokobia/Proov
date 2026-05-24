@@ -245,14 +245,23 @@ export default function GrindTimerPage() {
   }, [view]);
 
   const startTimer = async () => {
+    if (!isConnected) return;
+
     const now = Date.now();
-    // Capture for completion message (Fix 4)
     setSessionHabitName(selectedHabit?.name || '');
     setSessionDuration(duration);
     setSecondsLeft(duration * 60);
-    setView('running');
 
-    let newSessionId: string | null = null;
+    // tx must go through before we start the session
+    let txOk = false;
+    if (!isCustom && selectedHabit) {
+      txOk = await proovTx.startSession((selectedHabit as any)?.on_chain_id || 0, duration);
+    } else if (isCustom) {
+      txOk = await proovTx.startCustomSession(customLabel || `${duration}m session`, duration);
+    }
+    if (!txOk) return;
+
+    setView('running');
 
     const address = localStorage.getItem('proov_address') || '';
     const saved = await saveTimerSession({
@@ -265,7 +274,8 @@ export default function GrindTimerPage() {
       is_custom: isCustom,
       completed: false,
     }).catch(() => null);
-    if (saved) { newSessionId = saved.id; setSessionId(saved.id); }
+    const newSessionId = saved?.id || null;
+    if (saved) setSessionId(saved.id);
 
     localStorage.setItem('proov_active_timer', JSON.stringify({
       habitId: selectedHabit?.id || null,
@@ -275,28 +285,22 @@ export default function GrindTimerPage() {
       customLabel,
       sessionId: newSessionId,
     }));
-
-    if (isConnected && !isCustom && selectedHabit) {
-      proovTx.startSession((selectedHabit as any)?.on_chain_id || 0, duration);
-    } else if (isConnected && isCustom) {
-      proovTx.startCustomSession(customLabel || `${duration}m session`, duration);
-    }
   };
 
   const confirmDone = async () => {
+    if (!isConnected) return;
     const address = userAddress || localStorage.getItem('proov_address') || '';
     const streak = parseInt(localStorage.getItem('proov_streak_count') || '0');
 
     if (!isCustom && selectedHabit) {
+      const txOk = await proovTx.completeHabit((selectedHabit as any)?.on_chain_id || 0);
+      if (!txOk) return;
+      proovTx.endSession(0, true); // fire-and-forget — session close is secondary
       await saveHabitCompletion(selectedHabit.id, address, streak).catch(() => {});
       setCompletedToday(prev => prev.includes(selectedHabit.id) ? prev : [...prev, selectedHabit.id]);
-      if (isConnected) {
-        proovTx.completeHabit((selectedHabit as any)?.on_chain_id || 0);
-        proovTx.endSession(0, true);
-      }
     }
 
-    if (isCustom && isConnected) proovTx.endCustomSession(0, true);
+    if (isCustom) proovTx.endCustomSession(0, true);
 
     if (sessionId) {
       await updateTimerSession(sessionId, {
