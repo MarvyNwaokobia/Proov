@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { AppErrorBoundary } from "@/components/providers/AppErrorBoundary";
 import { OfflineIndicator } from "@/components/shared/OfflineIndicator";
 import { BottomNav } from "@/components/shared/BottomNav";
+import { TxToastProvider } from "@/components/shared/TxToast";
 
 export const metadata: Metadata = {
   title: "Proov — Do the work. Own the proof.",
@@ -52,9 +53,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AppErrorBoundary>
           <ThemeProvider>
             <WalletProvider>
-              <OfflineIndicator />
-              <div style={{ paddingBottom: '80px' }}>{children}</div>
-              <BottomNav />
+              <TxToastProvider>
+                <OfflineIndicator />
+                <div style={{ paddingBottom: '80px' }}>{children}</div>
+                <BottomNav />
+              </TxToastProvider>
             </WalletProvider>
           </ThemeProvider>
         </AppErrorBoundary>
