@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   IconArrowLeft, IconFlame, IconHeart, IconBell, IconCheck, IconSend,
-  IconAlertTriangle,
+  IconAlertTriangle, IconSparkles,
 } from "@tabler/icons-react";
 import {
   getAddressForUsername,
@@ -85,6 +85,11 @@ export default function CirclePage() {
   const [toastVisible, setToastVisible] = useState(false);
   const [cheeredMap, setCheeredMap] = useState<Record<string, boolean>>({});
   const [nudgedMap, setNudgedMap] = useState<Record<string, boolean>>({});
+
+  const [insight, setInsight] = useState<string | null>(null);
+  const [insightLoading, setInsightLoading] = useState(false);
+  const [insightGeneratedAt, setInsightGeneratedAt] = useState<string | null>(null);
+  const hasFetchedInsight = useRef(false);
 
   const myAddress = typeof window !== 'undefined'
     ? (localStorage.getItem('proov_address') || '').toLowerCase()
@@ -245,6 +250,68 @@ export default function CirclePage() {
     return !!localStorage.getItem(`proov_cheered_${addr}_${today}`);
   };
 
+  const fetchInsight = useCallback(async (forceRefresh = false) => {
+    if (accepted.length === 0) return;
+    const address = localStorage.getItem('proov_address') || '';
+    if (!address) return;
+
+    setInsightLoading(true);
+    const todayIso = new Date().toISOString().split('T')[0];
+    const circleMembersData = accepted.map(req => {
+      const addr = req.from_address === address.toLowerCase() ? req.to_address : req.from_address;
+      const username = usernameMap[addr] || addr.slice(0, 8);
+      const info = memberData[addr];
+      return {
+        username,
+        currentStreak: info?.streak ?? 0,
+        completedToday: info?.lastCompletionDate === todayIso,
+        totalCompletions: 0,
+        lastActive: info?.activityTime || info?.lastCompletionDate || 'unknown',
+      };
+    });
+
+    try {
+      const res = await fetch('/api/circle-insight', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ userAddress: address, circleMembersData, forceRefresh }),
+      });
+      const data = await res.json();
+      if (data.insight) {
+        setInsight(data.insight);
+        setInsightGeneratedAt(data.generatedAt || new Date().toISOString());
+      }
+    } catch {}
+    setInsightLoading(false);
+  }, [accepted, usernameMap, memberData]);
+
+  // Fetch insight once after members load — not on every 30s poll
+  useEffect(() => {
+    if (loading || accepted.length === 0 || hasFetchedInsight.current) return;
+    const hasData = accepted.every(req => {
+      const addr = req.from_address === myAddress ? req.to_address : req.from_address;
+      return memberData[addr] !== undefined;
+    });
+    if (!hasData) return;
+    hasFetchedInsight.current = true;
+    fetchInsight();
+  }, [loading, accepted, memberData, myAddress, fetchInsight]);
+
+  const handleRefreshInsight = () => {
+    const lastRefreshKey = 'proov_circle_insight_last_refresh';
+    const last = parseInt(localStorage.getItem(lastRefreshKey) || '0');
+    if (Date.now() - last < 60 * 60 * 1000) {
+      showToast('Refresh available once per hour');
+      return;
+    }
+    localStorage.setItem(lastRefreshKey, String(Date.now()));
+    fetchInsight(true);
+  };
+
+  const insightIsStale = insightGeneratedAt
+    ? Date.now() - new Date(insightGeneratedAt).getTime() > 6 * 60 * 60 * 1000
+    : false;
+
   // ── Render ────────────────────────────────────────────────────────────────
   const today = todayStr();
   const yesterday = yesterdayStr();
@@ -303,6 +370,42 @@ export default function CirclePage() {
         {/* ── MEMBERS TAB ─────────────────────────────────────────────── */}
         {tab === 'members' && (
           <>
+            {/* Insight card */}
+            {insightLoading && (
+              <div style={{
+                background: 'var(--bg2)', border: '1px solid var(--border)',
+                borderRadius: 14, padding: '14px 16px', marginBottom: 14,
+                animation: 'insight-pulse 1.5s ease-in-out infinite',
+              }}>
+                <div style={{ height: 10, background: 'var(--border)', borderRadius: 6, width: '40%', marginBottom: 10 }} />
+                <div style={{ height: 13, background: 'var(--border)', borderRadius: 6, width: '100%', marginBottom: 6 }} />
+                <div style={{ height: 13, background: 'var(--border)', borderRadius: 6, width: '75%' }} />
+                <style>{`@keyframes insight-pulse { 0%,100% { opacity: 0.5 } 50% { opacity: 1 } }`}</style>
+              </div>
+            )}
+            {!insightLoading && insight && (
+              <div style={{
+                background: 'var(--accent-bg)', border: '1px solid var(--accent-border)',
+                borderRadius: 14, padding: '14px 16px', marginBottom: 14,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                  <IconSparkles size={13} stroke={2} color="var(--accent-text)" />
+                  <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text3)' }}>Today</span>
+                </div>
+                <p style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.6, margin: 0 }}>{insight}</p>
+                {insightIsStale && (
+                  <div style={{ textAlign: 'right', marginTop: 8 }}>
+                    <button
+                      onClick={handleRefreshInsight}
+                      style={{ fontSize: 10, color: 'var(--text3)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0, textDecoration: 'underline' }}
+                    >
+                      Refresh
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {loading && (
               <p style={{ textAlign: 'center', color: 'var(--text3)', fontSize: 13, padding: '2rem 0' }}>Loading…</p>
             )}
