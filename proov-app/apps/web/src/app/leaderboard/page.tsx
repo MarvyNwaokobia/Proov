@@ -204,7 +204,7 @@ export default function LeaderboardPage() {
           </button>
           <div>
             <p style={{ fontWeight: 800, color: 'var(--text)', fontSize: 16, margin: 0, letterSpacing: '-.3px' }}>Leaderboard</p>
-            <p style={{ fontSize: 11, color: 'var(--text3)', margin: 0 }}>Ranked by Proov score</p>
+            <p style={{ fontSize: 11, color: 'var(--text3)', margin: 0 }}>Streak × 10 pts · +3 pts per verified habit</p>
           </div>
         </div>
       </div>
@@ -283,13 +283,15 @@ export default function LeaderboardPage() {
                   <p style={{ flex: 1, fontSize: 13, fontWeight: 600, color: isMe ? 'var(--accent-text)' : 'var(--text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     @{entry.username}
                   </p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                     {entry.verifiedCount > 0 && (
-                      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent-text)', display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent-text)', display: 'flex', alignItems: 'center', gap: 2, marginRight: 2 }}>
                         <IconShieldCheck size={12} stroke={2} />{entry.verifiedCount}
                       </span>
                     )}
+                    <IconFlame size={12} stroke={2} color="#f59e0b" />
                     <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{entry.score}</span>
+                    <span style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 500 }}>pts</span>
                   </div>
                 </div>
               );
@@ -320,13 +322,15 @@ export default function LeaderboardPage() {
                       {isMe && <span style={{ fontSize: 10, marginLeft: 6, color: 'var(--text3)', fontWeight: 400 }}>you</span>}
                     </p>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                     {entry.verifiedCount > 0 && (
-                      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent-text)', display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent-text)', display: 'flex', alignItems: 'center', gap: 2, marginRight: 2 }}>
                         <IconShieldCheck size={12} stroke={2} />{entry.verifiedCount}
                       </span>
                     )}
+                    <IconFlame size={12} stroke={2} color="#f59e0b" />
                     <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{entry.score}</span>
+                    <span style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 500 }}>pts</span>
                   </div>
                 </div>
               );
@@ -356,13 +360,15 @@ export default function LeaderboardPage() {
                 </p>
                 <p style={{ fontSize: 10, color: 'var(--text3)', margin: 0 }}>You</p>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                 {me.verifiedCount > 0 && (
-                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent-text)', display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent-text)', display: 'flex', alignItems: 'center', gap: 2, marginRight: 2 }}>
                     <IconShieldCheck size={12} stroke={2} />{me.verifiedCount}
                   </span>
                 )}
+                <IconFlame size={13} stroke={2} color="#f59e0b" />
                 <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{me.score}</span>
+                <span style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 500 }}>pts</span>
               </div>
             </div>
           </div>
