@@ -5,7 +5,6 @@ import { Web3Auth } from "@web3auth/modal";
 import { CHAIN_NAMESPACES, WEB3AUTH_NETWORK } from "@web3auth/base";
 import { EthereumPrivateKeyProvider } from "@web3auth/ethereum-provider";
 import { createConfig, http, mock } from "wagmi";
-import { injected } from "wagmi/connectors";
 import { celo, celoSepolia } from "viem/chains";
 
 export const clientId = process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID || "";
@@ -44,10 +43,7 @@ function buildConnectors() {
     return [mock({ accounts: ["0x0000000000000000000000000000000000000001"] as const })];
   }
   try {
-    return [
-      Web3AuthConnector({ web3AuthInstance: getWeb3Auth() }),
-      injected({ shimDisconnect: true }),
-    ];
+    return [Web3AuthConnector({ web3AuthInstance: getWeb3Auth() })];
   } catch {
     // Web3Auth failed to initialise — fall back to mock so the app still loads
     return [mock({ accounts: ["0x0000000000000000000000000000000000000001"] as const })];

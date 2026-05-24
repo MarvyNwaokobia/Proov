@@ -24,14 +24,6 @@ const XIcon = () => (
   </svg>
 );
 
-const WalletIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="5" width="20" height="14" rx="2"/>
-    <path d="M16 12h.01"/>
-    <path d="M2 10h20"/>
-  </svg>
-);
-
 export default function SignUpPage() {
   const router = useRouter();
   const { isConnected, address: connectedAddress } = useAccount();
@@ -42,9 +34,7 @@ export default function SignUpPage() {
   const [emailMethod, setEmailMethod] = useState<EmailMethod>('link');
   const [codeSent, setCodeSent] = useState(false);
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showWalletPicker, setShowWalletPicker] = useState(false);
   const [showMoreSocial, setShowMoreSocial] = useState(false);
 
   useEffect(() => {
@@ -86,119 +76,6 @@ export default function SignUpPage() {
     } catch {}
     const c = connectors[0];
     if (c) connect({ connector: c });
-  };
-
-  const handleSpecificWallet = async (
-    wallet: 'metamask' | 'valora' | 'coinbase' | 'walletconnect'
-  ) => {
-    setLoading(true);
-    setError('');
-
-    try {
-      let address = '';
-
-      if (wallet === 'metamask' || wallet === 'coinbase') {
-        const eth = (window as any).ethereum;
-
-        if (!eth) {
-          if (wallet === 'metamask') {
-            window.open('https://metamask.io/download/', '_blank');
-            setError('MetaMask not found. Install it and try again.');
-          } else {
-            window.open('https://www.coinbase.com/wallet/downloads', '_blank');
-            setError('Coinbase Wallet not found. Install it and try again.');
-          }
-          setLoading(false);
-          return;
-        }
-
-        const providers: any[] = eth.providers || [];
-        let targetProvider: any = null;
-
-        if (providers.length > 0) {
-          if (wallet === 'metamask') {
-            // Coinbase spoofs isMetaMask — real MetaMask won't have isCoinbaseWallet
-            targetProvider =
-              providers.find((p: any) => p.isMetaMask && !p.isCoinbaseWallet) ||
-              providers.find((p: any) => p.isMetaMask);
-          } else {
-            targetProvider =
-              providers.find((p: any) => p.isCoinbaseWallet) ||
-              providers.find((p: any) => p.isCoinbaseBrowser);
-          }
-        } else {
-          targetProvider = eth;
-        }
-
-        if (!targetProvider) {
-          if (wallet === 'metamask') {
-            window.open('https://metamask.io/download/', '_blank');
-            setError('MetaMask not found. Install it or switch your default wallet.');
-          } else {
-            window.open('https://www.coinbase.com/wallet/downloads', '_blank');
-            setError('Coinbase Wallet not found.');
-          }
-          setLoading(false);
-          return;
-        }
-
-        try {
-          const accounts = await targetProvider.request({ method: 'eth_requestAccounts' });
-          address = accounts[0];
-        } catch (e: any) {
-          if (e?.code === 4001) { setError(''); setLoading(false); return; }
-          throw e;
-        }
-      }
-
-      else if (wallet === 'valora') {
-        const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
-        if (isMobile) {
-          window.location.href = 'celo://wallet';
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
-        const c = connectors[1] ?? connectors[0];
-        if (c) connect({ connector: c });
-        setLoading(false);
-        return;
-      }
-
-      else if (wallet === 'walletconnect') {
-        const c = connectors[1] ?? connectors[0];
-        if (c) connect({ connector: c });
-        setLoading(false);
-        return;
-      }
-
-      if (!address) {
-        setError('Could not get wallet address. Try again.');
-        setLoading(false);
-        return;
-      }
-
-      const { getUsernameForAddress } = await import('@/lib/supabase');
-      const existingUsername = await getUsernameForAddress(address);
-
-      localStorage.setItem('proov_authenticated', 'true');
-      localStorage.setItem('proov_address', address);
-
-      if (existingUsername) {
-        localStorage.setItem('proov_username', existingUsername);
-        localStorage.setItem('proov_onboarding_done', '1');
-        localStorage.setItem('proov_tutorial_done', '1');
-        router.push('/dashboard');
-      } else {
-        localStorage.setItem('proov_is_new_user', 'true');
-        router.push('/username-setup');
-      }
-
-    } catch (e: any) {
-      if (e?.code !== 4001) {
-        setError(e?.message || 'Wallet connection failed.');
-      }
-    } finally {
-      setLoading(false);
-    }
   };
 
   const inputValue = emailMethod === 'number' ? phone : email;
@@ -500,35 +377,6 @@ export default function SignUpPage() {
             </div>
           )}
 
-          {/* Wallet button */}
-          <button
-            onClick={() => setShowWalletPicker(true)}
-            disabled={loading || isPending}
-            style={{
-              width: '100%', padding: 13, borderRadius: 13,
-              border: '2px solid var(--accent-border)',
-              background: 'transparent',
-              color: 'var(--accent-text)',
-              fontSize: 14, fontWeight: 700,
-              display: 'flex', alignItems: 'center',
-              justifyContent: 'center', gap: 10,
-              cursor: 'pointer', fontFamily: 'inherit',
-              marginTop: 10,
-              transition: 'all 0.2s cubic-bezier(.34,1.56,.64,1)',
-              boxSizing: 'border-box' as const,
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.background = 'var(--accent-bg)';
-              (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.background = 'transparent';
-              (e.currentTarget as HTMLElement).style.transform = '';
-            }}>
-            <WalletIcon />
-            Continue with Wallet
-          </button>
-
           {/* Footer */}
           <div style={{ textAlign: 'center', marginTop: '0.75rem' }}>
             <p style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 8 }}>
@@ -544,88 +392,6 @@ export default function SignUpPage() {
         </div>
       </div>
 
-      {/* Wallet picker bottom sheet */}
-      {showWalletPicker && (
-        <div
-          style={{
-            position: 'fixed', inset: 0, zIndex: 300,
-            background: 'rgba(0,0,0,0.6)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-            animation: 'fadeIn 0.2s ease',
-          }}
-          onClick={() => setShowWalletPicker(false)}
-        >
-          <div
-            style={{
-              background: 'var(--card-bg)',
-              border: '1px solid var(--card-border)',
-              borderRadius: '24px 24px 0 0',
-              padding: 'calc(1.5rem + env(safe-area-inset-bottom)) 1.25rem 1.5rem',
-              width: '100%',
-              maxWidth: 480,
-              boxShadow: '0 -8px 40px rgba(0,0,0,0.3)',
-              animation: 'slideUp 0.25s cubic-bezier(.34,1.56,.64,1)',
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border2)', margin: '0 auto 1.25rem' }} />
-
-            <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>Connect a wallet</div>
-            <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: '1.25rem' }}>Choose your wallet to continue</div>
-
-            {[
-              { id: 'metamask' as const,     label: 'MetaMask',        icon: <img src="https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg" width={28} height={28} alt="MetaMask" style={{ borderRadius: 6 }} /> },
-              { id: 'valora' as const,        label: 'Valora',          icon: <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg,#35D07F,#FBCC5C)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#fff' }}>V</div> },
-              { id: 'coinbase' as const,      label: 'Coinbase Wallet', icon: <div style={{ width: 28, height: 28, borderRadius: 8, background: '#0052FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#fff' }}>CB</div> },
-              { id: 'walletconnect' as const, label: 'Other wallets',   icon: <div style={{ width: 28, height: 28, borderRadius: 8, background: '#3B99FC', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#fff' }}>WC</div> },
-            ].map(wallet => (
-              <button
-                key={wallet.id}
-                onClick={() => { setShowWalletPicker(false); handleSpecificWallet(wallet.id); }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 14,
-                  width: '100%', padding: '13px 14px',
-                  borderRadius: 14, border: '1px solid var(--border)',
-                  background: 'var(--card-bg)', color: 'var(--text)',
-                  fontSize: 14, fontWeight: 500, cursor: 'pointer',
-                  fontFamily: 'inherit', marginBottom: 8,
-                  transition: 'all 0.15s ease',
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.background = 'var(--bg3)';
-                  (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent-border)';
-                  (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.background = 'var(--card-bg)';
-                  (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
-                  (e.currentTarget as HTMLElement).style.transform = '';
-                }}
-              >
-                {wallet.icon}
-                <span>{wallet.label}</span>
-              </button>
-            ))}
-
-            <button
-              onClick={() => setShowWalletPicker(false)}
-              style={{
-                width: '100%', padding: '12px',
-                borderRadius: 14, border: '1px solid var(--border)',
-                background: 'transparent', color: 'var(--text3)',
-                fontSize: 13, fontWeight: 500, cursor: 'pointer',
-                fontFamily: 'inherit', marginTop: 4,
-                transition: 'all 0.15s',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg3)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
     </>
   );
 }
