@@ -669,25 +669,27 @@ export async function getAiVerificationUsage(userAddress: string): Promise<{ use
   };
 }
 
-export async function saveAvatarUrl(userAddress: string, avatarUrl: string): Promise<void> {
-  if (!supabase || !userAddress) return;
+export async function updateAvatarUrl(address: string, avatarUrl: string): Promise<void> {
+  if (!supabase || !address) return;
   try {
-    await supabase
-      .from('profiles')
-      .upsert({ address: userAddress.toLowerCase(), avatar_url: avatarUrl }, { onConflict: 'address' });
+    await supabase.from('profiles').upsert(
+      { address: address.toLowerCase(), avatar_url: avatarUrl },
+      { onConflict: 'address' }
+    );
   } catch {}
 }
 
-export async function getAvatarUrl(userAddress: string): Promise<string | null> {
-  if (!supabase || !userAddress) return null;
+export async function getAvatarUrl(address: string): Promise<string | null> {
+  if (!supabase || !address) return null;
   try {
     const { data } = await supabase
       .from('profiles')
       .select('avatar_url')
-      .eq('address', userAddress.toLowerCase())
+      .eq('address', address.toLowerCase())
       .maybeSingle();
     return (data as any)?.avatar_url || null;
   } catch {
     return null;
   }
 }
+
