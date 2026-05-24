@@ -11,6 +11,7 @@ import {
   getTodayCompletions, saveHabitCompletion, getAllHabitStreaks, type Habit,
 } from "@/lib/supabase";
 import { useProovTx } from "@/hooks/useProovTx";
+import { useAccount } from 'wagmi';
 import { HABIT_CATEGORIES, getCategoryById, Frequency } from "@/lib/constants";
 import { HABIT_TEMPLATES, ARCHETYPE_LABELS, type Archetype } from "@/lib/habitTemplates";
 
@@ -428,6 +429,7 @@ export default function HabitsPage() {
   const [aiSuggestionsGeneratedAt, setAiSuggestionsGeneratedAt] = useState<string | null>(null);
   const [addedSuggestions, setAddedSuggestions] = useState<Set<string>>(new Set());
   const proovTx = useProovTx();
+  const { isConnected } = useAccount();
 
   // ── Load from Supabase ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -473,6 +475,7 @@ export default function HabitsPage() {
 
   // ── Create habit ────────────────────────────────────────────────────────────
   const handleSave = async (data: SaveData) => {
+    if (!isConnected) { showToast('Session expired — please sign out and back in'); return; }
     setIsSaving(true);
     const address = localStorage.getItem('proov_address') || '';
     const saved = await saveHabit({
@@ -502,6 +505,7 @@ export default function HabitsPage() {
 
   // ── Archive habit ───────────────────────────────────────────────────────────
   const handleArchive = async (habitId: string) => {
+    if (!isConnected) { showToast('Session expired — please sign out and back in'); return; }
     const habit = habits.find(h => h.id === habitId);
     await supabaseDeactivate(habitId);
     proovTx.removeHabit((habit as any)?.on_chain_id || 0);
@@ -539,6 +543,7 @@ export default function HabitsPage() {
 
   // ── Add from suggestion ─────────────────────────────────────────────────────
   const handleAddSuggestion = async (s: SuggestionItem) => {
+    if (!isConnected) { showToast('Session expired — please sign out and back in'); return; }
     setIsSaving(true);
     const address = localStorage.getItem('proov_address') || '';
     const saved = await saveHabit({
@@ -566,6 +571,7 @@ export default function HabitsPage() {
 
   // ── Add AI suggestion directly ──────────────────────────────────────────────
   const handleAddAiSuggestion = async (s: AiSuggestion) => {
+    if (!isConnected) { showToast('Session expired — please sign out and back in'); return; }
     const address = localStorage.getItem('proov_address') || '';
     const saved = await saveHabit({
       user_address: address.toLowerCase(),
