@@ -260,6 +260,7 @@ export interface TimerSession {
   is_custom: boolean;
   completed: boolean;
   is_archived?: boolean;
+  on_chain_session_id?: string | null;
 }
 
 export async function saveTimerSession(session: Omit<TimerSession, 'id'>): Promise<TimerSession | null> {

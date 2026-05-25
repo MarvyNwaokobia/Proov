@@ -64,6 +64,11 @@ export default function GrindTimerPage() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const justCompletedRef = useRef(false);
 
+  // On-chain session tracking
+  const [onChainSessionId, setOnChainSessionId] = useState<bigint | null>(null);
+  const [txPending, setTxPending] = useState<'starting' | 'ending' | null>(null);
+  const progressFiredRef = useRef(false);
+
   // Session editing state
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
   const [redoDuration, setRedoDuration] = useState<number>(25);
@@ -73,7 +78,6 @@ export default function GrindTimerPage() {
   const [convertDuration, setConvertDuration] = useState(25);
   const [convertSaving, setConvertSaving] = useState(false);
 
-  // Load address into state so history effect re-runs if address becomes available after sign-in
   useEffect(() => {
     const addr = localStorage.getItem('proov_address') || '';
     if (addr) setUserAddress(addr);
@@ -83,7 +87,6 @@ export default function GrindTimerPage() {
     if (rank > 0) setLeaderboardRank(rank);
   }, []);
 
-  // Reload session history + today's completions whenever the address is known
   useEffect(() => {
     if (!userAddress) return;
     getAllSessionHistory(userAddress).then(setSessionHistory).catch(() => {});
@@ -94,13 +97,11 @@ export default function GrindTimerPage() {
   useEffect(() => {
     const address = localStorage.getItem('proov_address') || '';
 
-    // Load timed habits from Supabase
     if (address) {
       getUserHabits(address).then(async (all) => {
         const timed = all.filter(h => h.type === 'timed');
         setTimedHabits(timed);
 
-        // Deep-link: pre-select habit by id from URL
         const habitId = searchParams.get('habitId');
         const autostart = searchParams.get('autostart') === '1';
         if (habitId) {
@@ -110,12 +111,16 @@ export default function GrindTimerPage() {
             setSelectedHabit(found);
             setDuration(dur);
             if (autostart) {
-              // Skip setup — start the timer immediately
+              setTxPending('starting');
+              const { ok, result } = await proovTx.startSession(
+                (found as any)?.on_chain_id || 0, dur
+              );
+              if (!ok) { setTxPending(null); return; }
+              const newOnChainId = result ?? null;
+              setOnChainSessionId(newOnChainId);
+              progressFiredRef.current = false;
+
               const now = Date.now();
-              setSessionHabitName(found.name);
-              setSessionDuration(dur);
-              setSecondsLeft(dur * 60);
-              setView('running');
               const saved = await saveTimerSession({
                 user_address: address.toLowerCase(),
                 habit_id: found.id,
@@ -125,6 +130,7 @@ export default function GrindTimerPage() {
                 ended_at: null,
                 is_custom: false,
                 completed: false,
+                on_chain_session_id: newOnChainId !== null ? newOnChainId.toString() : null,
               }).catch(() => null);
               localStorage.setItem('proov_active_timer', JSON.stringify({
                 habitId: found.id,
@@ -133,9 +139,14 @@ export default function GrindTimerPage() {
                 isCustom: false,
                 customLabel: '',
                 sessionId: saved?.id || null,
+                onChainSessionId: newOnChainId !== null ? newOnChainId.toString() : null,
               }));
               if (saved) setSessionId(saved.id);
-              proovTx.startSession((found as any)?.on_chain_id || 0, dur);
+              setSessionHabitName(found.name);
+              setSessionDuration(dur);
+              setSecondsLeft(dur * 60);
+              setTxPending(null);
+              setView('running');
             } else {
               setView('setup');
             }
@@ -145,14 +156,13 @@ export default function GrindTimerPage() {
         const cached = JSON.parse(localStorage.getItem('proov_habits_cache') || '[]');
         setTimedHabits(cached.filter((h: any) => h.type === 'timed'));
       });
-
     }
 
     // Restore active timer if still running
     const saved = localStorage.getItem('proov_active_timer');
     if (saved) {
       try {
-        const { habitId: hId, startedAt, duration: d, isCustom: ic, customLabel: cl, sessionId: sid } = JSON.parse(saved);
+        const { habitId: hId, startedAt, duration: d, isCustom: ic, customLabel: cl, sessionId: sid, onChainSessionId: ociStr } = JSON.parse(saved);
         const elapsed = Math.floor((Date.now() - startedAt) / 1000);
         const total = d * 60;
         if (elapsed < total) {
@@ -162,6 +172,7 @@ export default function GrindTimerPage() {
           setCustomLabel(cl || '');
           setSessionDuration(d);
           if (sid) setSessionId(sid);
+          if (ociStr) setOnChainSessionId(BigInt(ociStr));
           setView('running');
           if (hId) {
             const cached = JSON.parse(localStorage.getItem('proov_habits_cache') || '[]');
@@ -176,19 +187,17 @@ export default function GrindTimerPage() {
     }
   }, [searchParams]);
 
-  // Request notification permission when page loads
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
   }, []);
 
-  // Fire notification + sound when timer completes
+  // Notification + sound when timer completes naturally — no on-chain call here
   useEffect(() => {
     if (view === 'done' && justCompletedRef.current) {
       justCompletedRef.current = false;
 
-      // Browser notification
       if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
         new Notification('Session complete', {
           body: selectedHabit
@@ -198,7 +207,6 @@ export default function GrindTimerPage() {
         });
       }
 
-      // Subtle completion sound: C5 → E5 → G5 chord
       try {
         const ctx = new AudioContext();
         const osc = ctx.createOscillator();
@@ -213,9 +221,6 @@ export default function GrindTimerPage() {
         osc.start(ctx.currentTime);
         osc.stop(ctx.currentTime + 0.8);
       } catch {}
-
-      // Silent background endSession
-      proovTx.endSession(0, true);
     }
   }, [view, selectedHabit, duration]);
 
@@ -240,17 +245,46 @@ export default function GrindTimerPage() {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [view]);
 
+  // recordProgress at the halfway point for sessions longer than 30 minutes
+  const totalSeconds = duration * 60;
+  useEffect(() => {
+    if (view !== 'running' || !onChainSessionId) return;
+    if (duration <= 30) return;
+    const midpoint = Math.floor(totalSeconds / 2);
+    if (secondsLeft === midpoint && !progressFiredRef.current) {
+      progressFiredRef.current = true;
+      proovTx.recordProgress(onChainSessionId); // fire-and-forget
+    }
+  }, [secondsLeft, view, onChainSessionId, duration, totalSeconds]);
+
   const startTimer = async () => {
+    const address = localStorage.getItem('proov_address') || '';
+    setTxPending('starting');
+
+    // Fire on-chain FIRST — timer does not start until this confirms
+    let newOnChainId: bigint | null = null;
+    if (!isCustom && selectedHabit) {
+      const { ok, result } = await proovTx.startSession(
+        (selectedHabit as any)?.on_chain_id || 0, duration
+      );
+      if (!ok) { setTxPending(null); return; }
+      newOnChainId = result ?? null;
+    } else if (isCustom) {
+      const { ok, result } = await proovTx.startCustomSession(
+        customLabel || `${duration}m session`, duration
+      );
+      if (!ok) { setTxPending(null); return; }
+      newOnChainId = result ?? null;
+    }
+
+    setOnChainSessionId(newOnChainId);
+    progressFiredRef.current = false;
+
     const now = Date.now();
-    // Capture for completion message (Fix 4)
     setSessionHabitName(selectedHabit?.name || '');
     setSessionDuration(duration);
     setSecondsLeft(duration * 60);
-    setView('running');
 
-    let newSessionId: string | null = null;
-
-    const address = localStorage.getItem('proov_address') || '';
     const saved = await saveTimerSession({
       user_address: address.toLowerCase(),
       habit_id: selectedHabit?.id || null,
@@ -260,8 +294,10 @@ export default function GrindTimerPage() {
       ended_at: null,
       is_custom: isCustom,
       completed: false,
+      on_chain_session_id: newOnChainId !== null ? newOnChainId.toString() : null,
     }).catch(() => null);
-    if (saved) { newSessionId = saved.id; setSessionId(saved.id); }
+
+    if (saved) setSessionId(saved.id);
 
     localStorage.setItem('proov_active_timer', JSON.stringify({
       habitId: selectedHabit?.id || null,
@@ -269,30 +305,41 @@ export default function GrindTimerPage() {
       duration,
       isCustom,
       customLabel,
-      sessionId: newSessionId,
+      sessionId: saved?.id || null,
+      onChainSessionId: newOnChainId !== null ? newOnChainId.toString() : null,
     }));
 
-    if (!isCustom && selectedHabit) {
-      proovTx.startSession((selectedHabit as any)?.on_chain_id || 0, duration);
-    } else if (isCustom) {
-      proovTx.startCustomSession(customLabel || `${duration}m session`, duration);
-    }
+    setTxPending(null);
+    setView('running');
   };
 
   const confirmDone = async () => {
     const address = userAddress || localStorage.getItem('proov_address') || '';
     const streak = parseInt(localStorage.getItem('proov_streak_count') || '0');
+    const sessionOCId = onChainSessionId ?? 0n;
+
+    setTxPending('ending');
 
     if (!isCustom && selectedHabit) {
-      const txOk = await proovTx.completeHabit((selectedHabit as any)?.on_chain_id || 0);
-      if (!txOk) return;
-      proovTx.endSession(0, true); // fire-and-forget
+      // 1. End the on-chain session record
+      const endOk = await proovTx.endSession(sessionOCId, true);
+      if (!endOk) { setTxPending(null); return; }
+
+      // 2. Mark the habit complete on-chain
+      const completeOk = await proovTx.completeHabit((selectedHabit as any)?.on_chain_id || 0);
+      if (!completeOk) { setTxPending(null); return; }
+
+      // 3. Both confirmed — now write to Supabase
       await saveHabitCompletion(selectedHabit.id, address, streak).catch(() => {});
       setCompletedToday(prev => prev.includes(selectedHabit.id) ? prev : [...prev, selectedHabit.id]);
     }
 
-    if (isCustom) proovTx.endCustomSession(0, true);
+    if (isCustom) {
+      const endOk = await proovTx.endCustomSession(sessionOCId, true);
+      if (!endOk) { setTxPending(null); return; }
+    }
 
+    // Mark session complete in Supabase only after on-chain tx confirmed
     if (sessionId) {
       await updateTimerSession(sessionId, {
         ended_at: new Date().toISOString(),
@@ -300,9 +347,9 @@ export default function GrindTimerPage() {
       }).catch(() => {});
     }
 
-    // Reload from backend — await so pick view renders with fresh history
     await getAllSessionHistory(address).then(setSessionHistory).catch(() => {});
 
+    setTxPending(null);
     setView('pick');
     setSelectedHabit(null);
     setIsCustom(false);
@@ -311,14 +358,21 @@ export default function GrindTimerPage() {
     setSessionId(null);
     setSessionHabitName('');
     setSessionDuration(0);
+    setOnChainSessionId(null);
   };
 
   const cancelTimer = () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     localStorage.removeItem('proov_active_timer');
-    if (isCustom) proovTx.endCustomSession(0, false);
-    else proovTx.cancelSession(0);
+
+    const sessionOCId = onChainSessionId ?? 0n;
+
+    // Fire cancel in background — user is not blocked waiting for this
+    if (isCustom) proovTx.endCustomSession(sessionOCId, false);
+    else proovTx.cancelSession(sessionOCId);
+
     setView('pick');
+    setOnChainSessionId(null);
   };
 
   const handleRedo = (session: TimerSession) => {
@@ -367,7 +421,6 @@ export default function GrindTimerPage() {
     setExpandedSessionId(null);
   };
 
-  const totalSeconds = duration * 60;
   const progress = (view === 'running' || view === 'done')
     ? 1 - (secondsLeft / totalSeconds)
     : 0;
@@ -389,6 +442,35 @@ export default function GrindTimerPage() {
   return (
     <div style={{ position: 'relative', minHeight: '100vh', background: 'var(--bg)' }}>
 
+      {/* ── TX PENDING OVERLAY ── */}
+      {txPending && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 100,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(6px)',
+          WebkitBackdropFilter: 'blur(6px)',
+        }}>
+          <div style={{
+            background: 'var(--card-bg)', border: '1px solid var(--card-border)',
+            borderRadius: 18, padding: '22px 32px', textAlign: 'center',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+          }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: '50%',
+              border: '3px solid var(--accent-border)',
+              borderTopColor: 'var(--accent)',
+              animation: 'spin 0.8s linear infinite',
+              margin: '0 auto 14px',
+            }} />
+            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
+              {txPending === 'starting' ? 'Starting session on-chain…' : 'Recording on-chain…'}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text3)' }}>Gasless · Powered by Pimlico</div>
+          </div>
+        </div>
+      )}
+
       {/* ── RUNNING — full-page centered focus mode ── */}
       {isRunning && (
         <div style={{
@@ -397,14 +479,12 @@ export default function GrindTimerPage() {
           padding: 24, position: 'relative',
         }}>
           <style>{`@keyframes tpulse{0%,100%{opacity:.4;transform:translate(-50%,-50%) scale(1)}50%{opacity:.9;transform:translate(-50%,-50%) scale(1.08)}}`}</style>
-          {/* Pulse glow */}
           <div style={{
             position: 'absolute', top: '50%', left: '50%',
             width: 340, height: 340, borderRadius: '50%',
             background: 'radial-gradient(circle, var(--accent-bg), transparent 70%)',
             pointerEvents: 'none', animation: 'tpulse 2.5s ease-in-out infinite',
           }} />
-          {/* Change habit */}
           <button onClick={cancelTimer} style={{
             position: 'absolute', top: 14, left: 0,
             background: 'none', border: 'none', color: 'var(--accent-text)',
@@ -413,7 +493,6 @@ export default function GrindTimerPage() {
           }}>
             <IconArrowLeft size={13} stroke={2} /> Change habit
           </button>
-          {/* Habit pill */}
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8, marginBottom: 26,
             background: 'var(--accent-bg)', border: '1px solid var(--accent-border)',
@@ -427,7 +506,6 @@ export default function GrindTimerPage() {
               <div style={{ fontSize: 10, color: 'var(--text3)' }}>Target: {fmtDur(sessionDuration)}</div>
             </div>
           </div>
-          {/* 220×220 ring */}
           <div style={{ position: 'relative', width: 220, height: 220, marginBottom: 26, zIndex: 1 }}>
             <svg viewBox="0 0 220 220" width="220" height="220" style={{ transform: 'rotate(-90deg)', position: 'relative', zIndex: 1 }}>
               <circle cx="110" cy="110" r="94" fill="none" stroke="var(--border2)" strokeWidth="8" />
@@ -442,11 +520,9 @@ export default function GrindTimerPage() {
               <span style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>remaining</span>
             </div>
           </div>
-          {/* Background text */}
           <p style={{ fontSize: 12, color: 'var(--text3)', textAlign: 'center', lineHeight: 1.6, marginBottom: 22, position: 'relative', zIndex: 1 }}>
             Timer runs in the background.<br />Come back when you're done.
           </p>
-          {/* Cancel */}
           <button onClick={cancelTimer} style={{
             padding: '11px 28px', borderRadius: 12, background: 'transparent',
             border: '1px solid var(--border2)', color: 'var(--text2)',
@@ -477,14 +553,21 @@ export default function GrindTimerPage() {
           <p style={{ fontSize: 13, color: 'var(--text2)', textAlign: 'center', lineHeight: 1.6, marginBottom: 28 }}>
             "Keep showing up. That's the whole game."
           </p>
-          <button onClick={confirmDone} style={{
-            width: '100%', maxWidth: 360, padding: 14, borderRadius: 14,
-            background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)',
-            border: 'none', fontSize: 14, fontWeight: 700, cursor: 'pointer',
-            fontFamily: 'inherit',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          }}>
-            <IconCheck size={15} stroke={2} /> Mark complete
+          <button
+            onClick={confirmDone}
+            disabled={txPending === 'ending'}
+            style={{
+              width: '100%', maxWidth: 360, padding: 14, borderRadius: 14,
+              background: txPending === 'ending' ? 'var(--bg3)' : 'var(--btn-primary-bg)',
+              color: txPending === 'ending' ? 'var(--text3)' : 'var(--btn-primary-text)',
+              border: 'none', fontSize: 14, fontWeight: 700,
+              cursor: txPending === 'ending' ? 'not-allowed' : 'pointer',
+              fontFamily: 'inherit',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            }}
+          >
+            <IconCheck size={15} stroke={2} />
+            {txPending === 'ending' ? 'Recording on-chain…' : 'Mark complete'}
           </button>
         </div>
       )}
@@ -507,7 +590,6 @@ export default function GrindTimerPage() {
         {/* PICK HABIT */}
         {view === 'pick' && (
           <div>
-            {/* Search */}
             <div style={{
               display: 'flex', alignItems: 'center', gap: 10,
               background: 'var(--bg2)', borderRadius: 11, padding: '10px 12px',
@@ -526,7 +608,6 @@ export default function GrindTimerPage() {
               />
             </div>
 
-            {/* Your Timed Habits */}
             <div style={{ marginBottom: '1.5rem' }}>
               <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10 }}>
                 Your Timed Habits
@@ -645,7 +726,6 @@ export default function GrindTimerPage() {
                       background: 'var(--card-bg)', marginBottom: 8, overflow: 'hidden',
                       transition: 'border-color .15s',
                     }}>
-                      {/* Main row */}
                       <div
                         onClick={() => {
                           setExpandedSessionId(isExpanded ? null : session.id);
@@ -671,10 +751,8 @@ export default function GrindTimerPage() {
                         <span style={{ fontSize: 10, color: 'var(--text3)', flexShrink: 0 }}>{isExpanded ? '▲' : '▼'}</span>
                       </div>
 
-                      {/* Expanded controls */}
                       {isExpanded && !isConverting && (
                         <div style={{ borderTop: '1px solid var(--border)', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                          {/* Redo with editable duration */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <span style={{ fontSize: 11, color: 'var(--text3)', flex: 1 }}>Redo duration (min)</span>
                             <input
@@ -706,7 +784,6 @@ export default function GrindTimerPage() {
                               <IconRotate size={12} stroke={2} /> Redo
                             </button>
                           </div>
-                          {/* Convert to habit (custom sessions only) */}
                           {session.is_custom && (
                             <button
                               onClick={e => { e.stopPropagation(); setConvertSessionId(session.id); }}
@@ -721,7 +798,6 @@ export default function GrindTimerPage() {
                               <IconPlus size={12} stroke={2.5} /> Save as Habit
                             </button>
                           )}
-                          {/* Archive */}
                           <button
                             onClick={e => { e.stopPropagation(); handleArchive(session.id); }}
                             style={{
@@ -737,7 +813,6 @@ export default function GrindTimerPage() {
                         </div>
                       )}
 
-                      {/* Convert to habit form */}
                       {isExpanded && isConverting && (
                         <div style={{ borderTop: '1px solid var(--border)', padding: '14px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -824,7 +899,6 @@ export default function GrindTimerPage() {
               <IconArrowLeft size={16} stroke={2} /> Back
             </button>
 
-            {/* Selected habit badge */}
             {selectedHabit && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', borderRadius: 12, marginBottom: '1.25rem' }}>
                 <span style={{ fontSize: 22 }}>{selectedHabit.emoji}</span>
@@ -837,7 +911,6 @@ export default function GrindTimerPage() {
               </div>
             )}
 
-            {/* Custom label */}
             {isCustom && (
               <div style={{ marginBottom: '1.25rem' }}>
                 <input
@@ -852,7 +925,6 @@ export default function GrindTimerPage() {
               </div>
             )}
 
-            {/* Duration — text input (custom) or display (habit), both synced to slider */}
             {isCustom ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12 }}>
                 <input
@@ -901,20 +973,20 @@ export default function GrindTimerPage() {
 
             <button
               onClick={startTimer}
-              disabled={isCustom && !customLabel.trim()}
+              disabled={txPending === 'starting' || (isCustom && !customLabel.trim())}
               style={{
                 width: '100%', padding: 14, borderRadius: 14, border: 'none',
-                background: (!isCustom || customLabel.trim()) ? 'var(--btn-primary-bg)' : 'var(--bg3)',
-                color: (!isCustom || customLabel.trim()) ? 'var(--btn-primary-text)' : 'var(--text3)',
+                background: (txPending === 'starting' || (isCustom && !customLabel.trim())) ? 'var(--bg3)' : 'var(--btn-primary-bg)',
+                color: (txPending === 'starting' || (isCustom && !customLabel.trim())) ? 'var(--text3)' : 'var(--btn-primary-text)',
                 fontSize: 15, fontWeight: 700,
-                cursor: (!isCustom || customLabel.trim()) ? 'pointer' : 'not-allowed',
+                cursor: (txPending === 'starting' || (isCustom && !customLabel.trim())) ? 'not-allowed' : 'pointer',
                 fontFamily: 'inherit', boxShadow: '0 4px 20px var(--btn-primary-shadow)',
                 transition: 'transform .15s, box-shadow .15s',
               }}
-              onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')}
+              onMouseEnter={e => { if (!txPending) e.currentTarget.style.transform = 'translateY(-2px)'; }}
               onMouseLeave={e => (e.currentTarget.style.transform = '')}
             >
-              Start {fmtDur(duration)} session
+              {txPending === 'starting' ? 'Starting on-chain…' : `Start ${fmtDur(duration)} session`}
             </button>
           </div>
         )}
