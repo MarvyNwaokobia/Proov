@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   getUserHabits, getUsernameForAddress, getStreakData, getTodayCompletions,
   getGlobalLeaderboard, getAllHabitStreaks, getTotalCompletions,
-  getDailyCompletionCounts, getProfileCreatedAt, type Habit,
+  getDailyCompletionCounts, getProfileCreatedAt, getCircleRequests, type Habit,
 } from '@/lib/supabase';
 import { IconArrowLeft, IconFlame, IconSettings2 } from '@tabler/icons-react';
 
@@ -50,7 +50,6 @@ function glowStyle(count: number, total: number): React.CSSProperties {
       boxShadow: '0 0 10px var(--accent)',
     };
   }
-  // 100% — max glow
   return {
     background: 'var(--accent)',
     border: '1px solid var(--accent-border)',
@@ -67,9 +66,10 @@ export default function ProfilePage() {
   const [username, setUsername] = useState('');
   const [habits, setHabits] = useState<Habit[]>([]);
   const [completedToday, setCompletedToday] = useState<string[]>([]);
-  const [streak, setStreak] = useState({ current: 0 });
+  const [streak, setStreak] = useState({ current: 0, longest: 0 });
   const [rank, setRank] = useState<number | null>(null);
   const [totalDone, setTotalDone] = useState(0);
+  const [circleCount, setCircleCount] = useState(0);
   const [habitStreaks, setHabitStreaks] = useState<Record<string, number>>({});
   const [dailyCounts, setDailyCounts] = useState<Record<string, number>>({});
   const [memberSince, setMemberSince] = useState('');
@@ -94,7 +94,7 @@ export default function ProfilePage() {
     ]).then(([un, userHabits, streakData, todayDone, leaderboard, total, counts, createdAt]) => {
       if (un) setUsername(un as string);
       setHabits(userHabits as Habit[]);
-      setStreak({ current: (streakData as any).currentStreak });
+      setStreak({ current: (streakData as any).currentStreak, longest: (streakData as any).longestStreak });
       setCompletedToday(todayDone as string[]);
       setTotalDone(total as number);
       setDailyCounts(counts as Record<string, number>);
@@ -117,6 +117,18 @@ export default function ProfilePage() {
     if (!address || habits.length === 0) return;
     getAllHabitStreaks(habits.map(h => h.id), address).then(setHabitStreaks).catch(() => {});
   }, [habits, address]);
+
+  useEffect(() => {
+    if (!address) return;
+    getCircleRequests(address)
+      .then(({ accepted }) => setCircleCount(accepted.length))
+      .catch(() => {});
+  }, [address]);
+
+  const MILESTONES = [7, 14, 21, 30, 60, 90];
+  const nextMilestone = MILESTONES.find(m => m > streak.current) ?? 120;
+  const prevMilestone = (() => { let p = 0; for (const m of MILESTONES) { if (streak.current < m) return p; p = m; } return MILESTONES[MILESTONES.length - 1]; })();
+  const milestonePct = nextMilestone > prevMilestone ? Math.min(100, ((streak.current - prevMilestone) / (nextMilestone - prevMilestone)) * 100) : 100;
 
   const isOwn = myAddress && address && myAddress === address;
   const displayName = username ? `@${username}` : address.slice(0, 8) + '…';
@@ -193,18 +205,32 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Stats grid — 3 cols with 1px dividers */}
+          {/* Stats grid — 3 cols × 2 rows with 1px dividers */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 1, background: 'var(--border)' }}>
             {[
-              { value: streak.current, label: 'Streak' },
-              { value: totalDone,      label: 'Total done' },
-              { value: rank ? `#${rank}` : '—', label: 'Rank' },
+              { value: streak.current,           label: 'Streak 🔥' },
+              { value: streak.longest,            label: 'Best streak' },
+              { value: rank ? `#${rank}` : '—',  label: 'Rank' },
+              { value: habits.length,             label: 'Habits' },
+              { value: circleCount,               label: 'Circle' },
+              { value: totalDone,                 label: 'Total done' },
             ].map(s => (
               <div key={s.label} style={{ background: 'var(--card-bg)', padding: '10px', textAlign: 'center' }}>
                 <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{s.value}</div>
                 <div style={{ fontSize: 9, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.7px', marginTop: 2 }}>{s.label}</div>
               </div>
             ))}
+          </div>
+
+          {/* Milestone progress */}
+          <div style={{ padding: '12px 14px', borderTop: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text3)', marginBottom: 6 }}>
+              <span>Next goal: <strong style={{ color: 'var(--text2)' }}>{nextMilestone}-day streak</strong></span>
+              <span style={{ color: 'var(--accent-text)', fontWeight: 700 }}>{Math.max(0, nextMilestone - streak.current)} days to go</span>
+            </div>
+            <div style={{ height: 5, background: 'var(--bg3)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${milestonePct}%`, background: 'var(--accent)', borderRadius: 3, transition: 'width .4s ease' }} />
+            </div>
           </div>
         </div>
 
@@ -253,7 +279,8 @@ export default function ProfilePage() {
               {[0, 0.25, 0.5, 0.75, 1].map((r, i) => (
                 <div key={i} style={{
                   width: 8, height: 8, borderRadius: 2,
-                  ...glowStyle(r > 0 ? r : 0, r > 0 ? 1 : 1),
+                  background: r === 0 ? 'var(--bg2)' : 'var(--accent)',
+                  border: `1px solid ${r === 0 ? 'var(--border)' : 'var(--accent-border)'}`,
                   opacity: r === 0 ? 0.35 : r <= 0.25 ? 0.3 : r <= 0.5 ? 0.55 : r <= 0.75 ? 0.75 : 1,
                   boxShadow: r >= 1 ? '0 0 6px var(--accent)' : r >= 0.75 ? '0 0 4px var(--accent)' : undefined,
                 }} />

@@ -242,20 +242,13 @@ export default function GrindTimerPage() {
 
   const startTimer = async () => {
     const now = Date.now();
+    // Capture for completion message (Fix 4)
     setSessionHabitName(selectedHabit?.name || '');
     setSessionDuration(duration);
     setSecondsLeft(duration * 60);
-
-    // tx must go through before we start the session
-    let txOk = false;
-    if (!isCustom && selectedHabit) {
-      txOk = await proovTx.startSession((selectedHabit as any)?.on_chain_id || 0, duration);
-    } else if (isCustom) {
-      txOk = await proovTx.startCustomSession(customLabel || `${duration}m session`, duration);
-    }
-    if (!txOk) return;
-
     setView('running');
+
+    let newSessionId: string | null = null;
 
     const address = localStorage.getItem('proov_address') || '';
     const saved = await saveTimerSession({
@@ -268,8 +261,7 @@ export default function GrindTimerPage() {
       is_custom: isCustom,
       completed: false,
     }).catch(() => null);
-    const newSessionId = saved?.id || null;
-    if (saved) setSessionId(saved.id);
+    if (saved) { newSessionId = saved.id; setSessionId(saved.id); }
 
     localStorage.setItem('proov_active_timer', JSON.stringify({
       habitId: selectedHabit?.id || null,
@@ -279,6 +271,12 @@ export default function GrindTimerPage() {
       customLabel,
       sessionId: newSessionId,
     }));
+
+    if (!isCustom && selectedHabit) {
+      proovTx.startSession((selectedHabit as any)?.on_chain_id || 0, duration);
+    } else if (isCustom) {
+      proovTx.startCustomSession(customLabel || `${duration}m session`, duration);
+    }
   };
 
   const confirmDone = async () => {
@@ -288,7 +286,7 @@ export default function GrindTimerPage() {
     if (!isCustom && selectedHabit) {
       const txOk = await proovTx.completeHabit((selectedHabit as any)?.on_chain_id || 0);
       if (!txOk) return;
-      proovTx.endSession(0, true); // fire-and-forget — session close is secondary
+      proovTx.endSession(0, true); // fire-and-forget
       await saveHabitCompletion(selectedHabit.id, address, streak).catch(() => {});
       setCompletedToday(prev => prev.includes(selectedHabit.id) ? prev : [...prev, selectedHabit.id]);
     }
