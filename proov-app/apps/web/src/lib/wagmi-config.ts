@@ -9,7 +9,7 @@ import { celo, celoSepolia } from "viem/chains";
 export const clientId = process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID || "";
 export const hasWeb3AuthClientId = !!clientId;
 
-const CELO_RPC = process.env.NEXT_PUBLIC_CELO_RPC_URL || "https://celo-json-rpc.stakely.io";
+const CELO_RPC = process.env.NEXT_PUBLIC_CELO_RPC_URL || "https://rpc.ankr.com/celo";
 
 const chainConfig = {
   chainNamespace: CHAIN_NAMESPACES.EIP155,

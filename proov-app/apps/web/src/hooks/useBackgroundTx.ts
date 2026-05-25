@@ -23,9 +23,9 @@ export function useBackgroundTx() {
   const publicClient = usePublicClient();
   const { address: connectedAddress } = useAccount();
 
-  // Returns true when the tx is accepted by the bundler, false on any error.
+  // Returns the tx hash when accepted by the bundler, null on any error.
   const sendTx = useCallback(
-    (config: Parameters<typeof writeContract>[0]): Promise<boolean> => {
+    (config: Parameters<typeof writeContract>[0]): Promise<`0x${string}` | null> => {
       return new Promise((resolve) => {
         try {
           writeContract(
@@ -34,19 +34,19 @@ export function useBackgroundTx() {
               onSuccess: (hash) => {
                 console.log('[tx] submitted:', hash);
                 showSuccess('Transaction submitted');
-                resolve(true);
+                resolve(hash);
               },
               onError: (err) => {
                 console.error('[tx] failed:', err);
                 showError(parseError(err));
-                resolve(false);
+                resolve(null);
               },
             }
           );
         } catch (e) {
           console.error('[tx] sync error:', e);
           showError(parseError(e));
-          resolve(false);
+          resolve(null);
         }
       });
     },
@@ -76,8 +76,8 @@ export function useBackgroundTx() {
         }
       }
 
-      const ok = await sendTx(config);
-      return ok ? { ok: true, result: simulatedResult } : { ok: false };
+      const hash = await sendTx(config);
+      return hash ? { ok: true, result: simulatedResult } : { ok: false };
     },
     [publicClient, connectedAddress, sendTx, showError]
   );
