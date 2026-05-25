@@ -8,6 +8,15 @@ import {
   CIRCLE_MANAGER_ABI,
 } from '@/lib/transactions';
 
+function safeDuration(minutes: number | undefined): bigint {
+  return BigInt(Math.round((minutes ?? 0) * 60));
+}
+
+function safeId(id: number | undefined): bigint | null {
+  if (!id || id <= 0) return null;
+  return BigInt(id);
+}
+
 export function useProovTx() {
   const { sendTx, sendTxWithResult } = useBackgroundTx();
 
@@ -17,47 +26,68 @@ export function useProovTx() {
       name: string,
       category: string,
       isTimed: boolean,
-      durationMinutes: number
+      durationMinutes: number | undefined
     ) => sendTx({
       address: CONTRACTS.PROOV_CORE,
       abi: PROOV_CORE_ABI,
       functionName: 'createHabit',
-      args: [name, category, isTimed, BigInt(durationMinutes * 60)],
+      args: [name, category, isTimed, safeDuration(durationMinutes)],
     }),
 
-    completeHabit: (onChainId: number) => sendTx({
-      address: CONTRACTS.PROOV_CORE,
-      abi: PROOV_CORE_ABI,
-      functionName: 'completeHabit',
-      args: [BigInt(onChainId)],
-    }),
+    completeHabit: (onChainId: number | undefined) => {
+      const id = safeId(onChainId);
+      if (!id) {
+        console.warn('[tx] completeHabit: no valid on_chain_id, skipping chain tx');
+        return Promise.resolve('0x' as `0x${string}`);
+      }
+      return sendTx({
+        address: CONTRACTS.PROOV_CORE,
+        abi: PROOV_CORE_ABI,
+        functionName: 'completeHabit',
+        args: [id],
+      });
+    },
 
-    removeHabit: (onChainId: number) => sendTx({
-      address: CONTRACTS.PROOV_CORE,
-      abi: PROOV_CORE_ABI,
-      functionName: 'removeHabit',
-      args: [BigInt(onChainId)],
-    }),
+    removeHabit: (onChainId: number | undefined) => {
+      const id = safeId(onChainId);
+      if (!id) {
+        console.warn('[tx] removeHabit: no valid on_chain_id, skipping chain tx');
+        return Promise.resolve('0x' as `0x${string}`);
+      }
+      return sendTx({
+        address: CONTRACTS.PROOV_CORE,
+        abi: PROOV_CORE_ABI,
+        functionName: 'removeHabit',
+        args: [id],
+      });
+    },
 
     editHabit: (
-      onChainId: number,
+      onChainId: number | undefined,
       name: string,
       category: string,
       isTimed: boolean,
-      durationMinutes: number
-    ) => sendTx({
-      address: CONTRACTS.PROOV_CORE,
-      abi: PROOV_CORE_ABI,
-      functionName: 'editHabit',
-      args: [BigInt(onChainId), name, category, isTimed, BigInt(durationMinutes * 60)],
-    }),
+      durationMinutes: number | undefined
+    ) => {
+      const id = safeId(onChainId);
+      if (!id) {
+        console.warn('[tx] editHabit: no valid on_chain_id, skipping chain tx');
+        return Promise.resolve('0x' as `0x${string}`);
+      }
+      return sendTx({
+        address: CONTRACTS.PROOV_CORE,
+        abi: PROOV_CORE_ABI,
+        functionName: 'editHabit',
+        args: [id, name, category, isTimed, safeDuration(durationMinutes)],
+      });
+    },
 
     // ── STREAK ACTIONS ─────────────────────────────────────────────────────
-    recordStreakIncrement: (newStreakCount: number) => sendTx({
+    recordStreakIncrement: (newStreakCount: number | undefined) => sendTx({
       address: CONTRACTS.PROOV_CORE,
       abi: PROOV_CORE_ABI,
       functionName: 'recordStreakIncrement',
-      args: [BigInt(newStreakCount)],
+      args: [BigInt(newStreakCount ?? 0)],
     }),
 
     // ── PROFILE ACTIONS ────────────────────────────────────────────────────
@@ -83,24 +113,28 @@ export function useProovTx() {
     }),
 
     // ── SESSION ACTIONS ────────────────────────────────────────────────────
-    // Simulates first to capture the returned on-chain sessionId (bigint).
-    startSession: (onChainHabitId: number, durationMinutes: number) =>
-      sendTxWithResult<bigint>({
+    startSession: (onChainHabitId: number | undefined, durationMinutes: number | undefined) => {
+      const id = safeId(onChainHabitId);
+      if (!id) {
+        console.warn('[tx] startSession: no valid on_chain_habit_id, skipping chain tx');
+        return Promise.resolve({ ok: false } as { ok: boolean; result?: bigint });
+      }
+      return sendTxWithResult<bigint>({
         address: CONTRACTS.SESSION_MANAGER,
         abi: SESSION_MANAGER_ABI,
         functionName: 'startSession',
-        args: [BigInt(onChainHabitId), BigInt(durationMinutes * 60)],
-      }),
+        args: [id, safeDuration(durationMinutes)],
+      });
+    },
 
-    startCustomSession: (label: string, durationMinutes: number) =>
+    startCustomSession: (label: string, durationMinutes: number | undefined) =>
       sendTxWithResult<bigint>({
         address: CONTRACTS.SESSION_MANAGER,
         abi: SESSION_MANAGER_ABI,
         functionName: 'startCustomSession',
-        args: [label, BigInt(durationMinutes * 60)],
+        args: [label, safeDuration(durationMinutes)],
       }),
 
-    // sessionId is the bigint returned by startSession / startCustomSession.
     endSession: (sessionId: bigint, completed: boolean) => sendTx({
       address: CONTRACTS.SESSION_MANAGER,
       abi: SESSION_MANAGER_ABI,
@@ -122,7 +156,6 @@ export function useProovTx() {
       args: [sessionId, completed],
     }),
 
-    // Fired at the halfway point for sessions longer than 30 minutes.
     recordProgress: (sessionId: bigint) => sendTx({
       address: CONTRACTS.SESSION_MANAGER,
       abi: SESSION_MANAGER_ABI,

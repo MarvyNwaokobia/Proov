@@ -13,7 +13,7 @@ import { getAddress } from 'viem';
 const chainConfig = {
   chainNamespace: CHAIN_NAMESPACES.EIP155,
   chainId: '0xA4EC', // 42220 Celo mainnet
-  rpcTarget: process.env.NEXT_PUBLIC_CELO_RPC_URL || 'https://celo-json-rpc.stakely.io',
+  rpcTarget: process.env.NEXT_PUBLIC_CELO_RPC_URL || 'https://rpc.ankr.com/celo',
   displayName: 'Celo',
   ticker: 'CELO',
   tickerName: 'Celo',
