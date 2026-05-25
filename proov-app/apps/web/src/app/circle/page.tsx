@@ -207,17 +207,26 @@ export default function CirclePage() {
 
   const handleConfirmInvite = async () => {
     if (!resolvedAddress) return;
-    await sendCircleRequest(myAddress, resolvedAddress).catch(() => {});
-    proovTx.sendCircleRequest(resolvedAddress as `0x${string}`);
-    setInviteInput(''); setResolvedAddress(''); setResolvedUsername('');
     setShowConfirm(false);
+    setInviteLoading(true);
+    const hash = await proovTx.sendCircleRequest(resolvedAddress as `0x${string}`);
+    if (!hash) {
+      setInviteError('Transaction failed — invite not sent');
+      setInviteLoading(false);
+      return;
+    }
+    await sendCircleRequest(myAddress, resolvedAddress, hash).catch(() => {});
+    setInviteInput(''); setResolvedAddress(''); setResolvedUsername('');
+    setInviteLoading(false);
     showToast('Invite sent ✓');
     loadCircleData();
   };
 
   const handleAccept = async (requestId: string, fromAddress?: string) => {
-    await respondToCircleRequest(requestId, 'accepted').catch(() => {});
-    if (fromAddress) proovTx.acceptCircleRequest(fromAddress as `0x${string}`);
+    if (!fromAddress) return;
+    const hash = await proovTx.acceptCircleRequest(fromAddress as `0x${string}`);
+    if (!hash) return;
+    await respondToCircleRequest(requestId, 'accepted', hash).catch(() => {});
     showToast('Connected ✓');
     loadCircleData();
   };

@@ -193,13 +193,15 @@ export interface CircleRequest {
 
 export async function sendCircleRequest(
   fromAddress: string,
-  toAddress: string
+  toAddress: string,
+  txHash?: string
 ): Promise<void> {
   if (!supabase) return;
   await supabase.from('circle_requests').upsert({
     from_address: fromAddress.toLowerCase(),
     to_address: toAddress.toLowerCase(),
     status: 'pending',
+    ...(txHash ? { invite_tx_hash: txHash } : {}),
   }, { onConflict: 'from_address,to_address' });
 }
 
@@ -225,12 +227,16 @@ export async function getCircleRequests(userAddress: string): Promise<{
 
 export async function respondToCircleRequest(
   requestId: string,
-  response: 'accepted' | 'declined'
+  response: 'accepted' | 'declined',
+  txHash?: string
 ): Promise<void> {
   if (!supabase) return;
   await supabase
     .from('circle_requests')
-    .update({ status: response })
+    .update({
+      status: response,
+      ...(txHash ? { accept_tx_hash: txHash } : {}),
+    })
     .eq('id', requestId);
 }
 
