@@ -277,19 +277,33 @@ export default function DashboardPage() {
     }
   };
 
-  const handleCheer = (memberAddress: string) => {
+  const handleCheer = async (memberAddress: string) => {
     const today = new Date().toDateString();
     localStorage.setItem(`proov_cheered_${memberAddress}_${today}`, '1');
     setCheered(prev => ({ ...prev, [memberAddress]: true }));
-    showToast('Cheer sent!');
+    showToast('Sending cheer...');
+    const hash = await proovTx.sendCheer(memberAddress as `0x${string}`);
+    if (hash) {
+      showToast('Cheer sent!');
+    } else {
+      localStorage.removeItem(`proov_cheered_${memberAddress}_${today}`);
+      setCheered(prev => { const next = { ...prev }; delete next[memberAddress]; return next; });
+      showToast('Could not send cheer');
+    }
   };
 
   const handleNudge = async (memberAddress: string, memberUsername: string) => {
     const myAddr = localStorage.getItem('proov_address') || '';
     setNudgedMap(prev => ({ ...prev, [memberAddress]: true }));
-    const ok = await sendNudge(myAddr, memberAddress).catch(() => false);
-    if (ok) showToast(`Nudge sent to @${memberUsername}!`);
-    else { setNudgedMap(prev => { const n = { ...prev }; delete n[memberAddress]; return n; }); showToast('Could not send nudge'); }
+    showToast('Sending nudge...');
+    const hash = await proovTx.sendNudge(memberAddress as `0x${string}`);
+    if (hash) {
+      const ok = await sendNudge(myAddr, memberAddress).catch(() => false);
+      if (ok) showToast(`Nudge sent to @${memberUsername}!`);
+    } else {
+      setNudgedMap(prev => { const n = { ...prev }; delete n[memberAddress]; return n; });
+      showToast('Could not send nudge');
+    }
   };
 
   const showToast = (msg: string) => {

@@ -89,4 +89,14 @@ export const CIRCLE_MANAGER_ABI = [
     inputs: [{ name: 'to', type: 'address' }],
     outputs: [],
   },
+  {
+    name: 'removeFromCircle', type: 'function', stateMutability: 'nonpayable',
+    inputs: [{ name: 'member', type: 'address' }],
+    outputs: [],
+  },
+  {
+    name: 'cheer', type: 'function', stateMutability: 'nonpayable',
+    inputs: [{ name: 'to', type: 'address' }],
+    outputs: [],
+  },
 ] as const;

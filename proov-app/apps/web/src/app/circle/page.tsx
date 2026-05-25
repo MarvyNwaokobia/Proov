@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   IconArrowLeft, IconFlame, IconHeart, IconBell, IconCheck, IconSend,
-  IconAlertTriangle, IconSparkles,
+  IconAlertTriangle, IconSparkles, IconUserMinus,
 } from "@tabler/icons-react";
 import {
   getAddressForUsername,
@@ -87,6 +87,12 @@ export default function CirclePage() {
   const [toastVisible, setToastVisible] = useState(false);
   const [cheeredMap, setCheeredMap] = useState<Record<string, boolean>>({});
   const [nudgedMap, setNudgedMap] = useState<Record<string, boolean>>({});
+
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const [removeTargetAddress, setRemoveTargetAddress] = useState('');
+  const [removeTargetUsername, setRemoveTargetUsername] = useState('');
+  const [removeTargetRequestId, setRemoveTargetRequestId] = useState('');
+  const [removeLoading, setRemoveLoading] = useState(false);
 
   const [insight, setInsight] = useState<string | null>(null);
   const [insightLoading, setInsightLoading] = useState(false);
@@ -236,25 +242,57 @@ export default function CirclePage() {
     loadCircleData();
   };
 
-  const handleCheer = (addr: string) => {
+  const handleCheer = async (addr: string) => {
     const today = new Date().toDateString();
     localStorage.setItem(`proov_cheered_${addr}_${today}`, '1');
     setCheeredMap(m => ({ ...m, [addr]: true }));
-    proovTx.sendCheer(addr as `0x${string}`);
-    showToast('Cheer sent!');
+    showToast('Sending cheer...');
+    const hash = await proovTx.sendCheer(addr as `0x${string}`);
+    if (hash) {
+      showToast('Cheer sent!');
+    } else {
+      localStorage.removeItem(`proov_cheered_${addr}_${today}`);
+      setCheeredMap(m => { const next = { ...m }; delete next[addr]; return next; });
+      showToast('Could not send cheer');
+    }
   };
 
   const handleNudge = async (addr: string, username: string) => {
-    // Optimistic update so the button changes immediately
     setNudgedMap(m => ({ ...m, [addr]: true }));
-    const ok = await sendNudge(myAddress, addr).catch(() => false);
-    if (ok) {
-      showToast(`Nudge sent to @${username}!`);
+    showToast('Sending nudge...');
+    const hash = await proovTx.sendNudge(addr as `0x${string}`);
+    if (hash) {
+      const ok = await sendNudge(myAddress, addr).catch(() => false);
+      if (ok) {
+        showToast(`Nudge sent to @${username}!`);
+      }
     } else {
-      // Rollback on failure and let the user try again
       setNudgedMap(m => { const next = { ...m }; delete next[addr]; return next; });
-      showToast('Could not send nudge — try again');
+      showToast('Could not send nudge');
     }
+  };
+
+  const handleRemoveClick = (addr: string, username: string, requestId: string) => {
+    setRemoveTargetAddress(addr);
+    setRemoveTargetUsername(username);
+    setRemoveTargetRequestId(requestId);
+    setShowRemoveConfirm(true);
+  };
+
+  const handleConfirmRemove = async () => {
+    if (!removeTargetAddress || !removeTargetRequestId) return;
+    setShowRemoveConfirm(false);
+    setRemoveLoading(true);
+    showToast('Removing member...');
+    const hash = await proovTx.removeFromCircle(removeTargetAddress as `0x${string}`);
+    if (hash) {
+      await respondToCircleRequest(removeTargetRequestId, 'declined').catch(() => {});
+      showToast('Removed from circle ✓');
+      loadCircleData();
+    } else {
+      showToast('Could not remove member');
+    }
+    setRemoveLoading(false);
   };
 
   const wasCheerAlready = (addr: string) => {
@@ -484,32 +522,43 @@ export default function CirclePage() {
                     </div>
                   </div>
                   {/* Action button row — cheer if streak completed today, nudge if not */}
-                  <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
-                    {activeToday ? (
-                      alreadyCheered ? (
-                        <span style={{ fontSize: 11, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 4, padding: '5px 0' }}>
-                          <IconCheck size={12} stroke={2.5} /> Cheered
-                        </span>
+                  <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <button
+                      onClick={() => handleRemoveClick(otherAddr, username, req.id)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', borderRadius: 20, border: 'none', background: 'transparent', color: 'var(--text3)', fontSize: 11, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#f43f5e'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text3)'; }}
+                    >
+                      <IconUserMinus size={13} stroke={1.8} /> Remove
+                    </button>
+
+                    <div>
+                      {activeToday ? (
+                        alreadyCheered ? (
+                          <span style={{ fontSize: 11, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 4, padding: '5px 0' }}>
+                            <IconCheck size={12} stroke={2.5} /> Cheered
+                          </span>
+                        ) : (
+                          <button onClick={() => handleCheer(otherAddr)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 20, border: '1.5px solid rgba(244,63,94,0.4)', background: 'rgba(244,63,94,0.06)', color: '#f43f5e', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s' }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(244,63,94,0.12)'; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(244,63,94,0.06)'; }}>
+                            <IconHeart size={13} stroke={2} /> Cheer
+                          </button>
+                        )
                       ) : (
-                        <button onClick={() => handleCheer(otherAddr)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 20, border: '1.5px solid rgba(244,63,94,0.4)', background: 'rgba(244,63,94,0.06)', color: '#f43f5e', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s' }}
-                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(244,63,94,0.12)'; }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(244,63,94,0.06)'; }}>
-                          <IconHeart size={13} stroke={2} /> Cheer
-                        </button>
-                      )
-                    ) : (
-                      alreadyNudged ? (
-                        <span style={{ fontSize: 11, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 4, padding: '5px 0' }}>
-                          <IconCheck size={12} stroke={2.5} /> Nudged
-                        </span>
-                      ) : (
-                        <button onClick={() => handleNudge(otherAddr, username)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 20, border: '1.5px solid var(--border2)', background: 'transparent', color: 'var(--text3)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s' }}
-                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLElement).style.color = 'var(--text2)'; }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border2)'; (e.currentTarget as HTMLElement).style.color = 'var(--text3)'; }}>
-                          <IconBell size={13} stroke={1.8} /> Nudge
-                        </button>
-                      )
-                    )}
+                        alreadyNudged ? (
+                          <span style={{ fontSize: 11, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 4, padding: '5px 0' }}>
+                            <IconCheck size={12} stroke={2.5} /> Nudged
+                          </span>
+                        ) : (
+                          <button onClick={() => handleNudge(otherAddr, username)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 20, border: '1.5px solid var(--border2)', background: 'transparent', color: 'var(--text3)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s' }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLElement).style.color = 'var(--text2)'; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border2)'; (e.currentTarget as HTMLElement).style.color = 'var(--text3)'; }}>
+                            <IconBell size={13} stroke={1.8} /> Nudge
+                          </button>
+                        )
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -613,6 +662,24 @@ export default function CirclePage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <button onClick={() => setShowConfirm(false)} style={{ padding: 11, borderRadius: 12, border: '1px solid var(--border2)', background: 'transparent', color: 'var(--text2)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
               <button onClick={handleConfirmInvite} style={{ padding: 11, borderRadius: 12, border: 'none', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Add them</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm remove sheet */}
+      {showRemoveConfirm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100, padding: '0 1rem 1.5rem' }} onClick={() => setShowRemoveConfirm(false)}>
+          <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 20, padding: '1.5rem', width: '100%', maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>Remove from circle?</div>
+            <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: '1.25rem', lineHeight: 1.6 }}>
+              You will stop seeing <strong style={{ color: 'var(--text)' }}>@{removeTargetUsername}</strong>'s habit activity and they will stop seeing yours.
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <button onClick={() => setShowRemoveConfirm(false)} style={{ padding: 11, borderRadius: 12, border: '1px solid var(--border2)', background: 'transparent', color: 'var(--text2)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+              <button onClick={handleConfirmRemove} disabled={removeLoading} style={{ padding: 11, borderRadius: 12, border: 'none', background: '#f43f5e', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: removeLoading ? 0.5 : 1 }}>
+                {removeLoading ? 'Removing...' : 'Remove them'}
+              </button>
             </div>
           </div>
         </div>

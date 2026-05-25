@@ -762,6 +762,22 @@ export async function backupSessionKey(
   }
 }
 
+export async function updateSessionKeyExpiry(
+  address: string,
+  expiresAt: string
+): Promise<void> {
+  if (!supabase || !address) return;
+  try {
+    await supabase.from('profiles').update({
+      session_key_expires_at: expiresAt,
+      updated_at: new Date().toISOString(),
+    }).eq('address', address.toLowerCase());
+  } catch (err) {
+    console.error('updateSessionKeyExpiry error:', err);
+  }
+}
+
+
 export async function restoreSessionKey(
   address: string
 ): Promise<{ encryptedKey: string; expiresAt: string } | null> {
