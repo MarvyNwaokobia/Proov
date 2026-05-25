@@ -186,5 +186,21 @@ export function useProovTx() {
       isRoutine: true,
     } as any),
 
+    sendNudge: (toAddress: `0x${string}`) => sendTx({
+      address: CONTRACTS.CIRCLE_MANAGER,
+      abi: CIRCLE_MANAGER_ABI,
+      functionName: 'cheer',
+      args: [toAddress],
+      isRoutine: true,
+    } as any),
+
+    removeFromCircle: (memberAddress: `0x${string}`) => sendTx({
+      address: CONTRACTS.CIRCLE_MANAGER,
+      abi: CIRCLE_MANAGER_ABI,
+      functionName: 'removeFromCircle',
+      args: [memberAddress],
+      isRoutine: true,
+    } as any),
+
   };
 }
