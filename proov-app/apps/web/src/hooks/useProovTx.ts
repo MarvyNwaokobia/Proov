@@ -55,7 +55,8 @@ export function useProovTx() {
         abi: PROOV_CORE_ABI,
         functionName: 'selfCompleteHabit',
         args: [id, '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`],
-      });
+        isRoutine: true,
+      } as any);
     },
 
     removeHabit: (onChainId: number | undefined) => {
@@ -89,7 +90,8 @@ export function useProovTx() {
       abi: PROOV_CORE_ABI,
       functionName: 'recordStreakIncrement',
       args: [BigInt(newStreakCount ?? 0)],
-    }),
+      isRoutine: true,
+    } as any),
 
     // ── PROFILE ACTIONS ────────────────────────────────────────────────────
     setUsername: (username: string) => sendTx({
@@ -125,7 +127,8 @@ export function useProovTx() {
         abi: SESSION_MANAGER_ABI,
         functionName: 'startSession',
         args: [id],
-      }).then(hash => ({ ok: !!hash, result: undefined as bigint | undefined }));
+        isRoutine: true,
+      } as any).then(hash => ({ ok: !!hash, result: undefined as bigint | undefined }));
     },
 
     startCustomSession: (label: string, durationMinutes: number | undefined) =>
@@ -136,14 +139,16 @@ export function useProovTx() {
       abi: SESSION_MANAGER_ABI,
       functionName: 'endSession',
       args: [],
-    }),
+      isRoutine: true,
+    } as any),
 
     cancelSession: (sessionId: bigint) => sendTx({
       address: CONTRACTS.SESSION_MANAGER,
       abi: SESSION_MANAGER_ABI,
       functionName: 'abandonSession',
       args: [],
-    }),
+      isRoutine: true,
+    } as any),
 
     endCustomSession: (sessionId: bigint, completed: boolean) =>
       Promise.resolve('0x' as `0x${string}`),
@@ -153,7 +158,8 @@ export function useProovTx() {
       abi: SESSION_MANAGER_ABI,
       functionName: 'recordProgress',
       args: [sessionId],
-    }),
+      isRoutine: true,
+    } as any),
 
     // ── CIRCLE ACTIONS ─────────────────────────────────────────────────────
     sendCircleRequest: (toAddress: `0x${string}`) => sendTx({
@@ -161,20 +167,24 @@ export function useProovTx() {
       abi: CIRCLE_MANAGER_ABI,
       functionName: 'sendRequest',
       args: [toAddress],
-    }),
+      isRoutine: true,
+    } as any),
 
     acceptCircleRequest: (fromAddress: `0x${string}`) => sendTx({
       address: CONTRACTS.CIRCLE_MANAGER,
       abi: CIRCLE_MANAGER_ABI,
       functionName: 'acceptRequest',
       args: [fromAddress],
-    }),
+      isRoutine: true,
+    } as any),
 
     sendCheer: (toAddress: `0x${string}`) => sendTx({
       address: CONTRACTS.CIRCLE_MANAGER,
       abi: CIRCLE_MANAGER_ABI,
       functionName: 'sendCheer',
       args: [toAddress],
-    }),
+      isRoutine: true,
+    } as any),
+
   };
 }
