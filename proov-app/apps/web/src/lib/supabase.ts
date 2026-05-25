@@ -712,3 +712,25 @@ export async function getAvatarUrl(address: string): Promise<string | null> {
   }
 }
 
+export async function getOnboardingComplete(address: string): Promise<boolean> {
+  if (!supabase || !address) return false;
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('onboarding_complete')
+      .eq('address', address.toLowerCase())
+      .maybeSingle();
+    return (data as any)?.onboarding_complete === true;
+  } catch {
+    return false;
+  }
+}
+
+export async function setOnboardingComplete(address: string): Promise<void> {
+  if (!supabase || !address) return;
+  try {
+    await supabase
+      .from('profiles')
+      .upsert({ address: address.toLowerCase(), onboarding_complete: true }, { onConflict: 'address' });
+  } catch {}
+}
