@@ -33,11 +33,14 @@ export function createAAConnector({
 }: {
   web3AuthInstance: Web3Auth;
 }) {
-  // Singleton AA provider per login session — cleared on disconnect
-  let aaProviderPromise: Promise<AccountAbstractionProvider> | null = null;
+  // Resolved AA provider instance — stored as a value, NOT a promise.
+  // This avoids permanently caching a rejected promise: if a build attempt
+  // fails (e.g. RPC error during background reconnect), the next call starts
+  // fresh rather than replaying the same failure forever.
+  let _aaProvider: AccountAbstractionProvider | null = null;
 
   function clearAA() {
-    aaProviderPromise = null;
+    _aaProvider = null;
   }
 
   async function buildAAProvider(): Promise<AccountAbstractionProvider> {
@@ -61,14 +64,6 @@ export function createAAConnector({
     });
   }
 
-  async function getAAProvider(): Promise<AccountAbstractionProvider | null> {
-    if (!web3AuthInstance.provider) return null;
-    if (!aaProviderPromise) {
-      aaProviderPromise = buildAAProvider();
-    }
-    return aaProviderPromise;
-  }
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   type AnyProvider = any;
 
@@ -88,29 +83,30 @@ export function createAAConnector({
         await web3AuthInstance.connect();
       }
 
-      const provider: AnyProvider = await this.getProvider();
-      if (provider) {
-        provider.on?.('accountsChanged', (accounts: string[]) =>
-          this.onAccountsChanged(accounts)
-        );
-        provider.on?.('chainChanged', (chainId: string) =>
-          this.onChainChanged(chainId)
-        );
-        provider.on?.('disconnect', () => this.onDisconnect());
-      }
+      // Always rebuild on explicit connect — ensures a fresh AA provider even
+      // if a prior background reconnect attempt had failed and left _aaProvider null.
+      _aaProvider = await buildAAProvider();
+
+      _aaProvider.on?.('accountsChanged', (accounts: string[]) =>
+        this.onAccountsChanged(accounts)
+      );
+      _aaProvider.on?.('chainChanged', (chainId: string) =>
+        this.onChainChanged(chainId)
+      );
+      _aaProvider.on?.('disconnect', () => this.onDisconnect());
 
       const accounts = await this.getAccounts();
       const chainId = await this.getChainId();
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return { accounts, chainId } as any;
     },
 
     async disconnect() {
-      const provider: AnyProvider = await this.getProvider().catch(() => null);
-      if (provider) {
-        provider.removeListener?.('accountsChanged', this.onAccountsChanged);
-        provider.removeListener?.('chainChanged', this.onChainChanged);
-        provider.removeListener?.('disconnect', this.onDisconnect);
+      if (_aaProvider) {
+        _aaProvider.removeListener?.('accountsChanged', this.onAccountsChanged);
+        _aaProvider.removeListener?.('chainChanged', this.onChainChanged);
+        _aaProvider.removeListener?.('disconnect', this.onDisconnect);
       }
       await web3AuthInstance.logout({ cleanup: true }).catch(() => {});
       clearAA();
@@ -120,8 +116,7 @@ export function createAAConnector({
       const provider: AnyProvider = await this.getProvider();
       if (!provider) return [];
       const raw: string[] = await provider.request({ method: 'eth_accounts' });
-      // First account is the Smart Account address, second is the EOA.
-      // Expose only the SA address so the rest of the app uses it.
+      // First account is the Smart Account address.
       return raw.slice(0, 1).map(a => getAddress(a)) as [`0x${string}`];
     },
 
@@ -137,10 +132,21 @@ export function createAAConnector({
         await web3AuthInstance.initModal();
       }
 
-      // Not connected at all yet — return null so wagmi treats as disconnected
+      // Not logged in — return null so wagmi treats this connector as disconnected.
       if (!web3AuthInstance.provider) return null;
 
-      return getAAProvider();
+      // Return cached provider if already built.
+      if (_aaProvider) return _aaProvider;
+
+      // Build it now (happens on reconnect when session was restored by initModal).
+      // Swallow errors and return null — wagmi sees null as "not yet connected"
+      // rather than throwing, which would permanently break the connect flow.
+      try {
+        _aaProvider = await buildAAProvider();
+        return _aaProvider;
+      } catch {
+        return null;
+      }
     },
 
     async isAuthorized() {

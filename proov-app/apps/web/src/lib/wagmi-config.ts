@@ -29,7 +29,7 @@ export function getWeb3Auth(): Web3Auth {
 
   // EthereumPrivateKeyProvider drives the Web3Auth auth flow (social login,
   // session caching, key derivation). The AA connector wraps it afterward to
-  // derive the Safe Smart Account address.
+  // derive the Safe Smart Account address from the EOA.
   const privateKeyProvider = new EthereumPrivateKeyProvider({ config: { chainConfig } });
 
   _web3auth = new Web3Auth({
