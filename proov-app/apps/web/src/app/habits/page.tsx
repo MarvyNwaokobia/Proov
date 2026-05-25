@@ -92,7 +92,7 @@ const SUGGESTION_CATS = ['Focus', 'Fitness', 'Wellness', 'Learning', 'Nutrition'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const STOPS = [5, 10, 15, 20, 25, 30, 45, 60, 90, 120, 180, 240];
+const STOPS = [1, 5, 10, 15, 20, 25, 30, 45, 60, 90, 120, 180, 240];
 function snapToStop(val: number) { return STOPS.reduce((p, c) => Math.abs(c - val) < Math.abs(p - val) ? c : p); }
 function fmtDur(m: number) { return m < 60 ? `${m} min` : `${Math.floor(m / 60)}h${m % 60 > 0 ? ` ${m % 60}m` : ""}`; }
 

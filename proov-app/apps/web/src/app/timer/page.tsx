@@ -925,37 +925,30 @@ export default function GrindTimerPage() {
               </div>
             )}
 
-            {isCustom ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12 }}>
-                <input
-                  type="number"
-                  min={1}
-                  max={240}
-                  value={duration}
-                  onChange={e => {
-                    const val = parseInt(e.target.value);
-                    if (!isNaN(val)) setDuration(Math.min(240, Math.max(1, val)));
-                  }}
-                  onBlur={e => {
-                    const val = parseInt(e.target.value);
-                    setDuration(isNaN(val) || val < 1 ? 1 : Math.min(240, val));
-                  }}
-                  onFocus={e => e.target.select()}
-                  style={{
-                    width: 80, fontSize: 28, fontWeight: 800, color: 'var(--text)',
-                    background: 'var(--bg2)', border: '1.5px solid var(--accent-border)',
-                    borderRadius: 10, textAlign: 'center', outline: 'none',
-                    fontFamily: 'inherit', letterSpacing: -1, padding: '4px 8px',
-                  }}
-                />
-                <span style={{ fontSize: 16, color: 'var(--text3)', fontWeight: 600 }}>min</span>
-              </div>
-            ) : (
-              <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text)',
-                textAlign: 'center', marginBottom: 12, letterSpacing: -1 }}>
-                {fmtDur(duration)}
-              </div>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12 }}>
+              <input
+                type="number"
+                min={1}
+                max={240}
+                value={duration}
+                onChange={e => {
+                  const val = parseInt(e.target.value);
+                  if (!isNaN(val)) setDuration(Math.min(240, Math.max(1, val)));
+                }}
+                onBlur={e => {
+                  const val = parseInt(e.target.value);
+                  setDuration(isNaN(val) || val < 1 ? 1 : Math.min(240, val));
+                }}
+                onFocus={e => e.target.select()}
+                style={{
+                  width: 80, fontSize: 28, fontWeight: 800, color: 'var(--text)',
+                  background: 'var(--bg2)', border: '1.5px solid var(--accent-border)',
+                  borderRadius: 10, textAlign: 'center', outline: 'none',
+                  fontFamily: 'inherit', letterSpacing: -1, padding: '4px 8px',
+                }}
+              />
+              <span style={{ fontSize: 16, color: 'var(--text3)', fontWeight: 600 }}>min</span>
+            </div>
 
             <input
               type="range"
@@ -965,8 +958,8 @@ export default function GrindTimerPage() {
               value={duration}
               onChange={e => {
                 const v = parseInt(e.target.value);
-                const stops = [5,10,15,20,25,30,45,60,90,120,180,240];
-                setDuration(stops.reduce((p,c) => Math.abs(c-v)<Math.abs(p-v)?c:p));
+                const stops = [1, 5, 10, 15, 20, 25, 30, 45, 60, 90, 120, 180, 240];
+                setDuration(stops.reduce((p, c) => Math.abs(c - v) < Math.abs(p - v) ? c : p));
               }}
               style={{ width: '100%', marginBottom: 16, accentColor: 'var(--accent)' }}
             />
