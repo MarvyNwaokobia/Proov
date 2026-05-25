@@ -740,3 +740,47 @@ export async function setOnboardingComplete(address: string): Promise<void> {
       .upsert({ address: address.toLowerCase(), onboarding_complete: true }, { onConflict: 'address' });
   } catch {}
 }
+
+export async function backupSessionKey(
+  address: string,
+  encryptedKey: string,
+  expiresAt: string
+): Promise<void> {
+  if (!supabase || !address) return;
+  try {
+    await supabase.from('profiles').upsert(
+      {
+        address: address.toLowerCase(),
+        encrypted_session_key: encryptedKey,
+        session_key_expires_at: expiresAt,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'address' }
+    );
+  } catch (err) {
+    console.error('backupSessionKey error:', err);
+  }
+}
+
+export async function restoreSessionKey(
+  address: string
+): Promise<{ encryptedKey: string; expiresAt: string } | null> {
+  if (!supabase || !address) return null;
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('encrypted_session_key, session_key_expires_at')
+      .eq('address', address.toLowerCase())
+      .maybeSingle();
+
+    if (error || !data || !data.encrypted_session_key) return null;
+    return {
+      encryptedKey: data.encrypted_session_key,
+      expiresAt: data.session_key_expires_at || '',
+    };
+  } catch (err) {
+    console.error('restoreSessionKey error:', err);
+    return null;
+  }
+}
+
