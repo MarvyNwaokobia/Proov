@@ -9,31 +9,23 @@ export const PROOV_CORE_ABI = [
     name: 'createHabit', type: 'function', stateMutability: 'nonpayable',
     inputs: [
       { name: 'name', type: 'string' },
-      { name: 'category', type: 'string' },
-      { name: 'isTimed', type: 'bool' },
-      { name: 'durationSeconds', type: 'uint256' },
+      { name: 'habitType', type: 'uint8' },
+      { name: 'targetDuration', type: 'uint256' },
+      { name: 'frequency', type: 'uint8' },
     ],
     outputs: [{ name: 'habitId', type: 'uint256' }],
   },
   {
-    name: 'completeHabit', type: 'function', stateMutability: 'nonpayable',
-    inputs: [{ name: 'habitId', type: 'uint256' }],
-    outputs: [],
-  },
-  {
-    name: 'removeHabit', type: 'function', stateMutability: 'nonpayable',
-    inputs: [{ name: 'habitId', type: 'uint256' }],
-    outputs: [],
-  },
-  {
-    name: 'editHabit', type: 'function', stateMutability: 'nonpayable',
+    name: 'selfCompleteHabit', type: 'function', stateMutability: 'nonpayable',
     inputs: [
       { name: 'habitId', type: 'uint256' },
-      { name: 'name', type: 'string' },
-      { name: 'category', type: 'string' },
-      { name: 'isTimed', type: 'bool' },
-      { name: 'durationSeconds', type: 'uint256' },
+      { name: 'verificationHash', type: 'bytes32' },
     ],
+    outputs: [],
+  },
+  {
+    name: 'deactivateHabit', type: 'function', stateMutability: 'nonpayable',
+    inputs: [{ name: 'habitId', type: 'uint256' }],
     outputs: [],
   },
   {
@@ -61,44 +53,22 @@ export const PROOV_CORE_ABI = [
 export const SESSION_MANAGER_ABI = [
   {
     name: 'startSession', type: 'function', stateMutability: 'nonpayable',
-    inputs: [
-      { name: 'habitId', type: 'uint256' },
-      { name: 'durationSeconds', type: 'uint256' },
-    ],
-    outputs: [{ name: 'sessionId', type: 'uint256' }],
-  },
-  {
-    name: 'endSession', type: 'function', stateMutability: 'nonpayable',
-    inputs: [
-      { name: 'sessionId', type: 'uint256' },
-      { name: 'completed', type: 'bool' },
-    ],
+    inputs: [{ name: 'habitId', type: 'uint256' }],
     outputs: [],
   },
   {
-    name: 'cancelSession', type: 'function', stateMutability: 'nonpayable',
-    inputs: [{ name: 'sessionId', type: 'uint256' }],
+    name: 'endSession', type: 'function', stateMutability: 'nonpayable',
+    inputs: [],
+    outputs: [],
+  },
+  {
+    name: 'abandonSession', type: 'function', stateMutability: 'nonpayable',
+    inputs: [],
     outputs: [],
   },
   {
     name: 'recordProgress', type: 'function', stateMutability: 'nonpayable',
     inputs: [{ name: 'sessionId', type: 'uint256' }],
-    outputs: [],
-  },
-  {
-    name: 'startCustomSession', type: 'function', stateMutability: 'nonpayable',
-    inputs: [
-      { name: 'label', type: 'string' },
-      { name: 'durationSeconds', type: 'uint256' },
-    ],
-    outputs: [{ name: 'sessionId', type: 'uint256' }],
-  },
-  {
-    name: 'endCustomSession', type: 'function', stateMutability: 'nonpayable',
-    inputs: [
-      { name: 'sessionId', type: 'uint256' },
-      { name: 'completed', type: 'bool' },
-    ],
     outputs: [],
   },
 ] as const;
