@@ -14,7 +14,7 @@ const FAUCET_ABI = parseAbi([
 function getPublicClient() {
   return createPublicClient({
     chain: celo,
-    transport: http('https://forno.celo.org'),
+    transport: http(process.env.NEXT_PUBLIC_CELO_RPC_URL || 'https://celo-json-rpc.stakely.io'),
   });
 }
 
