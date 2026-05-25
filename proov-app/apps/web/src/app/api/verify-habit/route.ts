@@ -4,13 +4,15 @@ import { createClient } from '@supabase/supabase-js';
 const MONTHLY_LIMIT = 20;
 
 function getSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
   return createClient(url, key);
 }
 
 async function getUsage(address: string): Promise<{ used: number; resetDate: string | null }> {
   const supabase = getSupabase();
+  if (!supabase) return { used: 0, resetDate: null };
   const { data } = await supabase
     .from('profiles')
     .select('ai_verifications_used_this_month, ai_verifications_reset_date')
@@ -24,6 +26,7 @@ async function getUsage(address: string): Promise<{ used: number; resetDate: str
 
 async function incrementUsage(address: string): Promise<void> {
   const supabase = getSupabase();
+  if (!supabase) return;
   const addr = address.toLowerCase();
   const today = new Date().toISOString().split('T')[0];
   const { data: existing } = await supabase
@@ -50,6 +53,7 @@ async function recordProof(
   reasoning: string
 ): Promise<void> {
   const supabase = getSupabase();
+  if (!supabase) return;
   await supabase.from('habit_proofs').insert({
     habit_id: habitId,
     user_address: userAddress.toLowerCase(),
@@ -77,7 +81,7 @@ export async function POST(req: NextRequest) {
       if (daysSinceReset > 30) {
         // Reset counter
         const supabase = getSupabase();
-        await supabase.from('profiles').upsert(
+        await supabase?.from('profiles').upsert(
           { address: addr, ai_verifications_used_this_month: 0, ai_verifications_reset_date: new Date().toISOString().split('T')[0] },
           { onConflict: 'address' }
         );
