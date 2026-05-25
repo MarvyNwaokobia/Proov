@@ -3,7 +3,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { validateUsername, isUsernameTaken, registerUsername, generateSuggestions } from '@/lib/username';
 import { setIdentityUsername } from '@/lib/auth';
-import { useProovTx } from '@/hooks/useProovTx';
 import {
   isUsernameAvailable,
   registerUsername as registerSupabaseUsername,
@@ -18,7 +17,6 @@ export default function UsernameSetupPage() {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(false);
   const [address, setAddress] = useState('');
-  const proovTx = useProovTx();
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
@@ -85,17 +83,16 @@ export default function UsernameSetupPage() {
     registerUsername(clean, address);
     localStorage.setItem('proov_username', clean);
     setIdentityUsername(address, clean);
-    proovTx.setUsername(clean);
 
     localStorage.setItem('proov_is_new_user', 'true');
-    router.push('/onboarding');
+    router.push('/onboarding?step=habit');
   };
 
   const handleSkip = () => {
     const temp = 'user_' + Math.random().toString(36).slice(2, 7);
     registerUsername(temp, address);
     localStorage.setItem('proov_is_new_user', 'true');
-    router.push('/onboarding');
+    router.push('/onboarding?step=habit');
   };
 
   const borderColor = hint === '✓ Available'
