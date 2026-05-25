@@ -9,7 +9,7 @@ import {
 } from '@/lib/transactions';
 
 export function useProovTx() {
-  const { sendTx } = useBackgroundTx();
+  const { sendTx, sendTxWithResult } = useBackgroundTx();
 
   return {
     // ── HABIT ACTIONS ──────────────────────────────────────────────────────
@@ -83,39 +83,51 @@ export function useProovTx() {
     }),
 
     // ── SESSION ACTIONS ────────────────────────────────────────────────────
-    startSession: (onChainHabitId: number, durationMinutes: number) => sendTx({
-      address: CONTRACTS.SESSION_MANAGER,
-      abi: SESSION_MANAGER_ABI,
-      functionName: 'startSession',
-      args: [BigInt(onChainHabitId), BigInt(durationMinutes * 60)],
-    }),
+    // Simulates first to capture the returned on-chain sessionId (bigint).
+    startSession: (onChainHabitId: number, durationMinutes: number) =>
+      sendTxWithResult<bigint>({
+        address: CONTRACTS.SESSION_MANAGER,
+        abi: SESSION_MANAGER_ABI,
+        functionName: 'startSession',
+        args: [BigInt(onChainHabitId), BigInt(durationMinutes * 60)],
+      }),
 
-    endSession: (onChainSessionId: number, completed: boolean) => sendTx({
+    startCustomSession: (label: string, durationMinutes: number) =>
+      sendTxWithResult<bigint>({
+        address: CONTRACTS.SESSION_MANAGER,
+        abi: SESSION_MANAGER_ABI,
+        functionName: 'startCustomSession',
+        args: [label, BigInt(durationMinutes * 60)],
+      }),
+
+    // sessionId is the bigint returned by startSession / startCustomSession.
+    endSession: (sessionId: bigint, completed: boolean) => sendTx({
       address: CONTRACTS.SESSION_MANAGER,
       abi: SESSION_MANAGER_ABI,
       functionName: 'endSession',
-      args: [BigInt(onChainSessionId), completed],
+      args: [sessionId, completed],
     }),
 
-    cancelSession: (onChainSessionId: number) => sendTx({
+    cancelSession: (sessionId: bigint) => sendTx({
       address: CONTRACTS.SESSION_MANAGER,
       abi: SESSION_MANAGER_ABI,
       functionName: 'cancelSession',
-      args: [BigInt(onChainSessionId)],
+      args: [sessionId],
     }),
 
-    startCustomSession: (label: string, durationMinutes: number) => sendTx({
-      address: CONTRACTS.SESSION_MANAGER,
-      abi: SESSION_MANAGER_ABI,
-      functionName: 'startCustomSession',
-      args: [label, BigInt(durationMinutes * 60)],
-    }),
-
-    endCustomSession: (onChainSessionId: number, completed: boolean) => sendTx({
+    endCustomSession: (sessionId: bigint, completed: boolean) => sendTx({
       address: CONTRACTS.SESSION_MANAGER,
       abi: SESSION_MANAGER_ABI,
       functionName: 'endCustomSession',
-      args: [BigInt(onChainSessionId), completed],
+      args: [sessionId, completed],
+    }),
+
+    // Fired at the halfway point for sessions longer than 30 minutes.
+    recordProgress: (sessionId: bigint) => sendTx({
+      address: CONTRACTS.SESSION_MANAGER,
+      abi: SESSION_MANAGER_ABI,
+      functionName: 'recordProgress',
+      args: [sessionId],
     }),
 
     // ── CIRCLE ACTIONS ─────────────────────────────────────────────────────

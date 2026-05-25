@@ -1,6 +1,6 @@
 'use client';
 
-import { useWriteContract } from 'wagmi';
+import { useWriteContract, usePublicClient, useAccount } from 'wagmi';
 import { useCallback } from 'react';
 import { withCeloFee } from '@/lib/constants';
 import { useTxToast } from '@/components/shared/TxToast';
@@ -20,9 +20,10 @@ function parseError(err: unknown): string {
 export function useBackgroundTx() {
   const { writeContract } = useWriteContract();
   const { showError, showSuccess } = useTxToast();
+  const publicClient = usePublicClient();
+  const { address: connectedAddress } = useAccount();
 
   // Returns true when the tx is accepted by the bundler, false on any error.
-  // Callers must await this before writing anything to Supabase.
   const sendTx = useCallback(
     (config: Parameters<typeof writeContract>[0]): Promise<boolean> => {
       return new Promise((resolve) => {
@@ -52,5 +53,34 @@ export function useBackgroundTx() {
     [writeContract, showError, showSuccess]
   );
 
-  return { sendTx };
+  // Simulates the call first (to capture the return value), then writes.
+  // Returns { ok, result } where result is the value the contract would return.
+  // If simulation fails the tx is not sent and ok is false.
+  const sendTxWithResult = useCallback(
+    async <R>(config: Parameters<typeof writeContract>[0]): Promise<{ ok: boolean; result?: R }> => {
+      let simulatedResult: R | undefined;
+
+      if (publicClient && connectedAddress) {
+        try {
+          const sim = await publicClient.simulateContract({
+            account: connectedAddress,
+            address: (config as any).address,
+            abi: (config as any).abi,
+            functionName: (config as any).functionName,
+            args: (config as any).args,
+          });
+          simulatedResult = sim.result as R;
+        } catch (e) {
+          showError(parseError(e));
+          return { ok: false };
+        }
+      }
+
+      const ok = await sendTx(config);
+      return ok ? { ok: true, result: simulatedResult } : { ok: false };
+    },
+    [publicClient, connectedAddress, sendTx, showError]
+  );
+
+  return { sendTx, sendTxWithResult };
 }

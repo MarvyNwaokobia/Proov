@@ -81,6 +81,11 @@ export const SESSION_MANAGER_ABI = [
     outputs: [],
   },
   {
+    name: 'recordProgress', type: 'function', stateMutability: 'nonpayable',
+    inputs: [{ name: 'sessionId', type: 'uint256' }],
+    outputs: [],
+  },
+  {
     name: 'startCustomSession', type: 'function', stateMutability: 'nonpayable',
     inputs: [
       { name: 'label', type: 'string' },
