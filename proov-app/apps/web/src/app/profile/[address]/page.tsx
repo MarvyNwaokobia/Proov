@@ -5,9 +5,59 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   getUserHabits, getUsernameForAddress, getStreakData, getTodayCompletions,
   getGlobalLeaderboard, getAllHabitStreaks, getTotalCompletions,
-  getCompletionDates, getProfileCreatedAt, type Habit,
+  getDailyCompletionCounts, getProfileCreatedAt, type Habit,
 } from '@/lib/supabase';
 import { IconArrowLeft, IconFlame, IconSettings2 } from '@tabler/icons-react';
+
+function glowStyle(count: number, total: number): React.CSSProperties {
+  if (total === 0 || count === 0) {
+    return {
+      background: 'var(--bg2)',
+      border: '1px solid var(--border)',
+      opacity: 0.45,
+    };
+  }
+  const ratio = Math.min(count / total, 1);
+
+  if (ratio <= 0.25) {
+    return {
+      background: 'var(--accent)',
+      border: '1px solid var(--accent-border)',
+      opacity: 0.3,
+    };
+  }
+  if (ratio <= 0.5) {
+    return {
+      background: 'var(--accent)',
+      border: '1px solid var(--accent-border)',
+      opacity: 0.55,
+      boxShadow: '0 0 4px var(--accent)',
+    };
+  }
+  if (ratio <= 0.75) {
+    return {
+      background: 'var(--accent)',
+      border: '1px solid var(--accent-border)',
+      opacity: 0.75,
+      boxShadow: '0 0 7px var(--accent)',
+    };
+  }
+  if (ratio < 1) {
+    return {
+      background: 'var(--accent)',
+      border: '1px solid var(--accent-border)',
+      opacity: 0.9,
+      boxShadow: '0 0 10px var(--accent)',
+    };
+  }
+  // 100% — max glow
+  return {
+    background: 'var(--accent)',
+    border: '1px solid var(--accent-border)',
+    opacity: 1,
+    boxShadow: '0 0 14px 2px var(--accent)',
+  };
+}
 
 export default function ProfilePage() {
   const { address: rawAddress } = useParams<{ address: string }>();
@@ -21,7 +71,7 @@ export default function ProfilePage() {
   const [rank, setRank] = useState<number | null>(null);
   const [totalDone, setTotalDone] = useState(0);
   const [habitStreaks, setHabitStreaks] = useState<Record<string, number>>({});
-  const [completionDates, setCompletionDates] = useState<string[]>([]);
+  const [dailyCounts, setDailyCounts] = useState<Record<string, number>>({});
   const [memberSince, setMemberSince] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -39,15 +89,15 @@ export default function ProfilePage() {
       getTodayCompletions(address),
       getGlobalLeaderboard(200),
       getTotalCompletions(address),
-      getCompletionDates(address),
+      getDailyCompletionCounts(address),
       getProfileCreatedAt(address),
-    ]).then(([un, userHabits, streakData, todayDone, leaderboard, total, dates, createdAt]) => {
+    ]).then(([un, userHabits, streakData, todayDone, leaderboard, total, counts, createdAt]) => {
       if (un) setUsername(un as string);
       setHabits(userHabits as Habit[]);
       setStreak({ current: (streakData as any).currentStreak });
       setCompletedToday(todayDone as string[]);
       setTotalDone(total as number);
-      setCompletionDates(dates as string[]);
+      setDailyCounts(counts as Record<string, number>);
 
       const idx = (leaderboard as { address: string }[]).findIndex(
         r => r.address.toLowerCase() === address
@@ -72,23 +122,16 @@ export default function ProfilePage() {
   const displayName = username ? `@${username}` : address.slice(0, 8) + '…';
   const initial = (username || address).slice(0, 1).toUpperCase();
 
-  // Build 7-row × 8-col heatmap (last 56 days, row=day-of-week, col=week)
-  const heatmap = (() => {
-    const dateSet = new Set(completionDates);
+  // Build 30-day grid (10 cols × 3 rows), oldest top-left, today bottom-right
+  const heatmapDays = (() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const rows: { date: string; done: boolean; future: boolean }[][] = [];
-    for (let row = 0; row < 7; row++) {
-      rows.push([]);
-      for (let col = 0; col < 8; col++) {
-        const daysAgo = (6 - row) + (7 - col) * 7;
-        const d = new Date(today);
-        d.setDate(today.getDate() - daysAgo);
-        const dateStr = d.toISOString().split('T')[0];
-        rows[row].push({ date: dateStr, done: dateSet.has(dateStr), future: d > today });
-      }
-    }
-    return rows;
+    return Array.from({ length: 30 }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() - (29 - i));
+      const dateStr = d.toISOString().split('T')[0];
+      return { date: dateStr, count: dailyCounts[dateStr] || 0 };
+    });
   })();
 
   if (loading) return (
@@ -199,29 +242,41 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Heatmap */}
+        {/* 30-day glow heatmap */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.2px', color: 'var(--text3)', marginBottom: 10 }}>
-            Streak history · last 8 weeks
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.2px', color: 'var(--text3)' }}>
+              Last 30 days
+            </div>
+            <div style={{ fontSize: 9, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>less</span>
+              {[0, 0.25, 0.5, 0.75, 1].map((r, i) => (
+                <div key={i} style={{
+                  width: 8, height: 8, borderRadius: 2,
+                  ...glowStyle(r > 0 ? r : 0, r > 0 ? 1 : 1),
+                  opacity: r === 0 ? 0.35 : r <= 0.25 ? 0.3 : r <= 0.5 ? 0.55 : r <= 0.75 ? 0.75 : 1,
+                  boxShadow: r >= 1 ? '0 0 6px var(--accent)' : r >= 0.75 ? '0 0 4px var(--accent)' : undefined,
+                }} />
+              ))}
+              <span>more</span>
+            </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            {heatmap.map((row, ri) => (
-              <div key={ri} style={{ display: 'flex', gap: 3 }}>
-                {row.map((cell, ci) => (
-                  <div
-                    key={ci}
-                    title={cell.date}
-                    style={{
-                      flex: 1,
-                      aspectRatio: '1',
-                      borderRadius: 4,
-                      background: cell.done ? 'var(--accent)' : 'var(--bg2)',
-                      border: `1px solid ${cell.done ? 'var(--accent-border)' : 'var(--border)'}`,
-                      opacity: cell.done ? 0.85 : 0.4,
-                    }}
-                  />
-                ))}
-              </div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(10, 1fr)',
+            gap: 4,
+          }}>
+            {heatmapDays.map(({ date, count }) => (
+              <div
+                key={date}
+                title={`${date}${count > 0 ? ` · ${count} completed` : ''}`}
+                style={{
+                  aspectRatio: '1',
+                  borderRadius: 5,
+                  transition: 'box-shadow 0.2s',
+                  ...glowStyle(count, habits.length),
+                }}
+              />
             ))}
           </div>
         </div>

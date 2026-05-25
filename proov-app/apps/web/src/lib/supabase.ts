@@ -571,6 +571,24 @@ export async function getCompletionDates(userAddress: string): Promise<string[]>
   return Array.from(dateSet);
 }
 
+export async function getDailyCompletionCounts(userAddress: string): Promise<Record<string, number>> {
+  if (!supabase) return {};
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 29);
+  cutoff.setHours(0, 0, 0, 0);
+  const { data } = await supabase
+    .from('habit_completions')
+    .select('completed_at')
+    .eq('user_address', userAddress.toLowerCase())
+    .gte('completed_at', cutoff.toISOString());
+  const counts: Record<string, number> = {};
+  (data || []).forEach((c: any) => {
+    const date = c.completed_at.split('T')[0];
+    counts[date] = (counts[date] || 0) + 1;
+  });
+  return counts;
+}
+
 export async function getProfileCreatedAt(address: string): Promise<string | null> {
   if (!supabase) return null;
   const { data } = await supabase
