@@ -23,6 +23,8 @@ import {
   respondToCircleRequest,
 } from '@/lib/supabase';
 import { getSessionWalletClient, isSessionKeyRegistered } from '@/lib/sessionAAExecution';
+import { idbAddToQueue, idbGetAll, idbDelete, registerBackgroundSync } from '@/lib/idb';
+import { registerServiceWorker } from '@/lib/swRegistration';
 
 interface QueuedTx {
   id: string;
@@ -52,6 +54,7 @@ function saveOfflineQueue(queue: QueuedTx[]) {
 }
 
 function addToOfflineQueue(config: any) {
+  // 1. localStorage queue (fast, works while tab is open)
   const queue = getOfflineQueue();
   const item: QueuedTx = {
     id: Math.random().toString(36).slice(2, 9) + '-' + Date.now(),
@@ -63,7 +66,12 @@ function addToOfflineQueue(config: any) {
   };
   queue.push(item);
   saveOfflineQueue(queue);
-  console.log('[OfflineQueue] Transaction queued:', item.functionName);
+  console.log('[OfflineQueue] Transaction queued to localStorage:', item.functionName);
+
+  // 2. IndexedDB queue + Background Sync tag (persists across tab close)
+  idbAddToQueue(item)
+    .then(() => registerBackgroundSync())
+    .catch((err) => console.warn('[IDB] Could not write to IDB queue:', err));
 }
 
 // Re-construct and execute the corresponding Supabase query that was missed because the user was offline.
@@ -164,7 +172,7 @@ async function processOfflineQueue(
   if (queue.length === 0) return 0;
 
   isDrainingQueue = true;
-  console.log(`[OfflineQueue] Starting to drain ${queue.length} items...`);
+  console.log(`[OfflineQueue] Starting to drain ${queue.length} items (localStorage)...`);
 
   const remaining = [...queue];
   let succeededCount = 0;
@@ -193,9 +201,11 @@ async function processOfflineQueue(
         // Sync corresponding Supabase database records
         await syncSupabaseAfterTx(connectedAddress, tx.functionName, tx.args, hash);
 
+        // Remove from both localStorage and IDB
         const idx = remaining.findIndex((item) => item.id === tx.id);
         if (idx >= 0) remaining.splice(idx, 1);
         saveOfflineQueue(remaining);
+        idbDelete(tx.id).catch(() => {});
       } else {
         console.warn(`[OfflineQueue] Sync failed for ${tx.functionName}, keeping in queue.`);
         break; // Stop draining on first failure
@@ -203,6 +213,53 @@ async function processOfflineQueue(
     } catch (err) {
       console.error(`[OfflineQueue] Error syncing ${tx.functionName}:`, err);
       break; // Stop draining on error
+    }
+  }
+
+  isDrainingQueue = false;
+  return succeededCount;
+}
+
+/**
+ * Drain the IDB queue — called when the SW notifies us via postMessage
+ * that transactions were queued while the tab was closed.
+ * This runs only in the app thread (which holds the session key).
+ */
+async function processIdbQueue(
+  sendTxRaw: (config: any) => Promise<`0x${string}` | null>,
+  connectedAddress: string
+): Promise<number> {
+  if (isDrainingQueue) return 0;
+  const items = await idbGetAll();
+  if (items.length === 0) return 0;
+
+  isDrainingQueue = true;
+  console.log(`[IDB] Draining ${items.length} items from IDB (SW-triggered)...`);
+  let succeededCount = 0;
+
+  for (const tx of items) {
+    try {
+      const hash = await sendTxRaw({
+        address: tx.address,
+        abi: tx.abi,
+        functionName: tx.functionName,
+        args: tx.args,
+        isRoutine: true,
+        _fromQueue: true,
+      });
+
+      if (hash && !hash.startsWith('0xoffline-')) {
+        succeededCount++;
+        await syncSupabaseAfterTx(connectedAddress, tx.functionName, tx.args, hash);
+        await idbDelete(tx.id);
+        // Also remove from localStorage for consistency
+        const lsQueue = getOfflineQueue().filter((item) => item.id !== tx.id);
+        saveOfflineQueue(lsQueue);
+      } else {
+        break;
+      }
+    } catch {
+      break;
     }
   }
 
@@ -421,24 +478,56 @@ export function useBackgroundTx() {
     if (typeof window === 'undefined' || !connectedAddress) return;
 
     if (navigator.onLine) {
-      processOfflineQueue(sendTx, connectedAddress).then((count) => {
-        if (count > 0) {
-          showSuccess(`Synced ${count} offline completions on-chain! ✓`);
-        }
-      }).catch(() => {});
+      processOfflineQueue(sendTx, connectedAddress)
+        .then((count) => {
+          if (count > 0) {
+            showSuccess(`Synced ${count} offline completions on-chain! ✓`);
+          }
+          return processIdbQueue(sendTx, connectedAddress);
+        })
+        .then((count) => {
+          if (count > 0) {
+            showSuccess(`Synced ${count} background actions on-chain! ✓`);
+          }
+        })
+        .catch(() => {});
     }
 
     const handleOnline = () => {
       console.log('[useBackgroundTx] Network back online. Processing queue...');
-      processOfflineQueue(sendTx, connectedAddress).then((count) => {
-        if (count > 0) {
-          showSuccess(`Synced ${count} offline completions on-chain! ✓`);
-        }
-      }).catch(() => {});
+      processOfflineQueue(sendTx, connectedAddress)
+        .then((count) => {
+          if (count > 0) {
+            showSuccess(`Synced ${count} offline completions on-chain! ✓`);
+          }
+          return processIdbQueue(sendTx, connectedAddress);
+        })
+        .then((count) => {
+          if (count > 0) {
+            showSuccess(`Synced ${count} background actions on-chain! ✓`);
+          }
+        })
+        .catch(() => {});
     };
 
     window.addEventListener('online', handleOnline);
     return () => window.removeEventListener('online', handleOnline);
+  }, [connectedAddress, sendTx, showSuccess]);
+
+  // Register the service worker and wire up SW → app postMessage bridge
+  useEffect(() => {
+    if (typeof window === 'undefined' || !connectedAddress) return;
+
+    const cleanup = registerServiceWorker(() => {
+      // Called by the SW when it wakes up and finds queued transactions
+      processIdbQueue(sendTx, connectedAddress).then((count) => {
+        if (count > 0) {
+          showSuccess(`Synced ${count} background actions on-chain! ✓`);
+        }
+      }).catch(() => {});
+    });
+
+    return cleanup;
   }, [connectedAddress, sendTx, showSuccess]);
 
   // Simulates the call first (to capture the return value), then writes.
