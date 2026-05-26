@@ -3,6 +3,8 @@
 import { useWriteContract, usePublicClient, useAccount, useSignMessage } from 'wagmi';
 import { useCallback, useEffect } from 'react';
 import { privateKeyToAccount } from 'viem/accounts';
+import { createPublicClient, http } from 'viem';
+import { celo } from 'viem/chains';
 import { withCeloFee } from '@/lib/constants';
 import { useTxToast } from '@/components/shared/TxToast';
 import {
@@ -530,6 +532,91 @@ export function useBackgroundTx() {
     return cleanup;
   }, [connectedAddress, sendTx, showSuccess]);
 
+  const revokeSessionKey = useCallback(
+    async (sessionKeyAddress: `0x${string}`): Promise<`0x${string}` | null> => {
+      if (!connectedAddress) {
+        showError('Wallet not connected');
+        return null;
+      }
+
+      try {
+        // 1. Fetch current Safe owners to find predecessor (prevOwner)
+        const publicClientForRead = createPublicClient({
+          chain: celo,
+          transport: http(process.env.NEXT_PUBLIC_CELO_RPC_URL || 'https://rpc.ankr.com/celo'),
+        });
+
+        const SAFE_GET_OWNERS_ABI = [
+          {
+            inputs: [],
+            name: 'getOwners',
+            outputs: [{ name: '', type: 'address[]' }],
+            stateMutability: 'view',
+            type: 'function',
+          },
+        ] as const;
+
+        const owners = await publicClientForRead.readContract({
+          address: connectedAddress as `0x${string}`,
+          abi: SAFE_GET_OWNERS_ABI,
+          functionName: 'getOwners',
+        });
+
+        const idx = owners.findIndex(
+          (o) => o.toLowerCase() === sessionKeyAddress.toLowerCase()
+        );
+
+        if (idx === -1) {
+          throw new Error('Session key address is not registered on this Safe');
+        }
+
+        const prevOwner = idx === 0 ? '0x0000000000000000000000000000000000000001' : owners[idx - 1];
+
+        // 2. Call removeOwner on-chain
+        const SAFE_REMOVE_OWNER_ABI = [
+          {
+            inputs: [
+              { name: 'prevOwner', type: 'address' },
+              { name: 'owner', type: 'address' },
+              { name: '_threshold', type: 'uint256' },
+            ],
+            name: 'removeOwner',
+            outputs: [],
+            stateMutability: 'nonpayable',
+            type: 'function',
+          },
+        ] as const;
+
+        return new Promise((resolve) => {
+          writeContract(
+            withCeloFee({
+              address: connectedAddress,
+              abi: SAFE_REMOVE_OWNER_ABI,
+              functionName: 'removeOwner',
+              args: [prevOwner as `0x${string}`, sessionKeyAddress, 1n],
+            }) as any,
+            {
+              onSuccess: (hash) => {
+                console.log('[SessionKey] Revoked on-chain:', hash);
+                resolve(hash);
+              },
+              onError: (err) => {
+                console.error('[SessionKey] On-chain revocation failed:', err);
+                showError('On-chain revocation rejected');
+                resolve(null);
+              },
+            }
+          );
+        });
+      } catch (err) {
+        console.error('[SessionKey] Revocation error:', err);
+        showError(err instanceof Error ? err.message : 'Could not fetch Safe owners');
+        return null;
+      }
+    },
+    [connectedAddress, writeContract, showError]
+  );
+
   // Simulates the call first (to capture the return value), then writes.
   // Returns { ok, result } where result is the value the contract would return.
   // If simulation fails the tx is not sent and ok is false.
@@ -561,5 +648,5 @@ export function useBackgroundTx() {
     [publicClient, connectedAddress, sendTx, showError]
   );
 
-  return { sendTx, sendTxWithResult };
+  return { sendTx, sendTxWithResult, revokeSessionKey };
 }

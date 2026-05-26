@@ -241,9 +241,18 @@ export default function SettingsPage() {
     if (revoking) return;
     setRevoking(true);
     try {
-      // 1. Clear from localStorage immediately
+      // 1. Perform on-chain revocation first
+      if (sessionKeyStatus.address) {
+        const hash = await proovTx.revokeSessionKey(sessionKeyStatus.address as `0x${string}`);
+        if (!hash) {
+          setRevoking(false);
+          return;
+        }
+      }
+
+      // 2. Clear from localStorage immediately
       clearLocalSessionKey();
-      // 2. Clear the encrypted backup from Supabase
+      // 3. Clear the encrypted backup from Supabase
       if (address) {
         await clearSessionKey(address);
       }
