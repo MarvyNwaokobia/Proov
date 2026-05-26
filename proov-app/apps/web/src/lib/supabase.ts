@@ -800,3 +800,24 @@ export async function restoreSessionKey(
   }
 }
 
+/**
+ * Clears the encrypted session key backup from Supabase.
+ * Called during manual revocation. The local key must be cleared separately
+ * via clearLocalSessionKey() from sessionKey.ts.
+ */
+export async function clearSessionKey(address: string): Promise<void> {
+  if (!supabase || !address) return;
+  try {
+    await supabase
+      .from('profiles')
+      .update({
+        encrypted_session_key: null,
+        session_key_expires_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('address', address.toLowerCase());
+  } catch (err) {
+    console.error('clearSessionKey error:', err);
+  }
+}
+

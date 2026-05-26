@@ -6,7 +6,9 @@ import Link from 'next/link';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
 import { validateUsername, isUsernameTaken, registerUsername } from '@/lib/username';
 import { setIdentityUsername } from '@/lib/auth';
-import { updateUsername as updateSupabaseUsername, getAiVerificationUsage, updateAvatarUrl, getAvatarUrl } from '@/lib/supabase';
+import { updateUsername as updateSupabaseUsername, getAiVerificationUsage, updateAvatarUrl, getAvatarUrl, clearSessionKey } from '@/lib/supabase';
+import { clearLocalSessionKey } from '@/lib/sessionKey';
+import { useSessionKeyStatus } from '@/hooks/useSessionKeyStatus';
 import { useProovTx } from '@/hooks/useProovTx';
 import {
   IconTrophy,
@@ -17,6 +19,8 @@ import {
   IconCopy,
   IconCheck,
   IconShieldCheck,
+  IconKey,
+  IconAlertTriangle,
 } from '@tabler/icons-react';
 
 function fmtCountdown(secs: number): string {
@@ -53,6 +57,10 @@ export default function SettingsPage() {
   const [claimingFuel, setClaimingFuel] = useState(false);
   const [verificationUsed, setVerificationUsed] = useState(0);
   const [avatarUrl, setAvatarUrl] = useState('');
+  // Session key status
+  const sessionKeyStatus = useSessionKeyStatus();
+  const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
+  const [revoking, setRevoking] = useState(false);
 
   // Notification preferences
   const [notifTime, setNotifTime] = useState('09:00');
@@ -227,6 +235,26 @@ export default function SettingsPage() {
     const { clearWeb3AuthSession } = await import('@/lib/clearSession');
     await clearWeb3AuthSession();
     window.location.href = '/';
+  };
+
+  const handleRevokeSessionKey = async () => {
+    if (revoking) return;
+    setRevoking(true);
+    try {
+      // 1. Clear from localStorage immediately
+      clearLocalSessionKey();
+      // 2. Clear the encrypted backup from Supabase
+      if (address) {
+        await clearSessionKey(address);
+      }
+      setShowRevokeConfirm(false);
+      showToast('✓ Session key revoked');
+    } catch (err) {
+      console.error('Revoke error:', err);
+      showToast('Could not revoke — try again');
+    } finally {
+      setRevoking(false);
+    }
   };
 
   const handleClaimFuel = async () => {
@@ -622,6 +650,100 @@ export default function SettingsPage() {
           </button>
         </div>
 
+        {/* ── Security ── */}
+        <p style={{ ...sectionLabel, marginTop: 16 }}>Security</p>
+        <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14, padding: 14, marginBottom: 0 }}>
+          {/* Status row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+              background: sessionKeyStatus.status === 'active'
+                ? 'rgba(34,197,94,.12)'
+                : sessionKeyStatus.status === 'expiring'
+                ? 'rgba(234,179,8,.12)'
+                : 'rgba(156,163,175,.1)',
+              border: `1px solid ${
+                sessionKeyStatus.status === 'active'
+                  ? 'rgba(34,197,94,.3)'
+                  : sessionKeyStatus.status === 'expiring'
+                  ? 'rgba(234,179,8,.3)'
+                  : 'var(--border)'
+              }`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <IconKey size={16} stroke={1.8} color={
+                sessionKeyStatus.status === 'active' ? '#22c55e'
+                  : sessionKeyStatus.status === 'expiring' ? '#eab308'
+                  : 'var(--text3)'
+              } />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Zero-Click Mode</span>
+                {/* Status pip */}
+                <span style={{
+                  display: 'inline-block',
+                  width: 7, height: 7, borderRadius: '50%',
+                  background: sessionKeyStatus.status === 'active' ? '#22c55e'
+                    : sessionKeyStatus.status === 'expiring' ? '#eab308'
+                    : 'var(--text3)',
+                  boxShadow: sessionKeyStatus.status === 'active'
+                    ? '0 0 0 2px rgba(34,197,94,.25)'
+                    : sessionKeyStatus.status === 'expiring'
+                    ? '0 0 0 2px rgba(234,179,8,.25)'
+                    : 'none',
+                }} />
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 1 }}>
+                {sessionKeyStatus.status === 'active' && (
+                  <>Active · expires in {Math.floor(sessionKeyStatus.hoursLeft)}h {Math.floor((sessionKeyStatus.hoursLeft % 1) * 60)}m</>
+                )}
+                {sessionKeyStatus.status === 'expiring' && (
+                  <span style={{ color: '#eab308' }}>⚠ Expiring in &lt;2h — complete a habit to extend</span>
+                )}
+                {sessionKeyStatus.status === 'inactive' && 'Inactive — will activate on next habit completion'}
+              </div>
+            </div>
+          </div>
+
+          {/* Key address row — only show when active */}
+          {sessionKeyStatus.address && sessionKeyStatus.status !== 'inactive' && (
+            <div style={{
+              background: 'var(--bg2)', borderRadius: 8, padding: '8px 10px',
+              marginBottom: 12, fontFamily: 'monospace', fontSize: 10,
+              color: 'var(--text3)', wordBreak: 'break-all', lineHeight: 1.6,
+            }}>
+              <span style={{ color: 'var(--text2)', fontWeight: 600, fontFamily: 'inherit' }}>Session address: </span>
+              {sessionKeyStatus.address.slice(0, 10)}…{sessionKeyStatus.address.slice(-8)}
+            </div>
+          )}
+
+          {/* What is this? explainer */}
+          <p style={{ fontSize: 11, color: 'var(--text3)', margin: '0 0 12px', lineHeight: 1.6 }}>
+            Zero-click mode lets you complete habits, cheer, and nudge teammates without any wallet pop-ups.
+            The session key signs routine transactions silently in the background.
+          </p>
+
+          {/* Revoke button — only when a key exists */}
+          {sessionKeyStatus.status !== 'inactive' && (
+            <button
+              id="revoke-session-key-btn"
+              onClick={() => setShowRevokeConfirm(true)}
+              style={{
+                width: '100%', padding: '9px 0', borderRadius: 10,
+                border: '1px solid rgba(244,63,94,.3)',
+                background: 'rgba(244,63,94,.06)',
+                color: '#f43f5e', fontSize: 12, fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'inherit',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              }}
+            >
+              <IconAlertTriangle size={13} stroke={2} />
+              Revoke session key
+            </button>
+          )}
+        </div>
+
         {/* ── Sign out ── */}
         <button
           onClick={handleSignOut}
@@ -663,6 +785,61 @@ export default function SettingsPage() {
               <button onClick={confirmedSaveUsername}
                 style={{ padding: 11, borderRadius: 12, border: 'none', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                 Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Revoke session key confirm modal */}
+      {showRevokeConfirm && (
+        <div
+          id="revoke-session-key-modal"
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 200, padding: '0 1rem 1.5rem' }}
+          onClick={() => !revoking && setShowRevokeConfirm(false)}
+        >
+          <div
+            style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 20, padding: '1.5rem', width: '100%', maxWidth: 400 }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Warning icon header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+              <div style={{
+                width: 38, height: 38, borderRadius: 12,
+                background: 'rgba(244,63,94,.1)', border: '1px solid rgba(244,63,94,.25)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                <IconAlertTriangle size={18} stroke={2} color="#f43f5e" />
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>Revoke session key?</div>
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: '1.25rem', lineHeight: 1.7 }}>
+              This will remove the session key from your device and Supabase backup.
+              Zero-click mode will stop immediately.
+              <br /><br />
+              <strong style={{ color: 'var(--text)' }}>Your habits, progress, and wallet remain completely unaffected.</strong>
+              {' '}You can re-enable zero-click mode anytime by completing a habit.
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <button
+                onClick={() => setShowRevokeConfirm(false)}
+                disabled={revoking}
+                style={{ padding: 11, borderRadius: 12, border: '1px solid var(--border2)', background: 'transparent', color: 'var(--text2)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', opacity: revoking ? 0.5 : 1 }}
+              >
+                Cancel
+              </button>
+              <button
+                id="confirm-revoke-btn"
+                onClick={handleRevokeSessionKey}
+                disabled={revoking}
+                style={{
+                  padding: 11, borderRadius: 12, border: 'none',
+                  background: revoking ? 'var(--bg3)' : 'rgba(244,63,94,.85)',
+                  color: revoking ? 'var(--text3)' : '#fff',
+                  fontSize: 13, fontWeight: 700, cursor: revoking ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                {revoking ? 'Revoking…' : 'Revoke'}
               </button>
             </div>
           </div>
