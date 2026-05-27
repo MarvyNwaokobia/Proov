@@ -64,7 +64,6 @@ export function createAAConnector({
     });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   type AnyProvider = any;
 
   return createConnector<AnyProvider>(config => ({
@@ -98,7 +97,6 @@ export function createAAConnector({
       const accounts = await this.getAccounts();
       const chainId = await this.getChainId();
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return { accounts, chainId } as any;
     },
 

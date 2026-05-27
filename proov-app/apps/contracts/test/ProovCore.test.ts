@@ -55,7 +55,7 @@ describe("ProovCore", function () {
 
   describe("createHabit", function () {
     it("creates a habit and registers user", async function () {
-      await proovCore.connect(user1).createHabit("Deep Work", HabitType.FOCUS, 5400, Frequency.DAILY);
+      await proovCore.connect(user1)["createHabit(string,uint8,uint256,uint8)"]("Deep Work", HabitType.FOCUS, 5400, Frequency.DAILY);
 
       const habits = await proovCore.getHabits(user1.address);
       expect(habits.length).to.equal(1);
@@ -67,22 +67,22 @@ describe("ProovCore", function () {
     });
 
     it("returns the new habit id", async function () {
-      const tx = await proovCore.connect(user1).createHabit("Run", HabitType.FITNESS, 0, Frequency.DAILY);
+      const tx = await proovCore.connect(user1)["createHabit(string,uint8,uint256,uint8)"]("Run", HabitType.FITNESS, 0, Frequency.DAILY);
       const receipt = await tx.wait();
       const event = receipt?.logs.find((l: any) => l.fragment?.name === "HabitCreated");
       expect(event).to.not.be.undefined;
     });
 
     it("registers the user only once across multiple habits", async function () {
-      await proovCore.connect(user1).createHabit("Habit 1", HabitType.FOCUS, 0, Frequency.DAILY);
-      await proovCore.connect(user1).createHabit("Habit 2", HabitType.READING, 0, Frequency.DAILY);
+      await proovCore.connect(user1)["createHabit(string,uint8,uint256,uint8)"]("Habit 1", HabitType.FOCUS, 0, Frequency.DAILY);
+      await proovCore.connect(user1)["createHabit(string,uint8,uint256,uint8)"]("Habit 2", HabitType.READING, 0, Frequency.DAILY);
       expect(await proovCore.getUserCount()).to.equal(1);
     });
   });
 
   describe("selfCompleteHabit", function () {
     beforeEach(async function () {
-      await proovCore.connect(user1).createHabit("Morning Run", HabitType.FITNESS, 0, Frequency.DAILY);
+      await proovCore.connect(user1)["createHabit(string,uint8,uint256,uint8)"]("Morning Run", HabitType.FITNESS, 0, Frequency.DAILY);
     });
 
     it("records completion and starts a streak", async function () {
@@ -163,7 +163,7 @@ describe("ProovCore", function () {
   describe("completeHabit (authorized)", function () {
     beforeEach(async function () {
       await proovCore.setSessionManager(authorized.address);
-      await proovCore.connect(user1).createHabit("Focus", HabitType.FOCUS, 5400, Frequency.DAILY);
+      await proovCore.connect(user1)["createHabit(string,uint8,uint256,uint8)"]("Focus", HabitType.FOCUS, 5400, Frequency.DAILY);
     });
 
     it("authorized sessionManager can complete habit", async function () {
@@ -181,7 +181,7 @@ describe("ProovCore", function () {
 
   describe("deactivateHabit", function () {
     it("deactivates and emits event", async function () {
-      await proovCore.connect(user1).createHabit("Sleep", HabitType.SLEEP, 0, Frequency.DAILY);
+      await proovCore.connect(user1)["createHabit(string,uint8,uint256,uint8)"]("Sleep", HabitType.SLEEP, 0, Frequency.DAILY);
       await expect(proovCore.connect(user1).deactivateHabit(0))
         .to.emit(proovCore, "HabitDeactivated")
         .withArgs(user1.address, 0);
@@ -214,8 +214,8 @@ describe("ProovCore", function () {
 
   describe("getLeaderboard", function () {
     it("returns sorted leaderboard", async function () {
-      await proovCore.connect(user1).createHabit("H", HabitType.FOCUS, 0, Frequency.DAILY);
-      await proovCore.connect(user2).createHabit("H", HabitType.FOCUS, 0, Frequency.DAILY);
+      await proovCore.connect(user1)["createHabit(string,uint8,uint256,uint8)"]("H", HabitType.FOCUS, 0, Frequency.DAILY);
+      await proovCore.connect(user2)["createHabit(string,uint8,uint256,uint8)"]("H", HabitType.FOCUS, 0, Frequency.DAILY);
 
       await proovCore.connect(user1).selfCompleteHabit(0, ethers.ZeroHash);
       await time.increase(86400);

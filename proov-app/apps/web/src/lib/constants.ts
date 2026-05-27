@@ -3,7 +3,6 @@ export const FEE_CURRENCY_USDM = "0x471EcE3750Da237f93B8E339c536989b8978a438" as
 
 // Injects feeCurrency into a writeContract call.
 // feeCurrency is a Celo-specific extension not in standard wagmi types.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const withCeloFee = <T extends object>(args: T): T & { feeCurrency: `0x${string}` } =>
   ({ ...args, feeCurrency: FEE_CURRENCY_USDM } as T & { feeCurrency: `0x${string}` });
 

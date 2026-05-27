@@ -18,7 +18,7 @@ function safeId(id: number | undefined): bigint | null {
 }
 
 export function useProovTx() {
-  const { sendTx } = useBackgroundTx();
+  const { sendTx, revokeSessionKey } = useBackgroundTx();
 
   return {
     // ── HABIT ACTIONS ──────────────────────────────────────────────────────
@@ -201,6 +201,8 @@ export function useProovTx() {
       args: [memberAddress],
       isRoutine: true,
     } as any),
+
+    revokeSessionKey: (sessionKeyAddress: `0x${string}`) => revokeSessionKey(sessionKeyAddress),
 
   };
 }
