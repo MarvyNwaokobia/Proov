@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
+import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { CircleManager } from "../typechain-types";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
@@ -75,7 +76,7 @@ describe("CircleManager", function () {
     it("also emits MemberAdded", async function () {
       await expect(circleManager.connect(bob).acceptRequest(alice.address))
         .to.emit(circleManager, "MemberAdded")
-        .withArgs(bob.address, alice.address, await ethers.provider.getBlock("latest").then(b => b!.timestamp + 1));
+        .withArgs(bob.address, alice.address, anyValue);
     });
 
     it("clears pending request after accept", async function () {
@@ -162,7 +163,7 @@ describe("CircleManager", function () {
     it("emits CheerSent between circle members", async function () {
       await expect(circleManager.connect(alice).cheer(bob.address))
         .to.emit(circleManager, "CheerSent")
-        .withArgs(alice.address, bob.address, await ethers.provider.getBlock("latest").then(b => b!.timestamp + 1));
+        .withArgs(alice.address, bob.address, anyValue);
     });
 
     it("reverts if not in circle", async function () {

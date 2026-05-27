@@ -657,7 +657,7 @@ export default function CirclePage() {
           <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 20, padding: '1.5rem', width: '100%', maxWidth: 400 }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>Add to circle?</div>
             <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: '1.25rem', lineHeight: 1.6 }}>
-              <strong style={{ color: 'var(--text)' }}>@{resolvedUsername}</strong> will see your habit activity and you'll see theirs.
+              <strong style={{ color: 'var(--text)' }}>@{resolvedUsername}</strong> will see your habit activity and you&apos;ll see theirs.
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <button onClick={() => setShowConfirm(false)} style={{ padding: 11, borderRadius: 12, border: '1px solid var(--border2)', background: 'transparent', color: 'var(--text2)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
@@ -673,7 +673,7 @@ export default function CirclePage() {
           <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 20, padding: '1.5rem', width: '100%', maxWidth: 400 }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>Remove from circle?</div>
             <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: '1.25rem', lineHeight: 1.6 }}>
-              You will stop seeing <strong style={{ color: 'var(--text)' }}>@{removeTargetUsername}</strong>'s habit activity and they will stop seeing yours.
+              You will stop seeing <strong style={{ color: 'var(--text)' }}>@{removeTargetUsername}</strong>&apos;s habit activity and they will stop seeing yours.
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <button onClick={() => setShowRemoveConfirm(false)} style={{ padding: 11, borderRadius: 12, border: '1px solid var(--border2)', background: 'transparent', color: 'var(--text2)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>

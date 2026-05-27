@@ -8,7 +8,6 @@ type ActionRecord = {
   synced: boolean;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getDB(): Promise<any> {
   return openDB('proov-offline', 1, {
     upgrade(db) {

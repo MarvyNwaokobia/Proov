@@ -36,7 +36,7 @@ describe("SessionManager", function () {
     await proovCore.setSessionManager(await sessionManager.getAddress());
 
     // Create a habit for user1 to use in sessions
-    await proovCore.connect(user1).createHabit("Deep Work", HabitType.FOCUS, 5400, Frequency.DAILY);
+    await proovCore.connect(user1)["createHabit(string,uint8,uint256,uint8)"]("Deep Work", HabitType.FOCUS, 5400, Frequency.DAILY);
   });
 
   describe("Deployment", function () {

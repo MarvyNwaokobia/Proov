@@ -521,7 +521,7 @@ export default function GrindTimerPage() {
             </div>
           </div>
           <p style={{ fontSize: 12, color: 'var(--text3)', textAlign: 'center', lineHeight: 1.6, marginBottom: 22, position: 'relative', zIndex: 1 }}>
-            Timer runs in the background.<br />Come back when you're done.
+            Timer runs in the background.<br />Come back when you&apos;re done.
           </p>
           <button onClick={cancelTimer} style={{
             padding: '11px 28px', borderRadius: 12, background: 'transparent',
@@ -551,7 +551,7 @@ export default function GrindTimerPage() {
               : `Custom session · ${fmtDur(sessionDuration)} done`}
           </h2>
           <p style={{ fontSize: 13, color: 'var(--text2)', textAlign: 'center', lineHeight: 1.6, marginBottom: 28 }}>
-            "Keep showing up. That's the whole game."
+            &quot;Keep showing up. That&apos;s the whole game.&quot;
           </p>
           <button
             onClick={confirmDone}
@@ -920,7 +920,7 @@ export default function GrindTimerPage() {
                   onChange={e => setCustomLabel(e.target.value)}
                 />
                 <p style={{ fontSize: 10, color: 'var(--text3)', marginTop: 5 }}>
-                  Custom sessions don't count toward habit streaks.
+                  Custom sessions don&apos;t count toward habit streaks.
                 </p>
               </div>
             )}
