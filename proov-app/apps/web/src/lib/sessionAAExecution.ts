@@ -1,23 +1,16 @@
-import { createWalletClient, custom, createPublicClient, http, getAddress } from 'viem';
+import { createPublicClient, http } from 'viem';
 import { celo } from 'viem/chains';
-import { EthereumPrivateKeyProvider } from '@web3auth/ethereum-provider';
-import {
-  AccountAbstractionProvider,
-  SafeSmartAccount,
-} from '@web3auth/account-abstraction-provider';
-import { CHAIN_NAMESPACES } from '@web3auth/base';
+import { privateKeyToAccount } from 'viem/accounts';
+import { entryPoint07Address } from 'viem/account-abstraction';
+import { toSafeSmartAccount } from 'permissionless/accounts';
+import { createSmartAccountClient } from 'permissionless';
+import { createPimlicoClient } from 'permissionless/clients/pimlico';
 
-const chainConfig = {
-  chainNamespace: CHAIN_NAMESPACES.EIP155,
-  chainId: '0xA4EC', // 42220 Celo mainnet
-  rpcTarget: process.env.NEXT_PUBLIC_CELO_RPC_URL || 'https://rpc.ankr.com/celo',
-  displayName: 'Celo',
-  ticker: 'CELO',
-  tickerName: 'Celo',
-  blockExplorerUrl: 'https://celoscan.io',
-};
+const CELO_RPC = process.env.NEXT_PUBLIC_CELO_RPC_URL || 'https://rpc.ankr.com/celo';
 
-const SAFE_ABI = [
+const ENTRY_POINT = { address: entryPoint07Address, version: '0.7' } as const;
+
+const SAFE_IS_OWNER_ABI = [
   {
     inputs: [{ name: 'owner', type: 'address' }],
     name: 'isOwner',
@@ -28,61 +21,37 @@ const SAFE_ABI = [
 ] as const;
 
 /**
- * Creates a viem WalletClient that signs Safe smart wallet transactions gaslessly
- * using the local ephemeral session key.
+ * Creates a SmartAccountClient that signs UserOperations using an ephemeral
+ * session key that has been added as a co-owner of the user's Safe.
  */
 export async function getSessionWalletClient(safeAddress: string, privateKey: `0x${string}`) {
-  const cleanPk = privateKey.replace(/^0x/, '');
+  const publicClient = createPublicClient({ chain: celo, transport: http(CELO_RPC) });
+  const sessionKeyAccount = privateKeyToAccount(privateKey);
 
-  // 1. Setup ephemeral private key provider
-  const privateKeyProvider = new EthereumPrivateKeyProvider({
-    config: {
-      chainConfig,
-    },
-  });
-  await privateKeyProvider.setupProvider(cleanPk);
-
-  if (!privateKeyProvider.provider) {
-    throw new Error('Failed to setup private key provider');
-  }
-
-  // 2. Initialize SafeSmartAccount with the pre-existing Safe address override
-  // Bypass type omission by casting config option as any
-  const smartAccountInit = new SafeSmartAccount({
-    address: safeAddress,
-  } as any);
-
-  // 3. Build Account Abstraction provider instance
-  const aaProvider = await AccountAbstractionProvider.getProviderInstance({
-    chainConfig,
-    smartAccountInit,
-    bundlerConfig: {
-      url: process.env.NEXT_PUBLIC_BUNDLER_URL!,
-      paymasterContext: {
-        sponsorshipPolicyId: process.env.NEXT_PUBLIC_PAYMASTER_POLICY_ID!,
-      },
-    },
-    paymasterConfig: {
-      url: process.env.NEXT_PUBLIC_PAYMASTER_URL!,
-    },
-    eoaProvider: privateKeyProvider.provider as any,
+  const safeAccount = await toSafeSmartAccount({
+    client: publicClient,
+    owners: [sessionKeyAccount],
+    version: '1.4.1',
+    entryPoint: ENTRY_POINT,
+    address: safeAddress as `0x${string}`,
   });
 
-  // 4. Wrap the AA provider inside a standard viem WalletClient.
-  // Derive the smart account address from the provider (Safe address) so callers
-  // don't need to pass `account` explicitly on every writeContract call.
-  const rawAccounts = (await aaProvider.request({ method: 'eth_accounts' })) ?? [];
-  const smartAccountAddress = getAddress((rawAccounts as string[])[0]);
+  const pimlicoClient = createPimlicoClient({
+    transport: http(process.env.NEXT_PUBLIC_PAYMASTER_URL!),
+    entryPoint: ENTRY_POINT,
+  });
 
-  return createWalletClient({
-    account: { address: smartAccountAddress, type: 'json-rpc' as const },
+  return createSmartAccountClient({
+    account: safeAccount,
     chain: celo,
-    transport: custom(aaProvider),
+    bundlerTransport: http(process.env.NEXT_PUBLIC_BUNDLER_URL!),
+    paymaster: pimlicoClient,
+    paymasterContext: { sponsorshipPolicyId: process.env.NEXT_PUBLIC_PAYMASTER_POLICY_ID! },
   });
 }
 
 /**
- * Checks on-chain if the given session key address is registered as an owner on the user's Safe.
+ * Checks on-chain whether a session key address is a registered owner on the user's Safe.
  */
 export async function isSessionKeyRegistered(
   safeAddress: string,
@@ -90,15 +59,12 @@ export async function isSessionKeyRegistered(
 ): Promise<boolean> {
   if (!safeAddress || !sessionKeyAddress) return false;
 
-  const publicClient = createPublicClient({
-    chain: celo,
-    transport: http(process.env.NEXT_PUBLIC_CELO_RPC_URL || 'https://rpc.ankr.com/celo'),
-  });
+  const publicClient = createPublicClient({ chain: celo, transport: http(CELO_RPC) });
 
   try {
     const isOwner = await publicClient.readContract({
       address: safeAddress as `0x${string}`,
-      abi: SAFE_ABI,
+      abi: SAFE_IS_OWNER_ABI,
       functionName: 'isOwner',
       args: [sessionKeyAddress as `0x${string}`],
     });
