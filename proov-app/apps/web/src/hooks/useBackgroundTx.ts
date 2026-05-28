@@ -290,7 +290,7 @@ export function useBackgroundTx() {
   const { writeContract } = useWriteContract();
   const { showError, showSuccess } = useTxToast();
   const publicClient = usePublicClient();
-  const { address: connectedAddress, isConnected } = useAccount();
+  const { address: connectedAddress } = useAccount();
   const { signMessageAsync } = useSignMessage();
   const router = useRouter();
   const wagmiConfig = useConfig();
@@ -305,7 +305,10 @@ export function useBackgroundTx() {
   }, [router]);
 
   // Waits up to 8 s for wagmi to finish reconnecting (stale localStorage connector → real connector).
-  // Resolves when status === 'connected', rejects on 'disconnected' or timeout.
+  // Resolves when status === 'connected', rejects only on timeout.
+  // We intentionally do NOT reject on 'disconnected' because that status can appear transiently
+  // while AuthSessionGuard is about to call reconnect(). Letting the timeout handle all failures
+  // gives the reconnect a fair chance to complete before we give up.
   const waitForConnected = useCallback((): Promise<void> => {
     return new Promise((resolve, reject) => {
       if (wagmiConfig.state.status === 'connected') { resolve(); return; }
@@ -314,7 +317,6 @@ export function useBackgroundTx() {
         (state) => state.status,
         (status) => {
           if (status === 'connected') { clearTimeout(timeout); unsub(); resolve(); }
-          else if (status === 'disconnected') { clearTimeout(timeout); unsub(); reject(new Error('disconnected')); }
         }
       );
     });
@@ -339,9 +341,11 @@ export function useBackgroundTx() {
         return null;
       }
 
-      // Wallet address present but connector is still a stub from localStorage (wagmi reconnecting).
-      // Wait for the real connector to hydrate before any writeContract call, or redirect to signin.
-      if (!isConnected) {
+      // Always read the LIVE wagmi store status — never the stale React closure value.
+      // The closure captures isConnected at render time; the store is always current.
+      // This also handles mid-session disconnects where isConnected is stale-true but
+      // the connector has since been reset.
+      if (wagmiConfig.state.status !== 'connected') {
         try {
           await waitForConnected();
         } catch {
@@ -531,7 +535,7 @@ export function useBackgroundTx() {
         });
       }
     },
-    [connectedAddress, isConnected, waitForConnected, writeContract, signMessageAsync, showSuccess, showError, clearStaleSession]
+    [connectedAddress, wagmiConfig, waitForConnected, writeContract, signMessageAsync, showSuccess, showError, clearStaleSession]
   );
 
   // Auto-drains the offline queue whenever we boot up or come back online
@@ -598,7 +602,7 @@ export function useBackgroundTx() {
         return null;
       }
 
-      if (!isConnected) {
+      if (wagmiConfig.state.status !== 'connected') {
         try {
           await waitForConnected();
         } catch {
@@ -684,7 +688,7 @@ export function useBackgroundTx() {
         return null;
       }
     },
-    [connectedAddress, isConnected, waitForConnected, clearStaleSession, writeContract, showError]
+    [connectedAddress, wagmiConfig, waitForConnected, clearStaleSession, writeContract, showError]
   );
 
   // Simulates the call first (to capture the return value), then writes.
