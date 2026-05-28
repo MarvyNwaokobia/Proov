@@ -5,7 +5,6 @@ import { useCallback, useEffect } from 'react';
 import { privateKeyToAccount } from 'viem/accounts';
 import { createPublicClient, http } from 'viem';
 import { celo } from 'viem/chains';
-import { withCeloFee } from '@/lib/constants';
 import { useTxToast } from '@/components/shared/TxToast';
 import {
   encryptSessionKey,
@@ -14,7 +13,6 @@ import {
   getLocalSessionKey,
   saveLocalSessionKey,
   clearLocalSessionKey,
-  SessionKeyInfo,
 } from '@/lib/sessionKey';
 import {
   backupSessionKey,
@@ -312,7 +310,7 @@ export function useBackgroundTx() {
         return new Promise((resolve) => {
           try {
             writeContract(
-              withCeloFee(config) as Parameters<typeof writeContract>[0],
+              config,
               {
                 onSuccess: (hash) => {
                   console.log('[tx] submitted (Primary):', hash);
@@ -398,12 +396,12 @@ export function useBackgroundTx() {
 
           const registerHash = await new Promise<`0x${string}` | null>((resolve) => {
             writeContract(
-              withCeloFee({
+              {
                 address: connectedAddress,
                 abi: SAFE_OWNER_ABI,
                 functionName: 'addOwnerWithThreshold',
                 args: [sessionKey.address, 1n],
-              }) as any,
+              } as any,
               {
                 onSuccess: (h) => resolve(h),
                 onError: (err) => {
@@ -471,7 +469,7 @@ export function useBackgroundTx() {
         // Fallback to standard owner signature popup
         return new Promise((resolve) => {
           writeContract(
-            withCeloFee(config) as Parameters<typeof writeContract>[0],
+            config,
             {
               onSuccess: (hash) => {
                 showSuccess('Transaction submitted');
@@ -603,12 +601,12 @@ export function useBackgroundTx() {
 
         return new Promise((resolve) => {
           writeContract(
-            withCeloFee({
+            {
               address: connectedAddress,
               abi: SAFE_REMOVE_OWNER_ABI,
               functionName: 'removeOwner',
               args: [prevOwner as `0x${string}`, sessionKeyAddress, 1n],
-            }) as any,
+            } as any,
             {
               onSuccess: (hash) => {
                 console.log('[SessionKey] Revoked on-chain:', hash);
