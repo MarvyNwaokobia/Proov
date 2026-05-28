@@ -456,7 +456,6 @@ export function useBackgroundTx() {
           abi: config.abi,
           functionName: config.functionName as string,
           args: config.args as any[],
-          account: connectedAddress as any,
         });
 
         console.log('[SessionKey] Silent transaction completed:', hash);
