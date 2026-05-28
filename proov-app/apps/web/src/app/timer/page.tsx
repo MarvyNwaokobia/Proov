@@ -115,7 +115,7 @@ export default function GrindTimerPage() {
               const { ok, result } = await proovTx.startSession(
                 (found as any)?.on_chain_id || 0, dur
               );
-              if (!ok) { setTxPending(null); return; }
+              if (!ok) { setTxPending(null); setView('setup'); return; }
               const newOnChainId = result ?? null;
               setOnChainSessionId(newOnChainId);
               progressFiredRef.current = false;
