@@ -1,6 +1,6 @@
 'use client';
 
-import { useWriteContract, usePublicClient, useAccount, useSignMessage } from 'wagmi';
+import { useWriteContract, usePublicClient, useAccount, useSignMessage, useConfig } from 'wagmi';
 import { useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { privateKeyToAccount } from 'viem/accounts';
@@ -290,9 +290,10 @@ export function useBackgroundTx() {
   const { writeContract } = useWriteContract();
   const { showError, showSuccess } = useTxToast();
   const publicClient = usePublicClient();
-  const { address: connectedAddress } = useAccount();
+  const { address: connectedAddress, isConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
   const router = useRouter();
+  const wagmiConfig = useConfig();
 
   const clearStaleSession = useCallback(() => {
     if (typeof window !== 'undefined') {
@@ -302,6 +303,22 @@ export function useBackgroundTx() {
     }
     router.replace('/signin');
   }, [router]);
+
+  // Waits up to 8 s for wagmi to finish reconnecting (stale localStorage connector → real connector).
+  // Resolves when status === 'connected', rejects on 'disconnected' or timeout.
+  const waitForConnected = useCallback((): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      if (wagmiConfig.state.status === 'connected') { resolve(); return; }
+      const timeout = setTimeout(() => { unsub(); reject(new Error('timeout')); }, 8000);
+      const unsub = wagmiConfig.subscribe(
+        (state) => state.status,
+        (status) => {
+          if (status === 'connected') { clearTimeout(timeout); unsub(); resolve(); }
+          else if (status === 'disconnected') { clearTimeout(timeout); unsub(); reject(new Error('disconnected')); }
+        }
+      );
+    });
+  }, [wagmiConfig]);
 
   // Returns the tx hash when accepted by the bundler, null on any error.
   const sendTx = useCallback(
@@ -320,6 +337,17 @@ export function useBackgroundTx() {
           showError('Wallet not connected');
         }
         return null;
+      }
+
+      // Wallet address present but connector is still a stub from localStorage (wagmi reconnecting).
+      // Wait for the real connector to hydrate before any writeContract call, or redirect to signin.
+      if (!isConnected) {
+        try {
+          await waitForConnected();
+        } catch {
+          clearStaleSession();
+          return null;
+        }
       }
 
       // 1. For non-routine actions, use the primary wagmi write flow
@@ -503,7 +531,7 @@ export function useBackgroundTx() {
         });
       }
     },
-    [connectedAddress, writeContract, signMessageAsync, showSuccess, showError, clearStaleSession]
+    [connectedAddress, isConnected, waitForConnected, writeContract, signMessageAsync, showSuccess, showError, clearStaleSession]
   );
 
   // Auto-drains the offline queue whenever we boot up or come back online
@@ -568,6 +596,15 @@ export function useBackgroundTx() {
       if (!connectedAddress) {
         showError('Wallet not connected');
         return null;
+      }
+
+      if (!isConnected) {
+        try {
+          await waitForConnected();
+        } catch {
+          clearStaleSession();
+          return null;
+        }
       }
 
       try {
@@ -647,7 +684,7 @@ export function useBackgroundTx() {
         return null;
       }
     },
-    [connectedAddress, writeContract, showError]
+    [connectedAddress, isConnected, waitForConnected, clearStaleSession, writeContract, showError]
   );
 
   // Simulates the call first (to capture the return value), then writes.
