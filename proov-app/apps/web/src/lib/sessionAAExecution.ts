@@ -71,8 +71,8 @@ export async function getSessionWalletClient(safeAddress: string, privateKey: `0
   // 4. Wrap the AA provider inside a standard viem WalletClient.
   // Derive the smart account address from the provider (Safe address) so callers
   // don't need to pass `account` explicitly on every writeContract call.
-  const rawAccounts: string[] = await aaProvider.request({ method: 'eth_accounts' });
-  const smartAccountAddress = getAddress(rawAccounts[0]);
+  const rawAccounts = (await aaProvider.request({ method: 'eth_accounts' })) ?? [];
+  const smartAccountAddress = getAddress((rawAccounts as string[])[0]);
 
   return createWalletClient({
     account: { address: smartAccountAddress, type: 'json-rpc' as const },
