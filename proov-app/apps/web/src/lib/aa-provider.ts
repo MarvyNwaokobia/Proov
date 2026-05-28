@@ -45,6 +45,9 @@ export async function buildSmartAccountClient(web3AuthInstance: Web3Auth) {
     bundlerTransport: http(process.env.NEXT_PUBLIC_BUNDLER_URL!),
     paymaster: pimlicoClient,
     paymasterContext: { sponsorshipPolicyId: process.env.NEXT_PUBLIC_PAYMASTER_POLICY_ID! },
+    userOperation: {
+      estimateFeesPerGas: async () => (await pimlicoClient.getUserOperationGasPrice()).fast,
+    },
   });
 }
 
