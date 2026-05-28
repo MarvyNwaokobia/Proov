@@ -1,67 +1,96 @@
 'use client';
 
-import {
-  AccountAbstractionProvider,
-  SafeSmartAccount,
-} from '@web3auth/account-abstraction-provider';
-import { ADAPTER_STATUS, CHAIN_NAMESPACES } from '@web3auth/base';
+import { ADAPTER_STATUS } from '@web3auth/base';
 import type { Web3Auth } from '@web3auth/modal';
 import { createConnector } from 'wagmi';
-import { getAddress } from 'viem';
+import { createPublicClient, getAddress, http } from 'viem';
+import { celo } from 'viem/chains';
+import { privateKeyToAccount } from 'viem/accounts';
+import { entryPoint07Address } from 'viem/account-abstraction';
+import { toSafeSmartAccount } from 'permissionless/accounts';
+import { createSmartAccountClient } from 'permissionless';
+import { createPimlicoClient } from 'permissionless/clients/pimlico';
 
-// Must match the chain config in wagmi-config.ts
-const chainConfig = {
-  chainNamespace: CHAIN_NAMESPACES.EIP155,
-  chainId: '0xA4EC', // 42220 Celo mainnet
-  rpcTarget: process.env.NEXT_PUBLIC_CELO_RPC_URL || 'https://rpc.ankr.com/celo',
-  displayName: 'Celo',
-  ticker: 'CELO',
-  tickerName: 'Celo',
-  blockExplorerUrl: 'https://celoscan.io',
-};
+const CELO_RPC = process.env.NEXT_PUBLIC_CELO_RPC_URL || 'https://rpc.ankr.com/celo';
 
-/**
- * Creates a wagmi connector that wraps Web3Auth social login and uses a Safe
- * Smart Account for all transactions. Transactions are gasless — sponsored via
- * the Pimlico paymaster configured in NEXT_PUBLIC_PAYMASTER_URL.
- *
- * The EOA key from Web3Auth is used to own the Safe account; the Safe address
- * is what wagmi exposes to the rest of the app.
- */
-export function createAAConnector({
-  web3AuthInstance,
-}: {
-  web3AuthInstance: Web3Auth;
-}) {
-  // Resolved AA provider instance — stored as a value, NOT a promise.
-  // This avoids permanently caching a rejected promise: if a build attempt
-  // fails (e.g. RPC error during background reconnect), the next call starts
-  // fresh rather than replaying the same failure forever.
-  let _aaProvider: AccountAbstractionProvider | null = null;
+const ENTRY_POINT = { address: entryPoint07Address, version: '0.7' } as const;
 
-  function clearAA() {
-    _aaProvider = null;
-  }
+async function getEOAPrivateKey(web3AuthInstance: Web3Auth): Promise<`0x${string}`> {
+  const provider = web3AuthInstance.provider;
+  if (!provider) throw new Error('Web3Auth provider not available');
+  const pk = await (provider as any).request({ method: 'eth_private_key' }) as string;
+  return (pk.startsWith('0x') ? pk : `0x${pk}`) as `0x${string}`;
+}
 
-  async function buildAAProvider(): Promise<AccountAbstractionProvider> {
-    const eoaProvider = web3AuthInstance.provider;
-    if (!eoaProvider) throw new Error('Web3Auth EOA provider not available');
+export async function buildSmartAccountClient(web3AuthInstance: Web3Auth) {
+  const publicClient = createPublicClient({ chain: celo, transport: http(CELO_RPC) });
+  const pk = await getEOAPrivateKey(web3AuthInstance);
+  const owner = privateKeyToAccount(pk);
 
-    return AccountAbstractionProvider.getProviderInstance({
-      chainConfig,
-      smartAccountInit: new SafeSmartAccount(),
-      bundlerConfig: {
-        url: process.env.NEXT_PUBLIC_BUNDLER_URL!,
-        // paymasterContext is forwarded to every pm_getPaymasterData call
-        paymasterContext: {
-          sponsorshipPolicyId: process.env.NEXT_PUBLIC_PAYMASTER_POLICY_ID!,
-        },
-      },
-      paymasterConfig: {
-        url: process.env.NEXT_PUBLIC_PAYMASTER_URL!,
-      },
-      eoaProvider,
-    });
+  const safeAccount = await toSafeSmartAccount({
+    client: publicClient,
+    owners: [owner],
+    version: '1.4.1',
+    entryPoint: ENTRY_POINT,
+  });
+
+  const pimlicoClient = createPimlicoClient({
+    transport: http(process.env.NEXT_PUBLIC_PAYMASTER_URL!),
+    entryPoint: ENTRY_POINT,
+  });
+
+  return createSmartAccountClient({
+    account: safeAccount,
+    chain: celo,
+    bundlerTransport: http(process.env.NEXT_PUBLIC_BUNDLER_URL!),
+    paymaster: pimlicoClient,
+    paymasterContext: { sponsorshipPolicyId: process.env.NEXT_PUBLIC_PAYMASTER_POLICY_ID! },
+  });
+}
+
+type SmartAccountClientType = Awaited<ReturnType<typeof buildSmartAccountClient>>;
+
+function toEIP1193(client: SmartAccountClientType, web3AuthInstance: Web3Auth) {
+  const listeners: Record<string, Set<(...args: unknown[]) => void>> = {};
+
+  return {
+    request: async ({ method, params }: { method: string; params?: unknown[] }) => {
+      if (method === 'eth_accounts') return [client.account.address];
+      if (method === 'eth_chainId') return `0x${celo.id.toString(16)}`;
+
+      if (method === 'eth_sendTransaction') {
+        const [tx] = (params ?? []) as [{ to: string; data?: string; value?: string }];
+        return client.sendTransaction({
+          to: tx.to as `0x${string}`,
+          data: (tx.data || '0x') as `0x${string}`,
+          value: tx.value ? BigInt(tx.value) : 0n,
+        });
+      }
+
+      const eoaProvider = web3AuthInstance.provider;
+      if (!eoaProvider) throw new Error('EOA provider not available');
+      return (eoaProvider as any).request({ method, params });
+    },
+    on(event: string, listener: (...args: unknown[]) => void) {
+      if (!listeners[event]) listeners[event] = new Set();
+      listeners[event].add(listener);
+    },
+    removeListener(event: string, listener: (...args: unknown[]) => void) {
+      listeners[event]?.delete(listener);
+    },
+    _emit(event: string, ...args: unknown[]) {
+      listeners[event]?.forEach(l => l(...args));
+    },
+  };
+}
+
+export function createAAConnector({ web3AuthInstance }: { web3AuthInstance: Web3Auth }) {
+  let _client: SmartAccountClientType | null = null;
+  let _provider: ReturnType<typeof toEIP1193> | null = null;
+
+  function clearState() {
+    _client = null;
+    _provider = null;
   }
 
   type AnyProvider = any;
@@ -77,71 +106,47 @@ export function createAAConnector({
       if (web3AuthInstance.status === ADAPTER_STATUS.NOT_READY) {
         await web3AuthInstance.initModal();
       }
-
       if (!web3AuthInstance.connected) {
         await web3AuthInstance.connect();
       }
 
-      // Always rebuild on explicit connect — ensures a fresh AA provider even
-      // if a prior background reconnect attempt had failed and left _aaProvider null.
-      _aaProvider = await buildAAProvider();
+      _client = await buildSmartAccountClient(web3AuthInstance);
+      _provider = toEIP1193(_client, web3AuthInstance);
 
-      _aaProvider.on?.('accountsChanged', (accounts: string[]) =>
-        this.onAccountsChanged(accounts)
-      );
-      _aaProvider.on?.('chainChanged', (chainId: string) =>
-        this.onChainChanged(chainId)
-      );
-      _aaProvider.on?.('disconnect', () => this.onDisconnect());
+      web3AuthInstance.provider?.on?.('disconnect' as any, () => this.onDisconnect());
 
       const accounts = await this.getAccounts();
       const chainId = await this.getChainId();
-
       return { accounts, chainId } as any;
     },
 
     async disconnect() {
-      if (_aaProvider) {
-        _aaProvider.removeListener?.('accountsChanged', this.onAccountsChanged);
-        _aaProvider.removeListener?.('chainChanged', this.onChainChanged);
-        _aaProvider.removeListener?.('disconnect', this.onDisconnect);
-      }
       await web3AuthInstance.logout({ cleanup: true }).catch(() => {});
-      clearAA();
+      clearState();
     },
 
     async getAccounts() {
       const provider: AnyProvider = await this.getProvider();
       if (!provider) return [];
-      const raw: string[] = await provider.request({ method: 'eth_accounts' });
-      // First account is the Smart Account address.
-      return raw.slice(0, 1).map(a => getAddress(a)) as [`0x${string}`];
+      const raw = await provider.request({ method: 'eth_accounts' }) as string[];
+      return raw.slice(0, 1).map((a: string) => getAddress(a)) as [`0x${string}`];
     },
 
     async getChainId() {
-      const provider: AnyProvider = await this.getProvider();
-      if (!provider) return 42220;
-      const id: string = await provider.request({ method: 'eth_chainId' });
-      return Number(id);
+      return celo.id;
     },
 
     async getProvider() {
       if (web3AuthInstance.status === ADAPTER_STATUS.NOT_READY) {
         await web3AuthInstance.initModal();
       }
-
-      // Not logged in — return null so wagmi treats this connector as disconnected.
       if (!web3AuthInstance.provider) return null;
+      if (_provider) return _provider;
 
-      // Return cached provider if already built.
-      if (_aaProvider) return _aaProvider;
-
-      // Build it now (happens on reconnect when session was restored by initModal).
-      // Swallow errors and return null — wagmi sees null as "not yet connected"
-      // rather than throwing, which would permanently break the connect flow.
       try {
-        _aaProvider = await buildAAProvider();
-        return _aaProvider;
+        _client = await buildSmartAccountClient(web3AuthInstance);
+        _provider = toEIP1193(_client, web3AuthInstance);
+        return _provider;
       } catch {
         return null;
       }
@@ -162,12 +167,9 @@ export function createAAConnector({
 
     onAccountsChanged(accounts: string[]) {
       if (accounts.length === 0) config.emitter.emit('disconnect');
-      else
-        config.emitter.emit('change', {
-          accounts: accounts.slice(0, 1).map(a => getAddress(a)) as [
-            `0x${string}`,
-          ],
-        });
+      else config.emitter.emit('change', {
+        accounts: accounts.slice(0, 1).map(a => getAddress(a)) as [`0x${string}`],
+      });
     },
 
     onChainChanged(chainId: string | number) {
@@ -175,7 +177,7 @@ export function createAAConnector({
     },
 
     onDisconnect() {
-      clearAA();
+      clearState();
       config.emitter.emit('disconnect');
     },
   }));
