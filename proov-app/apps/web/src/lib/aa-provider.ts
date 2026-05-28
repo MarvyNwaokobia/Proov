@@ -58,7 +58,7 @@ function toEIP1193(client: SmartAccountClientType, web3AuthInstance: Web3Auth) {
       if (method === 'eth_accounts') return [client.account.address];
       if (method === 'eth_chainId') return `0x${celo.id.toString(16)}`;
 
-      if (method === 'eth_sendTransaction') {
+      if (method === 'eth_sendTransaction' || method === 'wallet_sendTransaction') {
         const [tx] = (params ?? []) as [{ to: string; data?: string; value?: string }];
         return client.sendTransaction({
           to: tx.to as `0x${string}`,
