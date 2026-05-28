@@ -293,8 +293,22 @@ export function useBackgroundTx() {
     async (
       config: Parameters<typeof writeContract>[0] & { isRoutine?: boolean; _fromQueue?: boolean }
     ): Promise<`0x${string}` | null> => {
-      // 1. If it's not a routine transaction, or the user is not connected, fallback immediately to primary EOA
-      if (!connectedAddress || !config.isRoutine) {
+      if (!connectedAddress) {
+        const hasLocalAuth = typeof window !== 'undefined'
+          && localStorage.getItem('proov_authenticated') === 'true';
+        if (hasLocalAuth) {
+          localStorage.setItem('proov_auth_notice', 'Your session expired. Please sign in again.');
+          localStorage.removeItem('proov_authenticated');
+          localStorage.removeItem('proov_address');
+          showError('Session expired. Please sign in again.');
+        } else {
+          showError('Wallet not connected');
+        }
+        return null;
+      }
+
+      // 1. For non-routine actions, use the primary wagmi write flow
+      if (!config.isRoutine) {
         return new Promise((resolve) => {
           try {
             writeContract(

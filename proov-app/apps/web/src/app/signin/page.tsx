@@ -44,6 +44,14 @@ export default function SignInPage() {
   }, [isPending]);
 
   useEffect(() => {
+    const authNotice = localStorage.getItem('proov_auth_notice');
+    if (authNotice) {
+      setError(authNotice);
+      localStorage.removeItem('proov_auth_notice');
+    }
+  }, []);
+
+  useEffect(() => {
     if (isMiniPay()) {
       connectMiniPay().then(addr => {
         if (addr) {

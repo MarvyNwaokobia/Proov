@@ -5,6 +5,7 @@ import "./globals.css";
 import { WalletProvider } from "@/components/wallet-provider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { AppErrorBoundary } from "@/components/providers/AppErrorBoundary";
+import { AuthSessionGuard } from "@/components/providers/AuthSessionGuard";
 import { OfflineIndicator } from "@/components/shared/OfflineIndicator";
 import { BottomNav } from "@/components/shared/BottomNav";
 import { TxToastProvider } from "@/components/shared/TxToast";
@@ -54,6 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ThemeProvider>
             <WalletProvider>
               <TxToastProvider>
+                <AuthSessionGuard />
                 <OfflineIndicator />
                 <div style={{ paddingBottom: '80px' }}>{children}</div>
                 <BottomNav />
