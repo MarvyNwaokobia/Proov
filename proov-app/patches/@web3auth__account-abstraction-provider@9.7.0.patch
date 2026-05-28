@@ -1,0 +1,46 @@
+diff --git a/dist/lib.cjs/providers/utils.js b/dist/lib.cjs/providers/utils.js
+index 72a1d92ac6f59be686c38ab8c00e6d8186f41e9f..baf630634f83a5b3623830654108f4c41652df18 100644
+--- a/dist/lib.cjs/providers/utils.js
++++ b/dist/lib.cjs/providers/utils.js
+@@ -51,7 +51,8 @@ function getProviderHandlers({
+         calls: [{
+           to,
+           // Explicit conversation required to avoid value being passed as hex
+-          value: BigInt(value),
++          // value may be undefined for zero-ETH contract calls — default to 0n
++          value: BigInt(value ?? 0),
+           data
+         }]
+         // should not use maxFeePerGas/maxPriorityFeePerGas from transaction params since that's fee for transaction not user operation and let bundler handle it instead
+@@ -78,7 +79,7 @@ function getProviderHandlers({
+         account: smartAccount,
+         calls: [{
+           to,
+-          value: BigInt(value),
++          value: BigInt(value ?? 0),
+           data
+         }]
+       });
+diff --git a/dist/lib.esm/providers/utils.js b/dist/lib.esm/providers/utils.js
+index 1139583d9920a85ad6e61d839176a386a93e10a2..3ce1bd20790efc7e95c71afb09a31787ef4d34e6 100644
+--- a/dist/lib.esm/providers/utils.js
++++ b/dist/lib.esm/providers/utils.js
+@@ -49,7 +49,8 @@ function getProviderHandlers({
+         calls: [{
+           to,
+           // Explicit conversation required to avoid value being passed as hex
+-          value: BigInt(value),
++          // value may be undefined for zero-ETH contract calls — default to 0n
++          value: BigInt(value ?? 0),
+           data
+         }]
+         // should not use maxFeePerGas/maxPriorityFeePerGas from transaction params since that's fee for transaction not user operation and let bundler handle it instead
+@@ -76,7 +77,7 @@ function getProviderHandlers({
+         account: smartAccount,
+         calls: [{
+           to,
+-          value: BigInt(value),
++          value: BigInt(value ?? 0),
+           data
+         }]
+       });

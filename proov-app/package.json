@@ -24,5 +24,10 @@
   "engines": {
     "node": ">=18.0.0",
     "pnpm": ">=8.0.0"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "@web3auth/account-abstraction-provider@9.7.0": "patches/@web3auth__account-abstraction-provider@9.7.0.patch"
+    }
   }
 }
