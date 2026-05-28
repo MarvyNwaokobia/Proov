@@ -2,6 +2,7 @@
 
 import { useWriteContract, usePublicClient, useAccount, useSignMessage } from 'wagmi';
 import { useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { privateKeyToAccount } from 'viem/accounts';
 import { createPublicClient, http } from 'viem';
 import { celo } from 'viem/chains';
@@ -279,12 +280,28 @@ function parseError(err: unknown): string {
   return `Transaction failed: ${short}`;
 }
 
+function isConnectorNotConnected(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  return err.name === 'ConnectorNotConnectedError'
+    || /connector not connected/i.test(err.message);
+}
+
 export function useBackgroundTx() {
   const { writeContract } = useWriteContract();
   const { showError, showSuccess } = useTxToast();
   const publicClient = usePublicClient();
   const { address: connectedAddress } = useAccount();
   const { signMessageAsync } = useSignMessage();
+  const router = useRouter();
+
+  const clearStaleSession = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('proov_auth_notice', 'Your session expired. Please sign in again.');
+      localStorage.removeItem('proov_authenticated');
+      localStorage.removeItem('proov_address');
+    }
+    router.replace('/signin');
+  }, [router]);
 
   // Returns the tx hash when accepted by the bundler, null on any error.
   const sendTx = useCallback(
@@ -319,6 +336,7 @@ export function useBackgroundTx() {
                 },
                 onError: (err) => {
                   console.error('[tx] failed (Primary):', err);
+                  if (isConnectorNotConnected(err)) { clearStaleSession(); resolve(null); return; }
                   showError(parseError(err));
                   resolve(null);
                 },
@@ -476,6 +494,7 @@ export function useBackgroundTx() {
                 resolve(hash);
               },
               onError: (e) => {
+                if (isConnectorNotConnected(e)) { clearStaleSession(); resolve(null); return; }
                 showError(parseError(e));
                 resolve(null);
               },
@@ -484,7 +503,7 @@ export function useBackgroundTx() {
         });
       }
     },
-    [connectedAddress, writeContract, signMessageAsync, showSuccess, showError]
+    [connectedAddress, writeContract, signMessageAsync, showSuccess, showError, clearStaleSession]
   );
 
   // Auto-drains the offline queue whenever we boot up or come back online
@@ -614,6 +633,7 @@ export function useBackgroundTx() {
               },
               onError: (err) => {
                 console.error('[SessionKey] On-chain revocation failed:', err);
+                if (isConnectorNotConnected(err)) { clearStaleSession(); resolve(null); return; }
                 showError('On-chain revocation rejected');
                 resolve(null);
               },
