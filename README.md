@@ -85,8 +85,8 @@ All three contracts are deployed behind **UUPS upgradeable proxies**. The proxy 
 | Smart contracts | Solidity 0.8.28, Hardhat, OpenZeppelin UUPS Upgradeable |
 | Frontend | Next.js 14, TypeScript, Tailwind CSS |
 | Wallet auth | [Web3Auth](https://web3auth.io) (social login — Google, Email OTP) |
-| Smart account | [Safe Smart Account](https://safe.global) v1.4.1 via `@web3auth/account-abstraction-provider` |
-| Gasless txs | [Pimlico](https://pimlico.io) bundler + paymaster (ERC-4337, sponsored policy) |
+| Smart account | [Safe Smart Account](https://safe.global) v1.4.1 via [permissionless.js](https://docs.pimlico.io/permissionless) (`toSafeSmartAccount`) |
+| Gasless txs | [Pimlico](https://pimlico.io) bundler + paymaster (ERC-4337 EntryPoint v0.7, sponsored policy) |
 | Onchain reads/writes | [wagmi](https://wagmi.sh) v2 + [viem](https://viem.sh) v2 |
 | AI verification | [Claude Sonnet 4.6](https://anthropic.com) via Anthropic API |
 | AI reports | Google Gemini 2.5 Flash Lite via `@google/generative-ai` |
