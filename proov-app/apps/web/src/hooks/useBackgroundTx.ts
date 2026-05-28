@@ -327,7 +327,7 @@ export function useBackgroundTx() {
         return new Promise((resolve) => {
           try {
             writeContract(
-              config,
+              { chainId: celo.id, ...config } as Parameters<typeof writeContract>[0],
               {
                 onSuccess: (hash) => {
                   console.log('[tx] submitted (Primary):', hash);
@@ -415,6 +415,7 @@ export function useBackgroundTx() {
           const registerHash = await new Promise<`0x${string}` | null>((resolve) => {
             writeContract(
               {
+                chainId: celo.id,
                 address: connectedAddress,
                 abi: SAFE_OWNER_ABI,
                 functionName: 'addOwnerWithThreshold',
@@ -486,7 +487,7 @@ export function useBackgroundTx() {
         // Fallback to standard owner signature popup
         return new Promise((resolve) => {
           writeContract(
-            config,
+            { chainId: celo.id, ...config } as Parameters<typeof writeContract>[0],
             {
               onSuccess: (hash) => {
                 showSuccess('Transaction submitted');
@@ -620,6 +621,7 @@ export function useBackgroundTx() {
         return new Promise((resolve) => {
           writeContract(
             {
+              chainId: celo.id,
               address: connectedAddress,
               abi: SAFE_REMOVE_OWNER_ABI,
               functionName: 'removeOwner',
