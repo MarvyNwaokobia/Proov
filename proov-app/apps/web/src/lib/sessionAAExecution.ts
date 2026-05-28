@@ -1,4 +1,4 @@
-import { createWalletClient, custom, createPublicClient, http } from 'viem';
+import { createWalletClient, custom, createPublicClient, http, getAddress } from 'viem';
 import { celo } from 'viem/chains';
 import { EthereumPrivateKeyProvider } from '@web3auth/ethereum-provider';
 import {
@@ -68,8 +68,14 @@ export async function getSessionWalletClient(safeAddress: string, privateKey: `0
     eoaProvider: privateKeyProvider.provider as any,
   });
 
-  // 4. Wrap the AA provider inside a standard viem WalletClient
+  // 4. Wrap the AA provider inside a standard viem WalletClient.
+  // Derive the smart account address from the provider (Safe address) so callers
+  // don't need to pass `account` explicitly on every writeContract call.
+  const rawAccounts = (await aaProvider.request({ method: 'eth_accounts' })) ?? [];
+  const smartAccountAddress = getAddress((rawAccounts as string[])[0]);
+
   return createWalletClient({
+    account: { address: smartAccountAddress, type: 'json-rpc' as const },
     chain: celo,
     transport: custom(aaProvider),
   });
