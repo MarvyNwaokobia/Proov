@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@web3auth/account-abstraction-provider@9.7.0':
+    hash: igwai3ahunk66hs5nhj274lmp4
+    path: patches/@web3auth__account-abstraction-provider@9.7.0.patch
+
 importers:
 
   .:
@@ -125,7 +130,7 @@ importers:
         version: 5.100.10(react@18.3.1)
       '@web3auth/account-abstraction-provider':
         specifier: 9.7.0
-        version: 9.7.0(@babel/runtime@7.29.2)(typescript@5.9.3)
+        version: 9.7.0(patch_hash=igwai3ahunk66hs5nhj274lmp4)(@babel/runtime@7.29.2)(typescript@5.9.3)
       '@web3auth/base':
         specifier: ^9.7.0
         version: 9.7.0(@babel/runtime@7.29.2)
@@ -5339,7 +5344,7 @@ packages:
       tslib: 1.14.1
     dev: false
 
-  /@web3auth/account-abstraction-provider@9.7.0(@babel/runtime@7.29.2)(typescript@5.9.3):
+  /@web3auth/account-abstraction-provider@9.7.0(patch_hash=igwai3ahunk66hs5nhj274lmp4)(@babel/runtime@7.29.2)(typescript@5.9.3):
     resolution: {integrity: sha512-YQsi52qzf7P/cDJTrFBoYmAjFyFWZex3K9k6L4PnLhYj6/3nDCqFmgdJeJijrz3iTeWN6pz2mJ3HOrjhSI7RUw==}
     engines: {node: '>=18.x', npm: '>=9.x'}
     peerDependencies:
@@ -5364,6 +5369,7 @@ packages:
       - utf-8-validate
       - zod
     dev: false
+    patched: true
 
   /@web3auth/auth-adapter@9.7.0(@babel/runtime@7.29.2):
     resolution: {integrity: sha512-pjjaTZcn593avmpBvF4sKWEaxpr/eTQjuGqq6/o0RKi67IfD5HTsSREqgiBU1eM+ytPaKglKdPbKwXRgy7oHyQ==}
