@@ -3,8 +3,10 @@ import { createWalletClient, createPublicClient, http, parseEther, isAddress } f
 import { celo } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 
-const DRIP = parseEther('0.02');
-const MIN_BALANCE = parseEther('0.005');
+// Each Celo L2 tx costs ~0.13 CELO (L1 data fee dominates). Send enough for
+// ~10 transactions so new users aren't blocked immediately.
+const DRIP = parseEther('1.5');
+const MIN_BALANCE = parseEther('0.1');
 const COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 // Module-level rate limit — persists across requests in same function instance
