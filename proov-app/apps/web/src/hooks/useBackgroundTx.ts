@@ -175,6 +175,24 @@ export function useBackgroundTx() {
     [publicClient, connectedAddress, sendTx, showError]
   );
 
+  // Auto-fund new users: silently top up if CELO balance is near zero
+  useEffect(() => {
+    if (!connectedAddress) return;
+    const key = `proov_fuel_checked_${connectedAddress.toLowerCase()}`;
+    if (typeof window !== 'undefined' && sessionStorage.getItem(key)) return;
+    if (typeof window !== 'undefined') sessionStorage.setItem(key, '1');
+
+    import('@/lib/fuel').then(({ getUserCeloBalance, requestServerFaucet }) => {
+      getUserCeloBalance(connectedAddress).then(balance => {
+        if (balance < 0.005) {
+          requestServerFaucet(connectedAddress).then(topped => {
+            if (topped) showSuccess('Gas funded — you\'re ready to go');
+          }).catch(() => {});
+        }
+      }).catch(() => {});
+    }).catch(() => {});
+  }, [connectedAddress, showSuccess]);
+
   // Drain offline queue when coming back online
   useEffect(() => {
     if (typeof window === 'undefined' || !connectedAddress) return;
