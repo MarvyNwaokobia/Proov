@@ -45,18 +45,20 @@ export function createAAConnector({ web3AuthInstance }: { web3AuthInstance: Web3
     },
 
     async getProvider() {
-      if (web3AuthInstance.status === ADAPTER_STATUS.NOT_READY) {
-        await web3AuthInstance.initModal();
-      }
-      return web3AuthInstance.provider ?? null;
-    },
-
-    async isAuthorized() {
       try {
         if (web3AuthInstance.status === ADAPTER_STATUS.NOT_READY) {
           await web3AuthInstance.initModal();
         }
-        if (!web3AuthInstance.connected) return false;
+        return web3AuthInstance.provider ?? null;
+      } catch {
+        return null;
+      }
+    },
+
+    async isAuthorized() {
+      try {
+        const provider = await this.getProvider();
+        if (!provider || !web3AuthInstance.connected) return false;
         const accounts = await this.getAccounts();
         return accounts.length > 0;
       } catch {
