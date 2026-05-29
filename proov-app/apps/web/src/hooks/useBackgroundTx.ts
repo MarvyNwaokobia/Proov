@@ -46,7 +46,8 @@ function addToOfflineQueue(config: any) {
 function parseError(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
   if (/user rejected|rejected by user/i.test(msg)) return 'Transaction rejected';
-  if (/insufficient.*funds|insufficient balance/i.test(msg)) return 'Insufficient balance';
+  if (/insufficient.*funds|insufficient balance|error_forwarding_sequencer.*insufficient/i.test(msg))
+    return 'Out of gas — go to Settings → Claim Fuel';
   if (/network changed|chain.*mismatch/i.test(msg)) return 'Network mismatch. Please refresh.';
   if (/nonce/i.test(msg)) return 'Transaction conflict. Please try again.';
   const short = msg.split('\n')[0].slice(0, 120);
