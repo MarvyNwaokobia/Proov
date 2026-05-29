@@ -93,24 +93,31 @@ export function useBackgroundTx() {
     async (
       config: Parameters<typeof writeContract>[0] & { _fromQueue?: boolean }
     ): Promise<`0x${string}` | null> => {
-      if (!connectedAddress) {
-        const hasLocalAuth = typeof window !== 'undefined'
-          && localStorage.getItem('proov_authenticated') === 'true';
-        if (hasLocalAuth) {
-          clearStaleSession();
-        } else {
-          showError('Wallet not connected');
-        }
-        return null;
-      }
-
-      if (wagmiConfig.state.status !== 'connected') {
+      // Wait for wagmi to be in a stable connected state before making any
+      // decision about the session. connectedAddress can be undefined for a
+      // render cycle right after a fresh sign-in, which would falsely trigger
+      // a "session expired" redirect.
+      if (!connectedAddress || wagmiConfig.state.status !== 'connected') {
         try {
           await waitForConnected();
         } catch {
-          clearStaleSession();
+          // Timed out waiting — session is genuinely gone
+          const hasLocalAuth = typeof window !== 'undefined'
+            && localStorage.getItem('proov_authenticated') === 'true';
+          if (hasLocalAuth) clearStaleSession();
+          else showError('Wallet not connected');
           return null;
         }
+      }
+
+      // Read address fresh from the store after waiting (the closure value of
+      // connectedAddress may be stale if we just waited for reconnection)
+      const liveConnections = wagmiConfig.state.connections;
+      const liveAddress = liveConnections.values().next().value?.accounts?.[0] ?? connectedAddress;
+
+      if (!liveAddress) {
+        showError('Wallet not connected. Please try again.');
+        return null;
       }
 
       const isOffline = typeof window !== 'undefined' ? !navigator.onLine : false;
