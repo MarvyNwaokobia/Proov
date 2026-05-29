@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proov — Redesign v2</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.34.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0c0c10;color:#fff;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+#topbar{background:#13131a;border-bottom:1px solid rgba(255,255,255,.07);padding:10px 20px;display:flex;align-items:center;gap:8px;flex-shrink:0;overflow-x:auto}
+#topbar h1{font-size:13px;font-weight:800;white-space:nowrap;margin-right:4px}
+#topbar h1 span{color:#6366f1}
+.tbadge{font-size:9px;background:rgba(99,102,241,.15);color:#a5b4fc;border:1px solid rgba(99,102,241,.3);border-radius:20px;padding:3px 8px;font-weight:700;white-space:nowrap}
+.sep{width:1px;height:18px;background:rgba(255,255,255,.1);flex-shrink:0;margin:0 4px}
+.theme-btn{border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:5px 11px;font-size:10px;font-weight:700;cursor:pointer;background:rgba(255,255,255,.04);color:rgba(255,255,255,.5);transition:all .15s;white-space:nowrap}
+.theme-btn:hover{background:rgba(255,255,255,.09);color:#fff}
+.theme-btn.active{border-color:#6366f1;background:rgba(99,102,241,.2);color:#fff}
+#main{display:flex;flex:1;overflow:hidden}
+#snav{width:165px;background:#0e0e14;border-right:1px solid rgba(255,255,255,.06);overflow-y:auto;flex-shrink:0;padding:8px}
+#snav::-webkit-scrollbar{display:none}
+.snav-s{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.2);padding:10px 6px 4px}
+.sbtn{display:block;width:100%;text-align:left;padding:6px 8px;border:none;border-radius:7px;font-size:11px;font-weight:500;cursor:pointer;background:transparent;color:rgba(255,255,255,.4);transition:all .1s;margin-bottom:1px;font-family:inherit}
+.sbtn:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.8)}
+.sbtn.active{background:rgba(99,102,241,.15);color:#a5b4fc;font-weight:700}
+#pw{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:16px}
+#phone{width:375px;height:752px;background:var(--bg);border-radius:50px;border:9px solid #1c1c1e;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 40px 80px rgba(0,0,0,.9),inset 0 0 0 1px rgba(255,255,255,.04);display:flex;flex-direction:column;overflow:hidden;position:relative;transition:background .3s}
+#island{position:absolute;top:14px;left:50%;transform:translateX(-50%);width:116px;height:32px;background:#000;border-radius:18px;z-index:50;pointer-events:none}
+#sbar{height:52px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 8px;font-size:12px;font-weight:600;color:var(--text);flex-shrink:0;position:relative;z-index:10}
+#sc{flex:1;overflow-y:auto;overflow-x:hidden}
+#sc::-webkit-scrollbar{display:none}
+#bnav{height:72px;background:var(--nav-bg);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 4px 10px;flex-shrink:0}
+.ni{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:6px 0;border-radius:12px;position:relative}
+.nic{font-size:20px;line-height:1;color:var(--text3);display:flex;align-items:center;justify-content:center}
+.nil{font-size:9px;font-weight:600;color:var(--text3);letter-spacing:.3px;transition:color .15s}
+.ni.active .nil,.ni.active .nic{color:var(--accent-text)}
+.nbadge{position:absolute;top:2px;right:14px;min-width:14px;height:14px;background:#f43f5e;border-radius:7px;font-size:8px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;padding:0 3px}
+#hind{height:8px;background:var(--nav-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+#hind::after{content:'';width:100px;height:4px;background:var(--border2);border-radius:2px}
+#notes{width:240px;background:#0e0e14;border-left:1px solid rgba(255,255,255,.06);overflow-y:auto;flex-shrink:0;padding:16px 14px}
+#notes::-webkit-scrollbar{display:none}
+#notes h3{font-size:12px;font-weight:700;color:rgba(255,255,255,.8);margin-bottom:12px}
+.nitem{display:flex;gap:7px;margin-bottom:9px;font-size:10px;line-height:1.5;color:rgba(255,255,255,.45)}
+.ntag{font-size:8px;font-weight:700;padding:2px 5px;border-radius:3px;flex-shrink:0;height:14px;margin-top:1px;letter-spacing:.3px}
+.ntag.new{background:rgba(16,185,129,.2);color:#6ee7b7}
+.ntag.changed{background:rgba(99,102,241,.2);color:#a5b4fc}
+.ntag.removed{background:rgba(244,63,94,.15);color:#fda4af}
+.ntag.kept{background:rgba(255,255,255,.07);color:rgba(255,255,255,.35)}
+.ntag.nochange{background:rgba(245,158,11,.15);color:#fcd34d}
+.page-hdr{background:var(--nav-bg);border-bottom:1px solid var(--border);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20}
+.ph-title{font-size:16px;font-weight:800;color:var(--text);letter-spacing:-.3px}
+.bbtn{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:var(--bg2);border:1px solid var(--border);color:var(--text2);cursor:pointer}
+/* Flip card */
+.flip-card{width:100%;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.flip-inner{display:grid;transition:transform .55s cubic-bezier(.4,0,.2,1);transform-style:preserve-3d}
+.flip-front,.flip-back{grid-area:1/1;-webkit-backface-visibility:hidden;backface-visibility:hidden;border-radius:18px;overflow:hidden}
+.flip-back{transform:rotateY(180deg)}
+.flip-inner.flipped{transform:rotateY(180deg)}
+</style>
+</head>
+<body>
+<div id="topbar">
+  <h1>Proov <span>Redesign v2</span></h1>
+  <span class="tbadge">Visual Prototype</span>
+  <div class="sep"></div>
+  <button class="theme-btn active" onclick="setTheme('bloom_light')">🌿 Bloom Light</button>
+  <button class="theme-btn" onclick="setTheme('bloom_dark')">🌿 Bloom Dark</button>
+  <button class="theme-btn" onclick="setTheme('midnight_dark')">🌑 Midnight</button>
+  <button class="theme-btn" onclick="setTheme('midnight_light')">🌑 Midnight Light</button>
+  <button class="theme-btn" onclick="setTheme('sakura_light')">🌸 Sakura</button>
+  <button class="theme-btn" onclick="setTheme('sakura_dark')">🌸 Sakura Dark</button>
+  <button class="theme-btn" onclick="setTheme('aurora_dark')">✨ Aurora</button>
+  <button class="theme-btn" onclick="setTheme('golden_light')">☀️ Golden</button>
+  <button class="theme-btn" onclick="setTheme('golden_dark')">☀️ Golden Dark</button>
+</div>
+<div id="main">
+  <nav id="snav">
+    <div class="snav-s">No Change</div>
+    <button class="sbtn" onclick="go('landing')">Landing</button>
+    <button class="sbtn" onclick="go('signin')">Sign In</button>
+    <button class="sbtn" onclick="go('onboarding')">Onboarding</button>
+    <div class="snav-s">Core</div>
+    <button class="sbtn active" onclick="go('dashboard')">Dashboard</button>
+    <button class="sbtn" onclick="go('habits')">My Habits</button>
+    <button class="sbtn" onclick="go('discover')">Discover</button>
+    <button class="sbtn" onclick="go('habit_detail')">Habit Detail</button>
+    <button class="sbtn" onclick="go('create_habit')">Create Habit</button>
+    <div class="snav-s">Timer</div>
+    <button class="sbtn" onclick="go('timer_pick')">Pick Habit</button>
+    <button class="sbtn" onclick="go('timer_running')">Running</button>
+    <button class="sbtn" onclick="go('timer_done')">Done</button>
+    <div class="snav-s">Social</div>
+    <button class="sbtn" onclick="go('circle')">Circle</button>
+    <button class="sbtn" onclick="go('leaderboard')">Leaderboard</button>
+    <button class="sbtn" onclick="go('profile')">Profile</button>
+    <button class="sbtn" onclick="go('settings')">Settings</button>
+    <div class="snav-s">Overlays</div>
+    <button class="sbtn" onclick="go('walkthrough')">Walkthrough — Step 1</button>
+    <button class="sbtn" onclick="go('walkthrough_last')">Walkthrough — Last</button>
+    <button class="sbtn" onclick="go('proofsheet')">AI Verify — empty</button>
+    <button class="sbtn" onclick="go('proofsheet_ready')">AI Verify — ready</button>
+    <button class="sbtn" onclick="go('proofsheet_approved')">AI Verify — approved</button>
+  </nav>
+  <div id="pw">
+    <div id="phone">
+      <div id="island"></div>
+      <div id="sbar"><span>9:41</span><span style="display:flex;align-items:center;gap:4px"><i class="ti ti-wifi" style="font-size:12px"></i><i class="ti ti-battery-2" style="font-size:12px"></i></span></div>
+      <div id="sc"></div>
+      <div id="bnav">
+        <div class="ni" data-nav="home" onclick="go('dashboard')"><span class="nic"><i class="ti ti-home-2"></i></span><span class="nil">Home</span></div>
+        <div class="ni" data-nav="habit" onclick="go('habits')" style="position:relative"><span class="nic"><i class="ti ti-flame"></i></span><span class="nil">Habit</span><span class="nbadge">2</span></div>
+        <div class="ni" data-nav="timer" onclick="go('timer_pick')"><span class="nic"><i class="ti ti-clock"></i></span><span class="nil">Timer</span></div>
+        <div class="ni" data-nav="circle" onclick="go('circle')" style="position:relative"><span class="nic"><i class="ti ti-users"></i></span><span class="nil">Circle</span><span class="nbadge">1</span></div>
+        <div class="ni" data-nav="settings" onclick="go('settings')"><span class="nic"><i class="ti ti-settings"></i></span><span class="nil">Settings</span></div>
+      </div>
+      <div id="hind"></div>
+    </div>
+  </div>
+  <div id="notes">
+    <h3 id="ntitle">Screen</h3>
+    <div id="nbody"></div>
+  </div>
+</div>
+<script>
+const T={
+bloom_light:{'--bg':'#f0fdf4','--bg2':'rgba(0,0,0,.03)','--bg3':'rgba(0,0,0,.06)','--border':'rgba(16,185,129,.15)','--border2':'rgba(16,185,129,.3)','--text':'#052e16','--text2':'rgba(5,46,22,.65)','--text3':'rgba(5,46,22,.38)','--accent':'#059669','--accent-bg':'rgba(5,150,105,.1)','--accent-border':'rgba(5,150,105,.25)','--accent-text':'#065f46','--card-bg':'#ffffff','--card-border':'rgba(16,185,129,.15)','--nav-bg':'rgba(240,253,244,.95)','--btn-primary-bg':'#059669','--btn-primary-text':'#fff','--streak':'#d97706','--pink-bg':'rgba(236,72,153,.08)','--pink-text':'#be185d','--success-text':'#065f46','--success-bg':'rgba(5,150,105,.1)','--hero-bg':'linear-gradient(135deg,#059669,#047857,#065f46)'},
+bloom_dark:{'--bg':'#0a1f14','--bg2':'rgba(16,185,129,.06)','--bg3':'rgba(16,185,129,.1)','--border':'rgba(16,185,129,.15)','--border2':'rgba(16,185,129,.28)','--text':'#d1fae5','--text2':'rgba(209,250,229,.6)','--text3':'rgba(209,250,229,.3)','--accent':'#10b981','--accent-bg':'rgba(16,185,129,.12)','--accent-border':'rgba(16,185,129,.3)','--accent-text':'#6ee7b7','--card-bg':'rgba(16,185,129,.07)','--card-border':'rgba(16,185,129,.15)','--nav-bg':'rgba(10,31,20,.95)','--btn-primary-bg':'#10b981','--btn-primary-text':'#fff','--streak':'#f59e0b','--pink-bg':'rgba(244,114,182,.08)','--pink-text':'#f9a8d4','--success-text':'#6ee7b7','--success-bg':'rgba(16,185,129,.12)','--hero-bg':'linear-gradient(135deg,#10b981,#059669,#064e3b)'},
+midnight_light:{'--bg':'#f8f7ff','--bg2':'rgba(0,0,0,.03)','--bg3':'rgba(0,0,0,.06)','--border':'rgba(99,102,241,.15)','--border2':'rgba(99,102,241,.28)','--text':'#1e1b4b','--text2':'rgba(30,27,75,.6)','--text3':'rgba(30,27,75,.38)','--accent':'#6366f1','--accent-bg':'rgba(99,102,241,.1)','--accent-border':'rgba(99,102,241,.25)','--accent-text':'#4338ca','--card-bg':'#ffffff','--card-border':'rgba(99,102,241,.15)','--nav-bg':'rgba(248,247,255,.95)','--btn-primary-bg':'#6366f1','--btn-primary-text':'#fff','--streak':'#d97706','--pink-bg':'rgba(236,72,153,.08)','--pink-text':'#be185d','--success-text':'#065f46','--success-bg':'rgba(5,150,105,.1)','--hero-bg':'linear-gradient(135deg,#6366f1,#4f46e5,#3730a3)'},
+midnight_dark:{'--bg':'#09090f','--bg2':'rgba(255,255,255,.04)','--bg3':'rgba(255,255,255,.08)','--border':'rgba(255,255,255,.08)','--border2':'rgba(255,255,255,.15)','--text':'#ffffff','--text2':'rgba(255,255,255,.55)','--text3':'rgba(255,255,255,.25)','--accent':'#6366f1','--accent-bg':'rgba(99,102,241,.12)','--accent-border':'rgba(99,102,241,.25)','--accent-text':'#a5b4fc','--card-bg':'rgba(255,255,255,.04)','--card-border':'rgba(255,255,255,.08)','--nav-bg':'rgba(9,9,15,.95)','--btn-primary-bg':'#6366f1','--btn-primary-text':'#fff','--streak':'#f59e0b','--pink-bg':'rgba(236,72,153,.08)','--pink-text':'#f9a8d4','--success-text':'#6ee7b7','--success-bg':'rgba(16,185,129,.12)','--hero-bg':'linear-gradient(135deg,#4c1d95,#3730a3,#1e1b4b)'},
+sakura_light:{'--bg':'#fff1f2','--bg2':'rgba(0,0,0,.03)','--bg3':'rgba(0,0,0,.06)','--border':'rgba(244,63,94,.15)','--border2':'rgba(244,63,94,.28)','--text':'#881337','--text2':'rgba(136,19,55,.6)','--text3':'rgba(136,19,55,.38)','--accent':'#f43f5e','--accent-bg':'rgba(244,63,94,.1)','--accent-border':'rgba(244,63,94,.25)','--accent-text':'#9f1239','--card-bg':'#ffffff','--card-border':'rgba(244,63,94,.15)','--nav-bg':'rgba(255,241,242,.95)','--btn-primary-bg':'#f43f5e','--btn-primary-text':'#fff','--streak':'#d97706','--pink-bg':'rgba(244,63,94,.08)','--pink-text':'#9f1239','--success-text':'#065f46','--success-bg':'rgba(5,150,105,.1)','--hero-bg':'linear-gradient(135deg,#f43f5e,#e11d48,#9f1239)'},
+sakura_dark:{'--bg':'#1a0812','--bg2':'rgba(255,255,255,.05)','--bg3':'rgba(255,255,255,.09)','--border':'rgba(244,63,94,.12)','--border2':'rgba(244,63,94,.25)','--text':'#fff0f5','--text2':'rgba(255,240,245,.55)','--text3':'rgba(255,240,245,.28)','--accent':'#f43f5e','--accent-bg':'rgba(244,63,94,.12)','--accent-border':'rgba(244,63,94,.3)','--accent-text':'#fda4af','--card-bg':'rgba(244,63,94,.06)','--card-border':'rgba(244,63,94,.12)','--nav-bg':'rgba(26,8,18,.95)','--btn-primary-bg':'#f43f5e','--btn-primary-text':'#fff','--streak':'#f59e0b','--pink-bg':'rgba(244,63,94,.1)','--pink-text':'#fda4af','--success-text':'#6ee7b7','--success-bg':'rgba(16,185,129,.12)','--hero-bg':'linear-gradient(135deg,#4a0520,#9f1239,#881337)'},
+aurora_dark:{'--bg':'#0d0221','--bg2':'rgba(139,92,246,.06)','--bg3':'rgba(139,92,246,.1)','--border':'rgba(139,92,246,.12)','--border2':'rgba(139,92,246,.25)','--text':'#f5f3ff','--text2':'rgba(245,243,255,.55)','--text3':'rgba(245,243,255,.28)','--accent':'#7c3aed','--accent-bg':'rgba(124,58,237,.12)','--accent-border':'rgba(124,58,237,.3)','--accent-text':'#c4b5fd','--card-bg':'rgba(139,92,246,.06)','--card-border':'rgba(139,92,246,.12)','--nav-bg':'rgba(13,2,33,.95)','--btn-primary-bg':'#7c3aed','--btn-primary-text':'#fff','--streak':'#f59e0b','--pink-bg':'rgba(236,72,153,.08)','--pink-text':'#f9a8d4','--success-text':'#6ee7b7','--success-bg':'rgba(16,185,129,.12)','--hero-bg':'linear-gradient(135deg,#7c3aed,#6d28d9,#4c1d95)'},
+golden_light:{'--bg':'#fffbeb','--bg2':'rgba(0,0,0,.03)','--bg3':'rgba(0,0,0,.06)','--border':'rgba(217,119,6,.15)','--border2':'rgba(217,119,6,.28)','--text':'#431407','--text2':'rgba(67,20,7,.6)','--text3':'rgba(67,20,7,.38)','--accent':'#d97706','--accent-bg':'rgba(217,119,6,.1)','--accent-border':'rgba(217,119,6,.25)','--accent-text':'#78350f','--card-bg':'#ffffff','--card-border':'rgba(217,119,6,.15)','--nav-bg':'rgba(255,251,235,.95)','--btn-primary-bg':'#d97706','--btn-primary-text':'#fff','--streak':'#d97706','--pink-bg':'rgba(236,72,153,.08)','--pink-text':'#be185d','--success-text':'#065f46','--success-bg':'rgba(5,150,105,.1)','--hero-bg':'linear-gradient(135deg,#d97706,#b45309,#92400e)'},
+golden_dark:{'--bg':'#1c1008','--bg2':'rgba(217,119,6,.06)','--bg3':'rgba(217,119,6,.1)','--border':'rgba(217,119,6,.15)','--border2':'rgba(217,119,6,.28)','--text':'#fef3c7','--text2':'rgba(254,243,199,.55)','--text3':'rgba(254,243,199,.28)','--accent':'#f59e0b','--accent-bg':'rgba(245,158,11,.12)','--accent-border':'rgba(245,158,11,.3)','--accent-text':'#fcd34d','--card-bg':'rgba(217,119,6,.07)','--card-border':'rgba(217,119,6,.15)','--nav-bg':'rgba(28,16,8,.95)','--btn-primary-bg':'#f59e0b','--btn-primary-text':'#1c1008','--streak':'#f59e0b','--pink-bg':'rgba(244,114,182,.08)','--pink-text':'#f9a8d4','--success-text':'#6ee7b7','--success-bg':'rgba(16,185,129,.12)','--hero-bg':'linear-gradient(135deg,#f59e0b,#d97706,#92400e)'},
+};
+
+const S={
+
+landing:{title:'Landing',nav:false,notes:[
+{t:'kept',s:'All copy unchanged — Do the work. Own the proof.'},
+{t:'changed',s:'Icons replace emojis throughout'},
+{t:'kept',s:'Blob backgrounds, hero layout, feature cards, CTA'},
+{t:'kept',s:'No redesign of this page'},
+],html:`<div style="background:var(--bg);min-height:100%;position:relative;overflow:hidden">
+<div style="position:absolute;top:-60px;left:-50px;width:240px;height:240px;border-radius:50%;background:var(--accent-bg);filter:blur(50px);opacity:.7;pointer-events:none"></div>
+<div style="position:absolute;top:100px;right:-60px;width:200px;height:200px;border-radius:50%;background:var(--accent-bg);filter:blur(45px);opacity:.5;pointer-events:none"></div>
+<div style="position:relative;padding:0 20px 32px">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0 16px">
+  <div style="display:flex;align-items:center;gap:7px">
+    <div style="width:30px;height:30px;border-radius:8px;background:var(--btn-primary-bg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:var(--btn-primary-text)">P</div>
+    <span style="font-size:16px;font-weight:800;color:var(--text);letter-spacing:-.4px">Proov</span>
+  </div>
+  <div style="display:flex;gap:6px">
+    <button style="padding:6px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--border2);background:transparent;color:var(--text2)">Sign in</button>
+    <button style="padding:6px 12px;border-radius:20px;font-size:11px;font-weight:700;border:none;background:var(--btn-primary-bg);color:var(--btn-primary-text)">Join free</button>
+  </div>
+</div>
+<div style="text-align:center;padding:4px 0 16px">
+  <div style="display:inline-flex;align-items:center;gap:5px;background:var(--accent-bg);border:1px solid var(--accent-border);border-radius:20px;padding:4px 12px;font-size:10px;color:var(--accent-text);font-weight:700;margin-bottom:14px">
+    <span style="width:5px;height:5px;border-radius:50%;background:var(--accent);display:inline-block"></span>Track habits. Stay accountable
+  </div>
+  <h1 style="font-size:28px;font-weight:900;color:var(--text);letter-spacing:-1.5px;line-height:1.1;margin-bottom:10px">Do the work.<br><em style="color:var(--accent)">Own the proof.</em></h1>
+  <p style="font-size:13px;color:var(--text2);line-height:1.65;margin-bottom:16px">Your progress is real.</p>
+  <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:14px">
+    <button style="padding:10px 18px;border-radius:12px;font-size:13px;font-weight:700;background:var(--btn-primary-bg);color:var(--btn-primary-text);border:none">Start today →</button>
+    <button style="padding:10px 16px;border-radius:12px;font-size:13px;font-weight:600;background:transparent;border:1px solid var(--border2);color:var(--text2)">See how it works</button>
+  </div>
+  <div style="display:flex;align-items:center;gap:7px;justify-content:center;font-size:11px;color:var(--text3)">
+    <div style="display:flex">${['#6366f1','#ec4899','#10b981','#f59e0b'].map((c,i)=>`<div style="width:20px;height:20px;border-radius:50%;background:${c};border:2px solid var(--bg);margin-left:${i?-5:0}px;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:#fff">${['A','T','S','J'][i]}</div>`).join('')}</div>
+    <span style="color:#f59e0b">★★★★★</span>
+    <span>Join thousands building better habits</span>
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+  ${[['brain','Verified progress','Log what you did. We check it.'],['users','Your people witness it','They see everything.'],['trophy','Leaderboard','Every day counts.'],['flame','Real progress','Earned, not claimed.']].map(([icon,title,desc])=>`<div style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:14px;padding:12px 10px"><div style="margin-bottom:7px;color:var(--accent-text)"><i class="ti ti-${icon}" style="font-size:22px"></i></div><div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:3px">${title}</div><div style="font-size:10px;color:var(--text3);line-height:1.5">${desc}</div></div>`).join('')}
+</div>
+<div style="background:var(--accent-bg);border:1px solid var(--accent-border);border-radius:16px;padding:16px;text-align:center;margin-bottom:14px">
+  <div style="margin-bottom:6px;color:var(--accent-text)"><i class="ti ti-flame" style="font-size:28px"></i></div>
+  <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px">Start today</div>
+  <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Free.</div>
+  <button style="padding:12px 28px;border-radius:12px;font-size:14px;font-weight:700;background:var(--btn-primary-bg);color:var(--btn-primary-text);border:none">Start today →</button>
+</div>
+<div style="text-align:center;font-size:10px;color:var(--text3);border-top:1px solid var(--border);padding-top:12px">Free to join · proov.app</div>
+</div></div>`},
+
+signin:{title:'Sign In — No Redesign',nav:false,notes:[
+{t:'nochange',s:'No redesign — stays exactly as current implementation'},
+{t:'kept',s:'Email + password form only'},
+{t:'kept',s:'No wallet connection, no MiniPay'},
+],html:`<div style="background:var(--bg);min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;gap:14px">
+<div style="width:60px;height:60px;border-radius:18px;background:var(--bg2);border:2px dashed var(--border2);display:flex;align-items:center;justify-content:center;color:var(--text3)"><i class="ti ti-lock" style="font-size:26px"></i></div>
+<div style="font-size:15px;font-weight:700;color:var(--text)">Sign In</div>
+<div style="font-size:12px;color:var(--text2);line-height:1.65;max-width:210px">No redesign. This screen stays exactly as it currently is in the app — email and password form.</div>
+<div style="background:var(--accent-bg);border:1px solid var(--accent-border);border-radius:10px;padding:8px 14px;font-size:10px;color:var(--accent-text);font-weight:600">No changes needed here</div>
+</div>`},
+
+onboarding:{title:'Onboarding — No Redesign',nav:false,notes:[
+{t:'nochange',s:'No redesign — stays exactly as current implementation'},
+{t:'kept',s:'Username selection, availability check, save button'},
+{t:'kept',s:'Progress bar, step flow — all unchanged'},
+],html:`<div style="background:var(--bg);min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;gap:14px">
+<div style="width:60px;height:60px;border-radius:18px;background:var(--bg2);border:2px dashed var(--border2);display:flex;align-items:center;justify-content:center;color:var(--text3)"><i class="ti ti-user-plus" style="font-size:26px"></i></div>
+<div style="font-size:15px;font-weight:700;color:var(--text)">Onboarding</div>
+<div style="font-size:12px;color:var(--text2);line-height:1.65;max-width:210px">No redesign. Username selection and onboarding steps stay as they currently are.</div>
+<div style="background:var(--accent-bg);border:1px solid var(--accent-border);border-radius:10px;padding:8px 14px;font-size:10px;color:var(--accent-text);font-weight:600">No changes needed here</div>
+</div>`},
+
+dashboard:{title:'Dashboard',nav:true,notes:[
+{t:'new',s:'Streak card flips on tap — front shows streak, back shows goal'},
+{t:'new',s:'Goal milestones: 7 → 14 → 21 → 30 days, auto-advances when hit'},
+{t:'changed',s:'Fuel replaces all currency refs — 48 Fuel pill in header'},
+{t:'changed',s:'All emojis replaced with icons'},
+{t:'removed',s:'All blockchain / crypto terminology'},
+{t:'kept',s:'Greeting, today habits grid, circle preview, leaderboard snippet'},
+],html:`<div style="background:var(--bg);padding-bottom:16px">
+<div style="padding:14px 18px 0;display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+  <div>
+    <div style="font-size:16px;font-weight:800;color:var(--text);letter-spacing:-.3px">Good morning, Marvy</div>
+    <div style="font-size:11px;color:var(--text3);margin-top:2px">Saturday, May 23</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:7px">
+    <div style="padding:5px 10px;border-radius:20px;background:var(--bg2);border:1px solid var(--border);font-size:11px;color:var(--accent-text);display:flex;align-items:center;gap:4px;font-weight:600"><i class="ti ti-bolt" style="font-size:12px"></i>48 Fuel</div>
+    <div onclick="go('settings')" style="width:28px;height:28px;border-radius:8px;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text3);cursor:pointer"><i class="ti ti-settings" style="font-size:14px"></i></div>
+  </div>
+</div>
+<div style="margin:0 18px 16px">
+  <div class="flip-card" onclick="this.querySelector('.flip-inner').classList.toggle('flipped')">
+    <div class="flip-inner">
+      <div class="flip-front" style="background:var(--hero-bg);padding:16px 18px;color:#fff">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">Current streak</div>
+            <div style="display:flex;align-items:baseline;gap:5px"><span style="font-size:40px;font-weight:900;letter-spacing:-2px;line-height:1">23</span><span style="display:flex;align-items:center;gap:3px;font-size:14px;color:rgba(255,255,255,.8)"><i class="ti ti-flame" style="font-size:15px"></i>days</span></div>
+          </div>
+          <div style="text-align:right;background:rgba(255,255,255,.12);border-radius:10px;padding:7px 10px">
+            <div style="font-size:9px;color:rgba(255,255,255,.5);margin-bottom:1px">Goal</div>
+            <div style="font-size:18px;font-weight:900;line-height:1">30d</div>
+            <div style="font-size:9px;color:rgba(255,255,255,.45);margin-top:1px">7 to go</div>
+          </div>
+        </div>
+        <div style="margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,.6);margin-bottom:4px"><span>Today</span><span>3 of 5 done</span></div>
+          <div style="height:4px;background:rgba(255,255,255,.2);border-radius:2px"><div style="height:100%;width:60%;background:rgba(255,255,255,.85);border-radius:2px"></div></div>
+        </div>
+        <div style="display:flex;gap:4px">
+          ${['S','M','T','W','T','F','S'].map((d,i)=>{const done=i<6,today=i===6;return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="font-size:7px;color:rgba(255,255,255,.4);font-weight:600">${d}</div><div style="width:100%;aspect-ratio:1;border-radius:5px;background:${done?'rgba(255,255,255,.85)':today?'transparent':'rgba(255,255,255,.12)'};border:${today?'2px solid rgba(255,255,255,.5)':'none'};display:flex;align-items:center;justify-content:center;font-size:9px;color:${done?'#047857':today?'rgba(255,255,255,.8)':'rgba(255,255,255,.25)'};font-weight:700">${done?'✓':today?'·':''}</div></div>`;}).join('')}
+        </div>
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:3px;margin-top:6px;font-size:8px;color:rgba(255,255,255,.25)"><i class="ti ti-refresh" style="font-size:9px"></i>Tap for goal</div>
+      </div>
+      <div class="flip-back" style="background:var(--hero-bg);padding:16px 18px;color:#fff">
+        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px"><i class="ti ti-target" style="font-size:13px"></i>Goal Progress</div>
+        <div style="display:flex;align-items:baseline;gap:5px;margin-bottom:10px"><span style="font-size:28px;font-weight:900;letter-spacing:-1px;line-height:1">30</span><span style="font-size:13px;color:rgba(255,255,255,.7)">day milestone</span></div>
+        <div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,.6);margin-bottom:5px"><span>Day 23 of 30</span><span>7 days to go</span></div>
+          <div style="height:6px;background:rgba(255,255,255,.2);border-radius:3px"><div style="height:100%;width:76.7%;background:rgba(255,255,255,.9);border-radius:3px"></div></div>
+        </div>
+        <div style="display:flex;gap:5px;margin-bottom:10px">
+          ${[{d:'7d',done:true},{d:'14d',done:true},{d:'21d',done:true},{d:'30d',cur:true}].map(m=>`<div style="flex:1;text-align:center;padding:6px 2px;border-radius:8px;background:${m.done?'rgba(255,255,255,.9)':m.cur?'rgba(255,255,255,.15)':'rgba(255,255,255,.08)'};border:${m.cur?'1.5px solid rgba(255,255,255,.5)':'none'};font-size:9px;font-weight:700;color:${m.done?'#047857':m.cur?'#fff':'rgba(255,255,255,.3)'}">${m.done?'✓ ':''}<span>${m.d}</span></div>`).join('')}
+        </div>
+        <div style="font-size:9px;color:rgba(255,255,255,.35);text-align:center">Hit 30 days → next goal becomes 60 days</div>
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:3px;margin-top:8px;font-size:8px;color:rgba(255,255,255,.25)"><i class="ti ti-refresh" style="font-size:9px"></i>Tap to go back</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div style="padding:0 18px;margin-bottom:14px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3)">TODAY</span>
+    <span onclick="go('habits')" style="font-size:11px;color:var(--accent-text);font-weight:600;cursor:pointer">Manage →</span>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
+    ${[{icon:'brain',n:'Deep Work',d:'90 min',s:12,done:true,type:'timed'},{icon:'run',n:'Morning Run',d:'30 min',s:7,done:false,type:'timed'},{icon:'droplet',n:'Water',d:'Checkbox',s:3,done:true,type:'check'},{icon:'book-2',n:'Read',d:'30 min',s:0,done:false,type:'timed'}].map(h=>`<div style="background:var(--card-bg);border:1px solid ${h.done?'var(--accent-border)':'var(--card-border)'};border-radius:14px;padding:11px;opacity:${h.done?.75:1}"><div style="margin-bottom:5px;color:var(--accent-text)"><i class="ti ti-${h.icon}" style="font-size:20px"></i></div><div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h.n}</div><div style="font-size:9px;color:var(--text3);margin-bottom:8px">${h.d}${h.s>0?' · '+h.s+'d':''}${h.done?' · Done':''}</div><button style="width:100%;padding:6px 0;border-radius:8px;border:${h.done?'none':'1.5px solid var(--border2)'};background:${h.done?'var(--accent)':'transparent'};color:${h.done?'#fff':'var(--text2)'};font-size:10px;font-weight:700;cursor:pointer">${h.done?'Done':h.type==='timed'?'Start':'Mark done'}</button></div>`).join('')}
+  </div>
+  <button onclick="go('create_habit')" style="width:100%;padding:12px;border:2px dashed var(--border2);border-radius:13px;background:transparent;cursor:pointer;color:var(--text3);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px"><i class="ti ti-plus" style="font-size:14px"></i>Add habit</button>
+</div>
+<div style="padding:0 18px;margin-bottom:14px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3)">CIRCLE</span>
+    <span onclick="go('circle')" style="font-size:11px;color:var(--accent-text);font-weight:600;cursor:pointer">Manage →</span>
+  </div>
+  <div style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:14px;overflow:hidden">
+    ${[{u:'tola',s:42,act:'Workout done · 2h ago',done:true,btn:'Cheer',ic:'star'},{u:'amara',s:7,act:'No activity yet today',done:false,btn:'Nudge',ic:'hand-stop'}].map((m,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:11px 14px;${i===0?'border-bottom:1px solid var(--border)':''}"><div style="width:32px;height:32px;border-radius:10px;background:var(--accent-bg);border:1px solid var(--accent-border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--accent-text);flex-shrink:0">${m.u.slice(0,2).toUpperCase()}</div><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;color:var(--text)">@${m.u}</div><div style="font-size:10px;color:${m.done?'var(--accent-text)':'var(--text3)'}">${m.act}</div></div><button style="padding:5px 9px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid ${m.done?'var(--pink-text)':'var(--border2)'};background:${m.done?'var(--pink-bg)':'transparent'};color:${m.done?'var(--pink-text)':'var(--text3)'};display:flex;align-items:center;gap:3px;white-space:nowrap"><i class="ti ti-${m.ic}" style="font-size:10px"></i>${m.btn}</button></div>`).join('')}
+  </div>
+</div>
+<div style="padding:0 18px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3)">LEADERBOARD</span>
+    <span onclick="go('leaderboard')" style="font-size:11px;color:var(--accent-text);font-weight:600;cursor:pointer">See all →</span>
+  </div>
+  <div style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:14px;overflow:hidden">
+    ${[{r:'1',n:'@marcus',s:87,gold:true},{r:'2',n:'@tola',s:42,silver:true},{r:'14',n:'You · @marvy',s:23,me:true}].map((row,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;${i<2?'border-bottom:1px solid var(--border)':''}${row.me?';background:var(--accent-bg)':''}"><span style="font-size:11px;font-weight:800;min-width:22px;color:${row.me?'var(--accent-text)':row.gold?'#f59e0b':row.silver?'#9ca3af':'var(--text3)'}">#${row.r}</span><span style="flex:1;font-size:12px;font-weight:${row.me?700:500};color:var(--text)">${row.n}</span><span style="font-size:11px;font-weight:700;color:var(--streak);display:flex;align-items:center;gap:3px"><i class="ti ti-flame" style="font-size:12px"></i>${row.s}</span></div>`).join('')}
+  </div>
+</div>
+</div>`},
+
+habits:{title:'Habits — My Habits',nav:true,notes:[
+{t:'kept',s:'My Habits tab — list view unchanged'},
+{t:'changed',s:'Icons replace emojis on every habit row'},
+{t:'new',s:'Discover tab shows category-matched habits (see Discover screen)'},
+{t:'kept',s:'Tab switcher, category filter, streak count, done/start buttons'},
+],html:`<div style="background:var(--bg)">
+<div class="page-hdr"><span class="ph-title">Habits</span><button onclick="go('create_habit')" style="padding:7px 14px;border-radius:10px;border:none;background:var(--btn-primary-bg);color:var(--btn-primary-text);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px"><i class="ti ti-plus" style="font-size:13px"></i>New</button></div>
+<div style="padding:12px 18px 0">
+  <div style="display:flex;background:var(--bg2);border-radius:12px;padding:3px;gap:3px;margin-bottom:14px">
+    ${[['My Habits',true,'habits'],['Discover',false,'discover'],['Templates',false,'']].map(([t,a,sc])=>`<button onclick="${sc?`go('${sc}')`:'null'}" style="flex:1;padding:7px;border-radius:9px;border:none;cursor:pointer;font-size:11px;font-weight:${a?700:500};background:${a?'var(--card-bg)':'transparent'};color:${a?'var(--text)':'var(--text3)'};box-shadow:${a?'0 1px 3px rgba(0,0,0,.08)':'none'}">${t}</button>`).join('')}
+  </div>
+  <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:14px">
+    ${[['All',true],['Focus',false],['Fitness',false],['Wellness',false],['Learning',false]].map(([l,a])=>`<button style="flex-shrink:0;padding:5px 12px;border-radius:14px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid ${a?'var(--accent)':'var(--border)'};background:${a?'var(--accent-bg)':'transparent'};color:${a?'var(--accent-text)':'var(--text3)'};white-space:nowrap">${l}</button>`).join('')}
+  </div>
+  <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);margin-bottom:10px">ACTIVE · 5</div>
+  ${[{icon:'brain',n:'Deep Work',d:'90 min · daily · Focus',s:12,done:true,type:'timed'},{icon:'run',n:'Morning Run',d:'30 min · daily · Fitness',s:7,done:false,type:'timed'},{icon:'droplet',n:'Drink Water',d:'Checkbox · daily · Wellness',s:3,done:true,type:'check'},{icon:'book-2',n:'Read',d:'30 min · daily · Learning',s:0,done:false,type:'timed'},{icon:'pencil',n:'Journaling',d:'15 min · daily · Focus',s:21,done:false,type:'timed'}].map(h=>`<div onclick="go('habit_detail')" style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:14px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer"><i class="ti ti-${h.icon}" style="font-size:22px;color:var(--accent-text);flex-shrink:0"></i><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;color:var(--text)">${h.n}</div><div style="font-size:10px;color:var(--text3);margin-top:1px">${h.d}</div><div style="font-size:11px;font-weight:700;color:var(--streak);margin-top:3px;display:flex;align-items:center;gap:3px">${h.s>0?`<i class="ti ti-flame" style="font-size:11px"></i>${h.s} day streak`:h.done?'Done today':'No streak yet'}</div></div><button style="padding:6px 12px;border-radius:9px;border:${h.done?'none':'1.5px solid var(--border2)'};background:${h.done?'var(--accent)':'transparent'};color:${h.done?'#fff':'var(--text2)'};font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">${h.done?'Done':h.type==='timed'?'Start':'Mark'}</button></div>`).join('')}
+</div></div>`},
+
+discover:{title:'Habits — Discover',nav:true,notes:[
+{t:'changed',s:'Each category shows only habits that match — no mismatches'},
+{t:'new',s:'Wellness → meditation, breathwork, sleep, gratitude, hydration'},
+{t:'new',s:'Focus → deep work, pomodoro, journaling, digital detox'},
+{t:'new',s:'Fitness → running, strength, yoga, walking, jump rope'},
+{t:'new',s:'Learning → reading, courses, language, podcast, writing'},
+],html:`<div style="background:var(--bg)">
+<div class="page-hdr"><span class="ph-title">Habits</span><button onclick="go('create_habit')" style="padding:7px 14px;border-radius:10px;border:none;background:var(--btn-primary-bg);color:var(--btn-primary-text);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px"><i class="ti ti-plus" style="font-size:13px"></i>New</button></div>
+<div style="padding:12px 18px 0">
+  <div style="display:flex;background:var(--bg2);border-radius:12px;padding:3px;gap:3px;margin-bottom:14px">
+    ${[['My Habits',false,'habits'],['Discover',true,'discover'],['Templates',false,'']].map(([t,a,sc])=>`<button onclick="${sc?`go('${sc}')`:'null'}" style="flex:1;padding:7px;border-radius:9px;border:none;cursor:pointer;font-size:11px;font-weight:${a?700:500};background:${a?'var(--card-bg)':'transparent'};color:${a?'var(--text)':'var(--text3)'};box-shadow:${a?'0 1px 3px rgba(0,0,0,.08)':'none'}">${t}</button>`).join('')}
+  </div>
+  <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:14px">
+    ${[['All',false],['Focus',false],['Fitness',false],['Wellness',true],['Learning',false]].map(([l,a])=>`<button style="flex-shrink:0;padding:5px 12px;border-radius:14px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid ${a?'var(--accent)':'var(--border)'};background:${a?'var(--accent-bg)':'transparent'};color:${a?'var(--accent-text)':'var(--text3)'};white-space:nowrap">${l}</button>`).join('')}
+  </div>
+  <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);margin-bottom:10px">WELLNESS · 5 suggestions</div>
+  ${[{icon:'brain',n:'Meditation',d:'10 min · daily · Clear your mind'},{icon:'wind',n:'Breathwork',d:'5 min · daily · Box breathing'},{icon:'moon',n:'Sleep Journal',d:'Evening · daily · Reflect before bed'},{icon:'heart',n:'Gratitude Notes',d:'5 min · daily · Write 3 things'},{icon:'droplet',n:'Daily Hydration',d:'8 glasses · daily · Track water intake'}].map(h=>`<div style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:14px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px"><i class="ti ti-${h.icon}" style="font-size:22px;color:var(--accent-text);flex-shrink:0"></i><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;color:var(--text)">${h.n}</div><div style="font-size:10px;color:var(--text3);margin-top:1px">${h.d}</div></div><button style="padding:6px 12px;border-radius:9px;border:1px solid var(--accent-border);background:var(--accent-bg);color:var(--accent-text);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:4px"><i class="ti ti-plus" style="font-size:11px"></i>Add</button></div>`).join('')}
+</div></div>`},
+
+habit_detail:{title:'Habit Detail — Bottom Sheet',nav:true,notes:[
+{t:'new',s:'Bottom sheet slides up — no full page navigation'},
+{t:'changed',s:'"Archive" replaces "Remove" — softer, inside sheet'},
+{t:'new',s:'7-day completion grid'},
+{t:'new',s:'Stats row: streak / total / avg'},
+{t:'changed',s:'Icons replace emojis'},
+{t:'removed',s:'All blockchain / on-chain language'},
+],html:`<div style="background:var(--bg)">
+<div style="height:160px;padding:14px 18px;overflow:hidden;opacity:.3">
+  ${[{icon:'brain',n:'Deep Work',s:12},{icon:'run',n:'Morning Run',s:7}].map(h=>`<div style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:14px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px"><i class="ti ti-${h.icon}" style="font-size:22px;color:var(--accent-text)"></i><div style="flex:1"><div style="font-size:14px;font-weight:700;color:var(--text)">${h.n}</div><div style="font-size:10px;color:var(--text3);">${h.s} day streak</div></div></div>`).join('')}
+</div>
+<div style="background:var(--bg);border-radius:24px 24px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.2);margin-top:-4px">
+  <div style="display:flex;justify-content:center;padding:10px 0 0"><div style="width:40px;height:4px;background:var(--border2);border-radius:2px"></div></div>
+  <div style="padding:14px 20px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <i class="ti ti-run" style="font-size:32px;color:var(--accent-text)"></i>
+      <div><div style="font-size:19px;font-weight:800;color:var(--text);letter-spacing:-.4px">Morning Run</div><div style="font-size:11px;color:var(--text3);margin-top:2px">30 min · Fitness · Daily · Private</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+      ${[['7','Streak'],['23','Total'],['28m','Avg']].map(([v,l])=>`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:10px;text-align:center"><div style="font-size:16px;font-weight:800;color:var(--text)">${v}</div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-top:2px">${l}</div></div>`).join('')}
+    </div>
+    <div style="margin-bottom:16px">
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:8px">Last 7 days</div>
+      <div style="display:flex;gap:5px">
+        ${['S','M','T','W','T','F','S'].map((d,i)=>{const done=[0,1,3,4,5].includes(i),today=i===6;return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="font-size:9px;color:var(--text3);font-weight:600">${d}</div><div style="width:100%;aspect-ratio:1;border-radius:7px;background:${done?'var(--btn-primary-bg)':today?'transparent':'var(--bg2)'};border:${today?'2px solid var(--accent-border)':done?'none':'1px solid var(--border)'};display:flex;align-items:center;justify-content:center;font-size:10px;color:${done?'#fff':today?'var(--accent-text)':'var(--text3)'};font-weight:700">${done?'✓':today?'·':''}</div></div>`;}).join('')}
+      </div>
+    </div>
+    <button style="width:100%;padding:13px;border-radius:13px;font-size:14px;font-weight:700;background:var(--btn-primary-bg);color:var(--btn-primary-text);border:none;cursor:pointer;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:6px"><i class="ti ti-player-play" style="font-size:14px"></i>Start 30 min session</button>
+    <div style="height:1px;background:var(--border);margin-bottom:12px"></div>
+    <div style="display:flex;gap:8px">
+      <button style="flex:1;padding:11px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px"><i class="ti ti-edit" style="font-size:13px"></i>Edit</button>
+      <button style="flex:1;padding:11px;border-radius:12px;border:1px solid rgba(244,63,94,.3);background:rgba(244,63,94,.06);color:#f43f5e;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px"><i class="ti ti-archive" style="font-size:13px"></i>Archive</button>
+    </div>
+  </div>
+</div></div>`},
+
+create_habit:{title:'Create Habit — Step 1',nav:true,notes:[
+{t:'kept',s:'5-step flow — works well, no changes'},
+{t:'changed',s:'Progress bar replaces dot indicators'},
+{t:'changed',s:'Icons replace emojis in category grid'},
+{t:'kept',s:'Name input, category grid, Next/Back'},
+],html:`<div style="background:var(--bg)">
+<div class="page-hdr" style="justify-content:flex-start;gap:12px"><button style="width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:var(--bg2);border:1px solid var(--border);color:var(--text2);cursor:pointer"><i class="ti ti-x" style="font-size:14px"></i></button><span class="ph-title">New Habit</span></div>
+<div style="padding:18px">
+  <div style="display:flex;gap:4px;margin-bottom:18px">${[1,2,3,4,5].map((_,i)=>`<div style="flex:1;height:3px;border-radius:2px;background:${i===0?'var(--accent)':'var(--border2)'}"></div>`).join('')}</div>
+  <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:5px">Step 1 of 5</div>
+  <h2 style="font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.5px;margin-bottom:14px">Name your habit</h2>
+  <input placeholder="e.g. Morning Run, Deep Work…" style="width:100%;padding:13px 14px;border-radius:13px;border:1.5px solid var(--accent-border);background:var(--accent-bg);color:var(--accent-text);font-size:15px;font-weight:600;outline:none;font-family:inherit;margin-bottom:18px"/>
+  <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);margin-bottom:10px">Category</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:7px;margin-bottom:22px">
+    ${[['brain','Focus',true],['run','Fitness',false],['heart','Wellness',false],['book-2','Learning',false],['salad','Nutrition',false],['palette','Creative',false],['bulb','Mind',false],['sparkles','Custom',false]].map(([icon,l,a])=>`<button style="border-radius:12px;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:9px;cursor:pointer;border:1px solid ${a?'var(--accent-border)':'var(--border)'};background:${a?'var(--accent-bg)':'transparent'};color:${a?'var(--accent-text)':'var(--text3)'}"><i class="ti ti-${icon}" style="font-size:18px"></i><span style="font-weight:600">${l}</span></button>`).join('')}
+  </div>
+  <div style="display:flex;gap:8px"><button style="flex:1;padding:13px;border-radius:12px;background:transparent;border:1px solid var(--border2);color:var(--text2);font-size:13px;font-weight:600;cursor:pointer">Cancel</button><button style="flex:2;padding:13px;border-radius:12px;background:var(--btn-primary-bg);color:var(--btn-primary-text);border:none;font-size:13px;font-weight:700;cursor:pointer">Next →</button></div>
+</div></div>`},
+
+timer_pick:{title:'Timer — Pick Habit',nav:true,notes:[
+{t:'changed',s:'"Free session" renamed to "Custom session"'},
+{t:'new',s:'Session history shown at bottom of this screen'},
+{t:'changed',s:'Icons replace emojis'},
+{t:'kept',s:'Search, habit list, pick to start'},
+],html:`<div style="background:var(--bg)">
+<div class="page-hdr"><span class="ph-title" style="display:flex;align-items:center;gap:6px"><i class="ti ti-clock" style="font-size:16px;color:var(--accent-text)"></i>Grind Timer</span></div>
+<div style="padding:16px 18px">
+  <div style="display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:14px"><i class="ti ti-search" style="font-size:14px;color:var(--text3)"></i><input placeholder="Search timed habits…" style="flex:1;border:none;background:transparent;color:var(--text);font-size:13px;outline:none;font-family:inherit"/></div>
+  <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);margin-bottom:10px">Your timed habits</div>
+  ${[{icon:'brain',n:'Deep Work',d:'90 min · Focus'},{icon:'run',n:'Morning Run',d:'30 min · Fitness'},{icon:'book-2',n:'Read',d:'30 min · Learning'},{icon:'pencil',n:'Journaling',d:'15 min · Focus'}].map(h=>`<div onclick="go('timer_running')" style="display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--card-bg);border:1px solid var(--card-border);border-radius:13px;margin-bottom:8px;cursor:pointer"><i class="ti ti-${h.icon}" style="font-size:20px;color:var(--accent-text)"></i><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--text)">${h.n}</div><div style="font-size:10px;color:var(--text3)">${h.d}</div></div><button style="padding:6px 14px;border-radius:20px;border:none;background:var(--btn-primary-bg);color:var(--btn-primary-text);font-size:11px;font-weight:700;cursor:pointer">Start</button></div>`).join('')}
+  <div style="height:1px;background:var(--border);margin:14px 0 12px"></div>
+  <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:8px">Or start without linking a habit</div>
+  <button onclick="go('timer_running')" style="width:100%;padding:12px;border-radius:12px;background:transparent;border:1px solid var(--border2);color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px"><i class="ti ti-clock" style="font-size:14px"></i>Custom session</button>
+  <div style="height:1px;background:var(--border);margin:16px 0 12px"></div>
+  <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);margin-bottom:10px">Recent sessions</div>
+  ${[{icon:'brain',n:'Deep Work',d:'90 min',when:'Today'},{ icon:'run',n:'Morning Run',d:'32 min',when:'Yesterday'},{icon:'book-2',n:'Read',d:'45 min',when:'May 21'}].map((s,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;${i<2?'border-bottom:1px solid var(--border)':''}"><i class="ti ti-${s.icon}" style="font-size:16px;color:var(--text3)"></i><div style="flex:1"><div style="font-size:12px;font-weight:600;color:var(--text)">${s.n}</div><div style="font-size:10px;color:var(--text3)">${s.d} · ${s.when}</div></div><i class="ti ti-check-circle" style="font-size:14px;color:var(--success-text)"></i></div>`).join('')}
+</div></div>`},
+
+timer_running:{title:'Timer — Running (Focus Mode)',nav:false,notes:[
+{t:'new',s:'Full-screen focus mode — bottom nav hidden'},
+{t:'kept',s:'SVG ring, pulse glow, cancel button'},
+{t:'changed',s:'Icons replace emojis in habit label'},
+{t:'kept',s:'Runs in background, returns to done screen'},
+],html:`<div style="background:var(--bg);min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;position:relative">
+<style>@keyframes tpulse{0%,100%{opacity:.4;transform:translate(-50%,-50%) scale(1)}50%{opacity:.9;transform:translate(-50%,-50%) scale(1.08)}}</style>
+<div style="position:absolute;top:50%;left:50%;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,var(--accent-bg),transparent 70%);pointer-events:none;animation:tpulse 2.5s ease-in-out infinite"></div>
+<button style="position:absolute;top:14px;left:18px;background:none;border:none;color:var(--accent-text);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px"><i class="ti ti-arrow-left" style="font-size:13px"></i>Change habit</button>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:26px;background:var(--accent-bg);border:1px solid var(--accent-border);border-radius:12px;padding:8px 14px;position:relative;z-index:1">
+  <i class="ti ti-brain" style="font-size:18px;color:var(--accent-text)"></i>
+  <div><div style="font-size:13px;font-weight:700;color:var(--accent-text)">Deep Work</div><div style="font-size:10px;color:var(--text3)">Target: 90 min</div></div>
+</div>
+<div style="position:relative;width:220px;height:220px;margin-bottom:26px;z-index:1">
+  <svg viewBox="0 0 220 220" width="220" height="220" style="transform:rotate(-90deg);position:relative;z-index:1">
+    <circle cx="110" cy="110" r="94" fill="none" stroke="var(--border2)" stroke-width="8"/>
+    <circle cx="110" cy="110" r="94" fill="none" stroke="var(--accent)" stroke-width="12" stroke-linecap="round" stroke-dasharray="590.6" stroke-dashoffset="177" style="filter:drop-shadow(0 0 8px var(--accent))"/>
+  </svg>
+  <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+    <span style="font-size:36px;font-weight:900;color:var(--text);letter-spacing:-2px;line-height:1">01:03:42</span>
+    <span style="font-size:11px;color:var(--text3);margin-top:4px">remaining</span>
+  </div>
+</div>
+<p style="font-size:12px;color:var(--text3);text-align:center;line-height:1.6;margin-bottom:22px;position:relative;z-index:1">Timer runs in the background.<br>Come back when you're done.</p>
+<button onclick="go('timer_done')" style="padding:11px 28px;border-radius:12px;background:transparent;border:1px solid var(--border2);color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;position:relative;z-index:1">Cancel session</button>
+</div>`},
+
+timer_done:{title:'Timer — Done',nav:false,notes:[
+{t:'new',s:'Session history list below action buttons'},
+{t:'changed',s:'Icons replace emojis'},
+{t:'kept',s:'Completion stats (streak, today, rank), mark complete, share'},
+],html:`<div style="background:var(--bg);min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px">
+<style>@keyframes pop{0%{transform:scale(.5);opacity:0}80%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}</style>
+<div style="margin-bottom:12px;animation:pop .4s ease;color:var(--accent-text)"><i class="ti ti-circle-check-filled" style="font-size:56px"></i></div>
+<h2 style="font-size:20px;font-weight:800;color:var(--text);text-align:center;letter-spacing:-.5px;margin-bottom:6px">Deep Work · 90 min done</h2>
+<p style="font-size:13px;color:var(--text2);text-align:center;line-height:1.6;margin-bottom:20px">"Keep showing up. That's the whole game."</p>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;width:100%;margin-bottom:18px">
+  ${[['23','streak'],['4','today'],['#14','rank']].map(([v,l])=>`<div style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:14px;padding:12px 6px;text-align:center"><div style="font-size:15px;font-weight:800;color:var(--text)">${v}</div><div style="font-size:9px;color:var(--text3);margin-top:3px">${l}</div></div>`).join('')}
+</div>
+<button style="width:100%;padding:14px;border-radius:14px;background:var(--btn-primary-bg);color:var(--btn-primary-text);border:none;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:6px"><i class="ti ti-check" style="font-size:15px"></i>Mark complete</button>
+<button style="width:100%;padding:13px;border-radius:14px;background:transparent;border:1px solid var(--border2);color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:18px"><i class="ti ti-share" style="font-size:14px"></i>Share this</button>
+<div style="width:100%;border-top:1px solid var(--border);padding-top:14px">
+  <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);margin-bottom:10px">Session history</div>
+  ${[{icon:'brain',n:'Deep Work',d:'90 min',when:'Today — just now'},{icon:'run',n:'Morning Run',d:'32 min',when:'Yesterday'},{icon:'book-2',n:'Read',d:'45 min',when:'May 21'}].map((s,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;${i<2?'border-bottom:1px solid var(--border)':''}"><i class="ti ti-${s.icon}" style="font-size:16px;color:var(--text3);flex-shrink:0"></i><div style="flex:1"><div style="font-size:12px;font-weight:600;color:var(--text)">${s.n} · ${s.d}</div><div style="font-size:10px;color:var(--text3)">${s.when}</div></div><i class="ti ti-check-circle" style="font-size:14px;color:var(--success-text)"></i></div>`).join('')}
+</div>
+</div>`},
+
+circle:{title:'Circle',nav:true,notes:[
+{t:'changed',s:'Members tab default, Requests tab has badge'},
+{t:'changed',s:'Context per member: done / not yet / streak broken'},
+{t:'new',s:'Cheer if done, Nudge if not — context-aware action'},
+{t:'changed',s:'Icons replace emojis'},
+{t:'removed',s:'All blockchain / wallet language'},
+],html:`<div style="background:var(--bg)">
+<div class="page-hdr"><span class="ph-title">Circle</span></div>
+<div style="padding:0 18px">
+  <div style="display:flex;gap:3px;background:var(--bg2);border-radius:12px;padding:3px;margin:12px 0 16px">
+    <button style="flex:1;padding:7px;border-radius:9px;border:none;cursor:pointer;font-size:11px;font-weight:700;background:var(--card-bg);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.08)">Members · 3</button>
+    <button style="flex:1;padding:7px;border-radius:9px;border:none;cursor:pointer;font-size:11px;font-weight:500;background:transparent;color:var(--text3);position:relative">Requests <span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;background:#f43f5e;border-radius:7px;font-size:8px;font-weight:700;color:#fff;margin-left:2px">1</span></button>
+  </div>
+  ${[{u:'tola',s:42,act:'Workout done · 2h ago',done:true,btn:'Cheer',ic:'star',bs:'border:1px solid var(--pink-text);background:var(--pink-bg);color:var(--pink-text)'},{u:'amara',s:7,act:'No activity yet today',done:false,btn:'Nudge',ic:'hand-stop',bs:'border:1px solid var(--border2);background:transparent;color:var(--text3)'},{u:'kemi',s:0,act:'Streak broken · last seen yesterday',done:false,btn:'',ic:'',bs:''}].map(m=>`<div style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:14px;padding:14px;margin-bottom:10px"><div style="display:flex;align-items:center;gap:10px"><div style="width:38px;height:38px;border-radius:12px;background:var(--accent-bg);border:1px solid var(--accent-border);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--accent-text);flex-shrink:0">${m.u.slice(0,2).toUpperCase()}</div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:var(--text)">@${m.u}</div><div style="font-size:10px;color:var(--text3);margin-top:1px;display:flex;align-items:center;gap:3px"><i class="ti ti-flame" style="font-size:10px;color:var(--streak)"></i>${m.s} days</div></div>${m.btn?`<button style="padding:6px 11px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer;${m.bs};display:flex;align-items:center;gap:4px;white-space:nowrap"><i class="ti ti-${m.ic}" style="font-size:10px"></i>${m.btn}</button>`:''}</div><div style="margin-top:8px;font-size:11px;color:${m.done?'var(--accent-text)':'var(--text3)'};display:flex;align-items:center;gap:4px">${m.done?'<i class="ti ti-check" style="font-size:11px"></i>':m.s===0?'<i class="ti ti-alert-triangle" style="font-size:11px"></i>':''} ${m.act}</div></div>`).join('')}
+  <div style="height:1px;background:var(--border);margin:4px 0 14px"></div>
+  <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:8px">Invite someone</div>
+  <div style="display:flex;gap:8px">
+    <input placeholder="@username" style="flex:1;padding:11px 13px;border-radius:11px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:12px;outline:none;font-family:inherit"/>
+    <button style="padding:11px 14px;border-radius:11px;background:var(--btn-primary-bg);color:var(--btn-primary-text);border:none;font-size:12px;font-weight:700;cursor:pointer">Send →</button>
+  </div>
+</div></div>`},
+
+leaderboard:{title:'Leaderboard (via Settings)',nav:true,notes:[
+{t:'changed',s:'No longer in bottom nav — accessible from Settings'},
+{t:'new',s:'Circle filter — rank among just your friends'},
+{t:'new',s:'Your rank pinned sticky at bottom'},
+{t:'changed',s:'Icons replace emojis, no blockchain language'},
+{t:'kept',s:'Top 3 podium, scrollable list'},
+],html:`<div style="background:var(--bg);padding-bottom:52px">
+<div class="page-hdr">
+  <div style="display:flex;align-items:center;gap:10px"><button onclick="go('settings')" class="bbtn"><i class="ti ti-arrow-left" style="font-size:14px"></i></button><div><div class="ph-title">Leaderboard</div><div style="font-size:10px;color:var(--text3)">Ranked by streak</div></div></div>
+</div>
+<div style="padding:0 18px">
+  <div style="display:flex;gap:3px;background:var(--bg2);border-radius:12px;padding:3px;margin:12px 0 18px">
+    <button style="flex:1;padding:7px;border-radius:9px;border:none;cursor:pointer;font-size:12px;font-weight:700;background:var(--card-bg);color:var(--text)">Global</button>
+    <button style="flex:1;padding:7px;border-radius:9px;border:none;cursor:pointer;font-size:12px;font-weight:500;background:transparent;color:var(--text3)">Circle</button>
+  </div>
+  <div style="display:flex;align-items:flex-end;justify-content:center;gap:10px;margin-bottom:18px">
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px">
+      <div style="width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#6b7280,#4b5563);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff">TO</div>
+      <i class="ti ti-medal" style="font-size:18px;color:#9ca3af"></i>
+      <div style="font-size:9px;color:var(--text2)">@tola</div>
+      <div style="width:100%;background:var(--card-bg);border:1px solid var(--card-border);border-radius:10px;padding:8px 0;text-align:center;height:62px;display:flex;flex-direction:column;justify-content:center">
+        <div style="font-size:18px;font-weight:700;color:var(--text)">42</div><div style="font-size:8px;color:var(--text3)">days</div>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px">
+      <div style="width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#fff;box-shadow:0 0 24px rgba(245,158,11,.4)">MA</div>
+      <i class="ti ti-medal" style="font-size:22px;color:#f59e0b"></i>
+      <div style="font-size:9px;color:var(--text2)">@marcus</div>
+      <div style="width:100%;border-radius:10px;padding:8px 0;text-align:center;background:rgba(146,64,14,.2);border:1px solid rgba(245,158,11,.2);height:88px;display:flex;flex-direction:column;justify-content:center">
+        <div style="font-size:24px;font-weight:900;color:#fcd34d">87</div><div style="font-size:8px;color:rgba(245,158,11,.5)">days</div>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px">
+      <div style="width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#92400e,#78350f);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff">AM</div>
+      <i class="ti ti-medal" style="font-size:18px;color:#92400e"></i>
+      <div style="font-size:9px;color:var(--text2)">@amara</div>
+      <div style="width:100%;background:var(--card-bg);border:1px solid var(--card-border);border-radius:10px;padding:8px 0;text-align:center;height:46px;display:flex;flex-direction:column;justify-content:center">
+        <div style="font-size:16px;font-weight:700;color:var(--text)">19</div><div style="font-size:8px;color:var(--text3)">days</div>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:6px">
+    ${[['4','@hassan',15],['5','@blessing',14],['6','@emeka',12],['7','@funmi',11],['8','@chidi',10]].map(([r,u,s])=>`<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--card-bg);border:1px solid var(--card-border);border-radius:14px"><span style="font-size:11px;font-weight:700;min-width:24px;color:var(--text3);font-family:monospace">#${r}</span><div style="width:30px;height:30px;border-radius:9px;background:var(--accent-bg);border:1px solid var(--accent-border);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--accent-text)">${u.slice(1,3).toUpperCase()}</div><span style="flex:1;font-size:12px;font-weight:500;color:var(--text)">${u}</span><span style="font-size:12px;font-weight:700;color:var(--streak);display:flex;align-items:center;gap:3px"><i class="ti ti-flame" style="font-size:12px"></i>${s}</span></div>`).join('')}
+  </div>
+</div>
+<div style="position:sticky;bottom:0;background:var(--accent-bg);border-top:1px solid var(--accent-border);padding:12px 18px;display:flex;align-items:center;gap:12px">
+  <span style="font-size:11px;font-weight:700;min-width:24px;color:var(--accent-text);font-family:monospace">#14</span>
+  <div style="width:30px;height:30px;border-radius:9px;background:var(--btn-primary-bg);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--btn-primary-text)">MA</div>
+  <span style="flex:1;font-size:12px;font-weight:700;color:var(--accent-text)">You · @marvy</span>
+  <span style="font-size:12px;font-weight:700;color:var(--streak);display:flex;align-items:center;gap:3px"><i class="ti ti-flame" style="font-size:12px"></i>23</span>
+</div>
+</div>`},
+
+profile:{title:'Profile (via Settings)',nav:true,notes:[
+{t:'changed',s:'Accessible from Settings only — not in bottom nav'},
+{t:'changed',s:'Wallet address removed — no blockchain language'},
+{t:'new',s:'Streak history heatmap (8 weeks)'},
+{t:'changed',s:'Icons replace emojis throughout'},
+{t:'kept',s:'Stats row, habit list with today status'},
+],html:`<div style="background:var(--bg);padding-bottom:16px">
+<div class="page-hdr"><button onclick="go('settings')" class="bbtn"><i class="ti ti-arrow-left" style="font-size:14px"></i></button><span class="ph-title">@marvy</span><button style="font-size:12px;color:var(--text3);background:none;border:none;cursor:pointer;display:flex;align-items:center"><i class="ti ti-settings" style="font-size:16px"></i></button></div>
+<div style="padding:16px 18px">
+  <div style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:18px;padding:16px;margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
+      <div style="width:52px;height:52px;border-radius:16px;background:var(--btn-primary-bg);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:var(--btn-primary-text)">M</div>
+      <div><div style="font-size:17px;font-weight:800;color:var(--text);letter-spacing:-.3px">@marvy</div><div style="font-size:11px;color:var(--text3)">Member since Jan 2025</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border)">
+      ${[['23','Streak'],['47','Total done'],['#14','Rank']].map(([v,l])=>`<div style="background:var(--card-bg);padding:10px;text-align:center"><div style="font-size:15px;font-weight:800;color:var(--text)">${v}</div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-top:2px">${l}</div></div>`).join('')}
+    </div>
+  </div>
+  <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);margin-bottom:8px">Habits (4 active)</div>
+  ${[{icon:'brain',n:'Deep Work',t:'Done today',s:12,done:true},{icon:'run',n:'Morning Run',t:'Done today',s:7,done:true},{icon:'droplet',n:'Water',t:'Pending',s:3,done:false},{icon:'book-2',n:'Read',t:'Pending',s:0,done:false}].map(h=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)"><i class="ti ti-${h.icon}" style="font-size:18px;color:var(--text3)"></i><span style="flex:1;font-size:13px;font-weight:600;color:var(--text)">${h.n}</span><span style="font-size:11px;color:${h.done?'var(--success-text)':'var(--text3)'};font-weight:600">${h.t}</span><span style="font-size:11px;font-weight:700;color:var(--streak);min-width:32px;text-align:right;display:flex;align-items:center;gap:2px;justify-content:flex-end"><i class="ti ti-flame" style="font-size:11px"></i>${h.s}</span></div>`).join('')}
+  <div style="margin-top:16px;margin-bottom:14px">
+    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);margin-bottom:10px">Streak history · last 8 weeks</div>
+    <div style="display:flex;flex-direction:column;gap:3px">
+      ${Array.from({length:7},()=>`<div style="display:flex;gap:3px">${Array.from({length:8},()=>{const f=Math.random()>.35;const op=(f?(.35+Math.random()*.65):.4).toFixed(2);return`<div style="flex:1;aspect-ratio:1;border-radius:4px;background:${f?'var(--accent)':'var(--bg2)'};opacity:${op};border:1px solid ${f?'var(--accent-border)':'var(--border)'}"></div>`;}).join('')}</div>`).join('')}
+    </div>
+  </div>
+</div></div>`},
+
+settings:{title:'Settings',nav:true,notes:[
+{t:'new',s:'View Profile row at top — profile moves here from nav'},
+{t:'new',s:'Leaderboard row at top — accessible from here, not nav'},
+{t:'changed',s:'Fuel section replaces CELO/blockchain section'},
+{t:'removed',s:'Wallet address from account details'},
+{t:'changed',s:'Icons replace emojis throughout'},
+{t:'kept',s:'Username, email, theme switcher, notifications, sign out'},
+],html:`<div style="background:var(--bg)">
+<div class="page-hdr"><span class="ph-title">Settings</span></div>
+<div style="padding:16px 18px">
+  <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);margin-bottom:8px">My Account</div>
+  <div onclick="go('profile')" style="display:flex;align-items:center;padding:13px 0;border-bottom:1px solid var(--border);cursor:pointer">
+    <div style="width:36px;height:36px;border-radius:10px;background:var(--btn-primary-bg);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:var(--btn-primary-text);margin-right:12px">M</div>
+    <div style="flex:1"><div style="font-size:14px;font-weight:700;color:var(--text)">@marvy</div><div style="font-size:11px;color:var(--text3)">View profile</div></div>
+    <i class="ti ti-chevron-right" style="font-size:16px;color:var(--text3)"></i>
+  </div>
+  <div onclick="go('leaderboard')" style="display:flex;align-items:center;padding:13px 0;border-bottom:1px solid var(--border);cursor:pointer">
+    <div style="width:36px;height:36px;border-radius:10px;background:var(--accent-bg);border:1px solid var(--accent-border);display:flex;align-items:center;justify-content:center;margin-right:12px;color:var(--accent-text)"><i class="ti ti-trophy" style="font-size:16px"></i></div>
+    <div style="flex:1"><div style="font-size:14px;font-weight:600;color:var(--text)">Leaderboard</div><div style="font-size:11px;color:var(--text3)">You're ranked #14 globally</div></div>
+    <i class="ti ti-chevron-right" style="font-size:16px;color:var(--text3)"></i>
+  </div>
+  <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);margin:16px 0 8px">Account Details</div>
+  ${[['Username','@marvy'],['Email','m@gmail.com']].map(([l,v])=>`<div style="display:flex;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)"><span style="flex:1;font-size:13px;font-weight:600;color:var(--text2)">${l}</span><span style="font-size:13px;font-weight:600;color:var(--text)">${v}</span><i class="ti ti-chevron-right" style="font-size:14px;color:var(--text3);margin-left:8px"></i></div>`).join('')}
+  <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);margin:16px 0 10px">Appearance</div>
+  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+    ${[['leaf','Bloom',true],['moon','Midnight',false],['heart','Sakura',false],['sparkles','Aurora',false],['sun','Golden',false]].map(([icon,t,a])=>`<button style="padding:7px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${a?'var(--accent)':'var(--border)'};background:${a?'var(--accent-bg)':'transparent'};color:${a?'var(--accent-text)':'var(--text3)'};display:flex;align-items:center;gap:5px"><i class="ti ti-${icon}" style="font-size:12px"></i>${t}</button>`).join('')}
+  </div>
+  <div style="display:flex;background:var(--bg2);border-radius:12px;padding:3px;gap:3px;margin-bottom:16px">
+    ${[['Light',true],['Dark',false],['Auto',false]].map(([m,a])=>`<button style="flex:1;padding:7px;border-radius:9px;border:none;cursor:pointer;font-size:11px;font-weight:${a?700:500};background:${a?'var(--card-bg)':'transparent'};color:${a?'var(--text)':'var(--text3)'}">${m}</button>`).join('')}
+  </div>
+  <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);margin-bottom:10px">Fuel</div>
+  <div style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:14px;padding:14px;margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:13px;color:var(--text2)">Balance</span><span style="font-size:14px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:4px"><i class="ti ti-bolt" style="font-size:14px;color:var(--accent-text)"></i>48 Fuel</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="font-size:13px;color:var(--text2)">Daily Fuel</span><span style="font-size:13px;font-weight:700;color:var(--success-text)">Claimable now</span></div>
+    <button style="width:100%;padding:12px;border-radius:12px;background:var(--btn-primary-bg);border:none;color:var(--btn-primary-text);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><i class="ti ti-bolt" style="font-size:14px"></i>Claim Daily Fuel</button>
+  </div>
+  <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);margin-bottom:8px">Notifications</div>
+  ${[['Daily reminder','9:00 AM'],['Streak alerts','On'],['Circle activity','On']].map(([l,v])=>`<div style="display:flex;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)"><span style="flex:1;font-size:13px;font-weight:600;color:var(--text2)">${l}</span><span style="font-size:13px;color:var(--accent-text);font-weight:600">${v}</span><i class="ti ti-chevron-right" style="font-size:14px;color:var(--text3);margin-left:8px"></i></div>`).join('')}
+  <button style="width:100%;padding:13px;border-radius:13px;background:rgba(244,63,94,.08);border:1px solid rgba(244,63,94,.25);color:#f43f5e;font-size:13px;font-weight:700;cursor:pointer;margin-top:20px;display:flex;align-items:center;justify-content:center;gap:7px"><i class="ti ti-logout" style="font-size:14px"></i>Sign out</button>
+</div></div>`},
+
+walkthrough:{title:'Walkthrough — Step 1 of 6',nav:false,notes:[
+{t:'new',s:'Replaces broken spotlight tour — data-wt attrs were never added to dashboard'},
+{t:'new',s:'Centered spring-animated card over dark blurred full-screen backdrop'},
+{t:'new',s:'6 thin accent progress bars at top — first bar lit, rest muted'},
+{t:'new',s:'Tapping outside the card or "Skip tour" → marks done in localStorage'},
+{t:'kept',s:'6 steps: welcome, streak, habits, circle, fuel, leaderboard'},
+{t:'kept',s:'proov_walkthrough_done + proov_tutorial_done set on complete/skip'},
+],html:`<div style="background:rgba(0,0,0,0.78);min-height:100%;display:flex;align-items:center;justify-content:center;padding:20px">
+<div style="background:var(--card-bg);border:1.5px solid var(--border2);border-radius:22px;padding:28px 24px;width:100%;max-width:290px;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,0.5)">
+  <div style="display:flex;gap:4px;margin-bottom:24px;justify-content:center">
+    <div style="height:3px;border-radius:2px;flex:1;background:var(--accent)"></div>
+    ${[1,2,3,4,5].map(()=>`<div style="height:3px;border-radius:2px;flex:1;background:var(--border2)"></div>`).join('')}
+  </div>
+  <div style="font-size:50px;margin-bottom:14px;line-height:1">👋</div>
+  <h3 style="font-size:19px;font-weight:700;color:var(--text);margin-bottom:10px;letter-spacing:-0.3px;line-height:1.2">Good to have you here</h3>
+  <p style="font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:28px">This is your dashboard. Everything you need to show up daily lives right here.</p>
+  <p style="font-size:11px;color:var(--text3);margin-bottom:16px">1 of 6</p>
+  <button style="width:100%;padding:12px 0;border-radius:12px;border:none;background:var(--btn-primary-bg);color:var(--btn-primary-text);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px;box-shadow:0 4px 14px rgba(0,0,0,0.2)">Next →</button>
+  <button style="background:none;border:none;font-size:12px;color:var(--text3);cursor:pointer;padding:4px 8px">Skip tour</button>
+</div>
+</div>`},
+
+walkthrough_last:{title:'Walkthrough — Step 6 of 6',nav:false,notes:[
+{t:'new',s:'Final step — all 6 bars lit in accent colour'},
+{t:'new',s:'"Let\'s go 🚀" replaces "Next →" on the last step'},
+{t:'new',s:'Pressing it or "Skip tour" both call handleComplete → localStorage + onComplete()'},
+],html:`<div style="background:rgba(0,0,0,0.78);min-height:100%;display:flex;align-items:center;justify-content:center;padding:20px">
+<div style="background:var(--card-bg);border:1.5px solid var(--border2);border-radius:22px;padding:28px 24px;width:100%;max-width:290px;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,0.5)">
+  <div style="display:flex;gap:4px;margin-bottom:24px;justify-content:center">
+    ${[0,1,2,3,4,5].map(()=>`<div style="height:3px;border-radius:2px;flex:1;background:var(--accent)"></div>`).join('')}
+  </div>
+  <div style="font-size:50px;margin-bottom:14px;line-height:1">🏆</div>
+  <h3 style="font-size:19px;font-weight:700;color:var(--text);margin-bottom:10px;letter-spacing:-0.3px;line-height:1.2">Earn your rank</h3>
+  <p style="font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:28px">Show up daily and climb the leaderboard. Your rank is earned, not bought.</p>
+  <p style="font-size:11px;color:var(--text3);margin-bottom:16px">6 of 6</p>
+  <button style="width:100%;padding:12px 0;border-radius:12px;border:none;background:var(--btn-primary-bg);color:var(--btn-primary-text);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px;box-shadow:0 4px 14px rgba(0,0,0,0.2)">Let's go 🚀</button>
+  <button style="background:none;border:none;font-size:12px;color:var(--text3);cursor:pointer;padding:4px 8px">Skip tour</button>
+</div>
+</div>`},
+
+proofsheet:{title:'AI Verify — Empty (button disabled)',nav:false,notes:[
+{t:'new',s:'Bottom sheet slides up with spring animation — shown static here'},
+{t:'new',s:'Drag handle pill at top — native sheet feel on mobile'},
+{t:'new',s:'Button is gray + "not-allowed" cursor when text < 20 chars'},
+{t:'new',s:'"Add X more characters to enable" hint visible below button when disabled'},
+{t:'new',s:'Char counter format changed to "0 / 20 chars (20 more)" for clarity'},
+{t:'kept',s:'Text + Photo tabs, 20/month usage cap, self-report fallback on reject'},
+],html:`<div style="position:relative;height:660px;overflow:hidden;background:var(--bg)">
+  <div style="padding:16px 18px;opacity:0.22;pointer-events:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div><div style="font-size:17px;font-weight:800;color:var(--text)">Good evening, Marvy</div><div style="font-size:11px;color:var(--text3)">Sunday, May 24</div></div>
+      <div style="width:34px;height:34px;border-radius:50%;background:var(--btn-primary-bg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:var(--btn-primary-text)">M</div>
+    </div>
+    <div style="background:var(--accent-bg);border:1px solid var(--accent-border);border-radius:14px;padding:12px;margin-bottom:10px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Current Streak</div><div style="font-size:28px;font-weight:900;color:var(--text)">7 <span style="font-size:13px;color:var(--text3)">days</span></div></div>
+    <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.8px;text-transform:uppercase;margin-bottom:8px">Today</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:12px;padding:10px"><div style="font-size:12px;font-weight:700;color:var(--text)">Journal</div><div style="font-size:10px;color:var(--text3);margin-top:2px">✓ Done</div></div>
+      <div style="background:var(--card-bg);border:2px solid var(--accent-border);border-radius:12px;padding:10px"><div style="font-size:12px;font-weight:700;color:var(--text)">Walk</div><div style="font-size:10px;color:var(--accent-text);margin-top:2px">Tap to verify</div></div>
+    </div>
+  </div>
+  <div style="position:absolute;inset:0;background:rgba(0,0,0,0.55)"></div>
+  <div style="position:absolute;bottom:0;left:0;right:0;background:var(--card-bg);border-top:1px solid var(--card-border);border-radius:20px 20px 0 0;padding:0 20px 32px">
+    <div style="display:flex;justify-content:center;padding-top:12px;padding-bottom:4px"><div style="width:36px;height:4px;border-radius:2px;background:var(--border2)"></div></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-top:8px">
+      <div style="display:flex;align-items:center;gap:8px"><i class="ti ti-shield-check" style="font-size:18px;color:var(--accent)"></i><span style="font-size:15px;font-weight:800;color:var(--text)">Proov it</span></div>
+      <button style="background:var(--bg2);border:1px solid var(--border);cursor:pointer;color:var(--text3);display:flex;align-items:center;padding:5px;border-radius:8px"><i class="ti ti-x" style="font-size:15px"></i></button>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Submit proof for <strong style="color:var(--text)">Walk</strong> · earn +3 leaderboard points</div>
+    <div style="display:flex;background:var(--bg2);border-radius:10px;padding:3px;gap:3px;margin-bottom:12px">
+      <button style="flex:1;padding:7px 0;border-radius:8px;border:none;background:var(--card-bg);color:var(--text);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 1px 3px rgba(0,0,0,0.08)"><i class="ti ti-align-left" style="font-size:12px"></i>Text</button>
+      <button style="flex:1;padding:7px 0;border-radius:8px;border:none;background:transparent;color:var(--text3);font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:5px"><i class="ti ti-photo" style="font-size:12px"></i>Photo</button>
+    </div>
+    <textarea rows="3" placeholder="Describe what you did in at least 20 characters…" style="width:100%;border-radius:12px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:13px;padding:10px 12px;resize:none;outline:none;box-sizing:border-box;font-family:inherit;opacity:0.7"></textarea>
+    <div style="font-size:10px;color:var(--text3);text-align:right;margin-top:3px">0 / 20 chars (20 more)</div>
+    <div style="margin-top:10px;font-size:10px;color:var(--text3);margin-bottom:8px;text-align:center">20 of 20 free verifications remaining this month</div>
+    <button style="width:100%;padding:13px;border-radius:12px;border:none;background:var(--bg3);color:var(--text3);font-size:14px;font-weight:700;cursor:not-allowed;display:flex;align-items:center;justify-content:center;gap:8px"><i class="ti ti-shield-check" style="font-size:15px"></i>Verify &amp; complete</button>
+    <p style="text-align:center;font-size:11px;color:var(--text3);margin-top:7px">Add 20 more characters to enable</p>
+  </div>
+</div>`},
+
+proofsheet_ready:{title:'AI Verify — Ready (button enabled)',nav:false,notes:[
+{t:'new',s:'Button switches to primary colour once 20+ chars are entered'},
+{t:'new',s:'Char counter turns accent colour when requirement is met'},
+{t:'new',s:'Hint text disappears — no noise once the user has done what\'s needed'},
+{t:'kept',s:'Text entry tab, same layout — nothing jumps or reflows'},
+],html:`<div style="position:relative;height:660px;overflow:hidden;background:var(--bg)">
+  <div style="padding:16px 18px;opacity:0.22;pointer-events:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div><div style="font-size:17px;font-weight:800;color:var(--text)">Good evening, Marvy</div><div style="font-size:11px;color:var(--text3)">Sunday, May 24</div></div>
+      <div style="width:34px;height:34px;border-radius:50%;background:var(--btn-primary-bg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:var(--btn-primary-text)">M</div>
+    </div>
+    <div style="background:var(--accent-bg);border:1px solid var(--accent-border);border-radius:14px;padding:12px;margin-bottom:10px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Current Streak</div><div style="font-size:28px;font-weight:900;color:var(--text)">7 <span style="font-size:13px;color:var(--text3)">days</span></div></div>
+    <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.8px;text-transform:uppercase;margin-bottom:8px">Today</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:12px;padding:10px"><div style="font-size:12px;font-weight:700;color:var(--text)">Journal</div><div style="font-size:10px;color:var(--text3);margin-top:2px">✓ Done</div></div>
+      <div style="background:var(--card-bg);border:2px solid var(--accent-border);border-radius:12px;padding:10px"><div style="font-size:12px;font-weight:700;color:var(--text)">Walk</div><div style="font-size:10px;color:var(--accent-text);margin-top:2px">Verifying…</div></div>
+    </div>
+  </div>
+  <div style="position:absolute;inset:0;background:rgba(0,0,0,0.55)"></div>
+  <div style="position:absolute;bottom:0;left:0;right:0;background:var(--card-bg);border-top:1px solid var(--card-border);border-radius:20px 20px 0 0;padding:0 20px 32px">
+    <div style="display:flex;justify-content:center;padding-top:12px;padding-bottom:4px"><div style="width:36px;height:4px;border-radius:2px;background:var(--border2)"></div></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-top:8px">
+      <div style="display:flex;align-items:center;gap:8px"><i class="ti ti-shield-check" style="font-size:18px;color:var(--accent)"></i><span style="font-size:15px;font-weight:800;color:var(--text)">Proov it</span></div>
+      <button style="background:var(--bg2);border:1px solid var(--border);cursor:pointer;color:var(--text3);display:flex;align-items:center;padding:5px;border-radius:8px"><i class="ti ti-x" style="font-size:15px"></i></button>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Submit proof for <strong style="color:var(--text)">Walk</strong> · earn +3 leaderboard points</div>
+    <div style="display:flex;background:var(--bg2);border-radius:10px;padding:3px;gap:3px;margin-bottom:12px">
+      <button style="flex:1;padding:7px 0;border-radius:8px;border:none;background:var(--card-bg);color:var(--text);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 1px 3px rgba(0,0,0,0.08)"><i class="ti ti-align-left" style="font-size:12px"></i>Text</button>
+      <button style="flex:1;padding:7px 0;border-radius:8px;border:none;background:transparent;color:var(--text3);font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:5px"><i class="ti ti-photo" style="font-size:12px"></i>Photo</button>
+    </div>
+    <textarea rows="3" style="width:100%;border-radius:12px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:13px;padding:10px 12px;resize:none;outline:none;box-sizing:border-box;font-family:inherit">Went for a 30 minute walk around the park this morning — tracked on Strava too.</textarea>
+    <div style="font-size:10px;color:var(--accent-text);text-align:right;margin-top:3px">76 / 20 chars ✓</div>
+    <div style="margin-top:10px;font-size:10px;color:var(--text3);margin-bottom:8px;text-align:center">20 of 20 free verifications remaining this month</div>
+    <button style="width:100%;padding:13px;border-radius:12px;border:none;background:var(--btn-primary-bg);color:var(--btn-primary-text);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 14px rgba(0,0,0,0.2)"><i class="ti ti-shield-check" style="font-size:15px"></i>Verify &amp; complete</button>
+  </div>
+</div>`},
+
+proofsheet_approved:{title:'AI Verify — Approved ✓',nav:false,notes:[
+{t:'new',s:'Green result card appears between textarea and submit button'},
+{t:'new',s:'Button switches to green bg with "Verified ✓" text — disabled, no re-click'},
+{t:'new',s:'Sheet auto-dismisses 1.2 s after approval (toast shows +3 pts)'},
+{t:'new',s:'If rejected: red result card + "Just self-report instead" link appears'},
+{t:'kept',s:'reasoning text from AI shown in result card for transparency'},
+],html:`<div style="position:relative;height:660px;overflow:hidden;background:var(--bg)">
+  <div style="padding:16px 18px;opacity:0.22;pointer-events:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div><div style="font-size:17px;font-weight:800;color:var(--text)">Good evening, Marvy</div><div style="font-size:11px;color:var(--text3)">Sunday, May 24</div></div>
+      <div style="width:34px;height:34px;border-radius:50%;background:var(--btn-primary-bg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:var(--btn-primary-text)">M</div>
+    </div>
+    <div style="background:var(--accent-bg);border:1px solid var(--accent-border);border-radius:14px;padding:12px;margin-bottom:10px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Current Streak</div><div style="font-size:28px;font-weight:900;color:var(--text)">7 <span style="font-size:13px;color:var(--text3)">days</span></div></div>
+    <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.8px;text-transform:uppercase;margin-bottom:8px">Today</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:12px;padding:10px"><div style="font-size:12px;font-weight:700;color:var(--text)">Journal</div><div style="font-size:10px;color:var(--text3);margin-top:2px">✓ Done</div></div>
+      <div style="background:var(--card-bg);border:2px solid rgba(5,150,105,0.4);border-radius:12px;padding:10px"><div style="font-size:12px;font-weight:700;color:var(--text)">Walk</div><div style="font-size:10px;color:#059669;margin-top:2px">✓ Verified</div></div>
+    </div>
+  </div>
+  <div style="position:absolute;inset:0;background:rgba(0,0,0,0.55)"></div>
+  <div style="position:absolute;bottom:0;left:0;right:0;background:var(--card-bg);border-top:1px solid var(--card-border);border-radius:20px 20px 0 0;padding:0 20px 32px">
+    <div style="display:flex;justify-content:center;padding-top:12px;padding-bottom:4px"><div style="width:36px;height:4px;border-radius:2px;background:var(--border2)"></div></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-top:8px">
+      <div style="display:flex;align-items:center;gap:8px"><i class="ti ti-shield-check" style="font-size:18px;color:var(--accent)"></i><span style="font-size:15px;font-weight:800;color:var(--text)">Proov it</span></div>
+      <button style="background:var(--bg2);border:1px solid var(--border);cursor:pointer;color:var(--text3);display:flex;align-items:center;padding:5px;border-radius:8px"><i class="ti ti-x" style="font-size:15px"></i></button>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Submit proof for <strong style="color:var(--text)">Walk</strong> · earn +3 leaderboard points</div>
+    <div style="display:flex;background:var(--bg2);border-radius:10px;padding:3px;gap:3px;margin-bottom:12px">
+      <button style="flex:1;padding:7px 0;border-radius:8px;border:none;background:var(--card-bg);color:var(--text);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 1px 3px rgba(0,0,0,0.08)"><i class="ti ti-align-left" style="font-size:12px"></i>Text</button>
+      <button style="flex:1;padding:7px 0;border-radius:8px;border:none;background:transparent;color:var(--text3);font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:5px"><i class="ti ti-photo" style="font-size:12px"></i>Photo</button>
+    </div>
+    <textarea rows="2" style="width:100%;border-radius:12px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:13px;padding:10px 12px;resize:none;outline:none;box-sizing:border-box;font-family:inherit;opacity:0.75">Went for a 30 minute walk around the park this morning — tracked on Strava too.</textarea>
+    <div style="margin-top:10px;padding:10px 12px;border-radius:10px;background:rgba(5,150,105,0.1);border:1px solid rgba(5,150,105,0.3)">
+      <div style="font-size:12px;font-weight:700;color:#059669;margin-bottom:4px">✓ Approved</div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.5">The proof describes completing a walk with specific details and external tracking. Consistent with the habit goal.</div>
+    </div>
+    <div style="margin-top:10px;font-size:10px;color:var(--text3);margin-bottom:8px;text-align:center">19 of 20 free verifications remaining this month</div>
+    <button style="width:100%;padding:13px;border-radius:12px;border:none;background:rgba(5,150,105,0.15);color:#059669;font-size:14px;font-weight:700;cursor:not-allowed;display:flex;align-items:center;justify-content:center;gap:8px"><i class="ti ti-check" style="font-size:15px"></i>Verified</button>
+  </div>
+</div>`},
+
+};
+
+const navMap={dashboard:'home',habits:'habit',discover:'habit',habit_detail:'habit',create_habit:'habit',timer_pick:'timer',timer_running:'timer',timer_done:'timer',circle:'circle',settings:'settings',leaderboard:'settings',profile:'settings',landing:'',signin:'',onboarding:'',walkthrough:'',walkthrough_last:'',proofsheet:'',proofsheet_ready:'',proofsheet_approved:''};
+
+function applyTheme(id){
+  const t=T[id];const ph=document.getElementById('phone');
+  Object.entries(t).forEach(([k,v])=>ph.style.setProperty(k,v));
+  document.querySelectorAll('.theme-btn').forEach(b=>b.classList.toggle('active',b.getAttribute('onclick').includes("'"+id+"'")));
+}
+function go(id){
+  const s=S[id];if(!s)return;
+  document.getElementById('sc').innerHTML=s.html;
+  const hasNav=s.nav!==false;
+  document.getElementById('bnav').style.display=hasNav?'flex':'none';
+  document.getElementById('hind').style.display=hasNav?'flex':'none';
+  document.getElementById('sc').scrollTop=0;
+  document.querySelectorAll('.sbtn').forEach(b=>b.classList.toggle('active',b.getAttribute('onclick').includes("'"+id+"'")));
+  const active=navMap[id]||'';
+  document.querySelectorAll('.ni').forEach(n=>n.classList.toggle('active',n.dataset.nav===active&&active!==''));
+  document.getElementById('ntitle').textContent=s.title;
+  document.getElementById('nbody').innerHTML=s.notes.map(n=>`<div class="nitem"><span class="ntag ${n.t}">${n.t.toUpperCase()}</span><span>${n.s}</span></div>`).join('');
+}
+function setTheme(id){applyTheme(id);}
+applyTheme('bloom_light');go('dashboard');
+</script>
+</body>
+</html>

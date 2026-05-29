@@ -4,7 +4,6 @@ import { useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAccount, useReconnect } from 'wagmi';
 import { clearWeb3AuthSession } from '@/lib/clearSession';
-import { clearLocalSessionKey } from '@/lib/sessionKey';
 
 const PROTECTED_PREFIXES = [
   '/dashboard',
@@ -32,7 +31,6 @@ async function clearExpiredSession() {
   localStorage.removeItem('proov_authenticated');
   localStorage.removeItem('proov_address');
 
-  clearLocalSessionKey();
   await clearWeb3AuthSession().catch(() => {});
 }
 
