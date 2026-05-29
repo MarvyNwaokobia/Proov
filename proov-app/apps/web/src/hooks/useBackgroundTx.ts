@@ -97,10 +97,7 @@ export function useBackgroundTx() {
         const hasLocalAuth = typeof window !== 'undefined'
           && localStorage.getItem('proov_authenticated') === 'true';
         if (hasLocalAuth) {
-          localStorage.setItem('proov_auth_notice', 'Your session expired. Please sign in again.');
-          localStorage.removeItem('proov_authenticated');
-          localStorage.removeItem('proov_address');
-          showError('Session expired. Please sign in again.');
+          clearStaleSession();
         } else {
           showError('Wallet not connected');
         }
