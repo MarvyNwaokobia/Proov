@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git checkout *)",
+      "Bash(git reset *)",
+      "Bash(cat \"/Users/marvy/Documents/HACK/Proov Overview/proov_full_design_preview \\(6\\).html\" | head -200)",
+      "Read(//Users/marvy/Documents/HACK/Proov Overview/**)",
+      "Bash(gh pr *)"
+    ]
+  }
+}

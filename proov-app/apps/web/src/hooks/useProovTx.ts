@@ -18,7 +18,7 @@ function safeId(id: number | undefined): bigint | null {
 }
 
 export function useProovTx() {
-  const { sendTx, revokeSessionKey } = useBackgroundTx();
+  const { sendTx } = useBackgroundTx();
 
   return {
     // ── HABIT ACTIONS ──────────────────────────────────────────────────────
@@ -35,12 +35,12 @@ export function useProovTx() {
         hydration: 3,
         sleep: 4,
       };
-      const habitType = catMap[category.toLowerCase()] ?? 5; // default to CUSTOM (5)
+      const habitType = catMap[category.toLowerCase()] ?? 5;
       return sendTx({
         address: CONTRACTS.PROOV_CORE,
         abi: PROOV_CORE_ABI,
         functionName: 'createHabit',
-        args: [name, habitType, safeDuration(durationMinutes), 0], // 0 = Frequency.DAILY
+        args: [name, habitType, safeDuration(durationMinutes), 0],
       });
     },
 
@@ -55,7 +55,6 @@ export function useProovTx() {
         abi: PROOV_CORE_ABI,
         functionName: 'selfCompleteHabit',
         args: [id, '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`],
-        isRoutine: true,
       } as any);
     },
 
@@ -74,11 +73,11 @@ export function useProovTx() {
     },
 
     editHabit: (
-      onChainId: number | undefined,
-      name: string,
-      category: string,
-      isTimed: boolean,
-      durationMinutes: number | undefined
+      _onChainId: number | undefined,
+      _name: string,
+      _category: string,
+      _isTimed: boolean,
+      _durationMinutes: number | undefined
     ) => {
       console.warn('[tx] editHabit: on-chain edit not supported by legacy contract, skipping');
       return Promise.resolve('0x' as `0x${string}`);
@@ -90,7 +89,6 @@ export function useProovTx() {
       abi: PROOV_CORE_ABI,
       functionName: 'recordStreakIncrement',
       args: [BigInt(newStreakCount ?? 0)],
-      isRoutine: true,
     } as any),
 
     // ── PROFILE ACTIONS ────────────────────────────────────────────────────
@@ -116,7 +114,7 @@ export function useProovTx() {
     }),
 
     // ── SESSION ACTIONS ────────────────────────────────────────────────────
-    startSession: (onChainHabitId: number | undefined, durationMinutes: number | undefined) => {
+    startSession: (onChainHabitId: number | undefined, _durationMinutes: number | undefined) => {
       const id = safeId(onChainHabitId);
       if (id === null) {
         console.warn('[tx] startSession: no valid on_chain_habit_id, skipping chain tx');
@@ -127,30 +125,27 @@ export function useProovTx() {
         abi: SESSION_MANAGER_ABI,
         functionName: 'startSession',
         args: [id],
-        isRoutine: true,
       } as any).then(hash => ({ ok: !!hash, result: undefined as bigint | undefined }));
     },
 
-    startCustomSession: (label: string, durationMinutes: number | undefined) =>
+    startCustomSession: (_label: string, _durationMinutes: number | undefined) =>
       Promise.resolve({ ok: true, result: undefined as bigint | undefined }),
 
-    endSession: (sessionId: bigint, completed: boolean) => sendTx({
+    endSession: (_sessionId: bigint, _completed: boolean) => sendTx({
       address: CONTRACTS.SESSION_MANAGER,
       abi: SESSION_MANAGER_ABI,
       functionName: 'endSession',
       args: [],
-      isRoutine: true,
     } as any),
 
-    cancelSession: (sessionId: bigint) => sendTx({
+    cancelSession: (_sessionId: bigint) => sendTx({
       address: CONTRACTS.SESSION_MANAGER,
       abi: SESSION_MANAGER_ABI,
       functionName: 'abandonSession',
       args: [],
-      isRoutine: true,
     } as any),
 
-    endCustomSession: (sessionId: bigint, completed: boolean) =>
+    endCustomSession: (_sessionId: bigint, _completed: boolean) =>
       Promise.resolve('0x' as `0x${string}`),
 
     recordProgress: (sessionId: bigint) => sendTx({
@@ -158,7 +153,6 @@ export function useProovTx() {
       abi: SESSION_MANAGER_ABI,
       functionName: 'recordProgress',
       args: [sessionId],
-      isRoutine: true,
     } as any),
 
     // ── CIRCLE ACTIONS ─────────────────────────────────────────────────────
@@ -167,42 +161,34 @@ export function useProovTx() {
       abi: CIRCLE_MANAGER_ABI,
       functionName: 'sendRequest',
       args: [toAddress],
-      isRoutine: true,
-    } as any),
+    }),
 
     acceptCircleRequest: (fromAddress: `0x${string}`) => sendTx({
       address: CONTRACTS.CIRCLE_MANAGER,
       abi: CIRCLE_MANAGER_ABI,
       functionName: 'acceptRequest',
       args: [fromAddress],
-      isRoutine: true,
-    } as any),
+    }),
 
     sendCheer: (toAddress: `0x${string}`) => sendTx({
       address: CONTRACTS.CIRCLE_MANAGER,
       abi: CIRCLE_MANAGER_ABI,
       functionName: 'sendCheer',
       args: [toAddress],
-      isRoutine: true,
-    } as any),
+    }),
 
     sendNudge: (toAddress: `0x${string}`) => sendTx({
       address: CONTRACTS.CIRCLE_MANAGER,
       abi: CIRCLE_MANAGER_ABI,
       functionName: 'cheer',
       args: [toAddress],
-      isRoutine: true,
-    } as any),
+    }),
 
     removeFromCircle: (memberAddress: `0x${string}`) => sendTx({
       address: CONTRACTS.CIRCLE_MANAGER,
       abi: CIRCLE_MANAGER_ABI,
       functionName: 'removeFromCircle',
       args: [memberAddress],
-      isRoutine: true,
-    } as any),
-
-    revokeSessionKey: (sessionKeyAddress: `0x${string}`) => revokeSessionKey(sessionKeyAddress),
-
+    }),
   };
 }
