@@ -191,7 +191,7 @@ export function useBackgroundTx() {
 
     import('@/lib/fuel').then(({ getUserCeloBalance, requestServerFaucet }) => {
       getUserCeloBalance(connectedAddress).then(balance => {
-        if (balance < 0.005) {
+        if (balance < 0.1) {
           requestServerFaucet(connectedAddress).then(topped => {
             if (topped) showSuccess('Gas funded — you\'re ready to go');
           }).catch(() => {});
