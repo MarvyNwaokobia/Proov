@@ -1,94 +1,11 @@
-import { createPublicClient, createWalletClient, http, custom, parseAbi, formatEther, type Address } from 'viem';
+import { createPublicClient, http, formatEther, type Address } from 'viem';
 import { celo } from 'viem/chains';
-
-const FAUCET_ADDRESS = (process.env.NEXT_PUBLIC_FUEL_FAUCET_ADDRESS || '') as Address;
-
-const FAUCET_ABI = parseAbi([
-  'function claimFuel() external',
-  'function canClaim(address user) external view returns (bool)',
-  'function secondsUntilClaim(address user) external view returns (uint256)',
-  'function lastClaimTime(address) external view returns (uint256)',
-  'function dripAmount() external view returns (uint256)',
-]);
 
 function getPublicClient() {
   return createPublicClient({
     chain: celo,
-    transport: http(process.env.NEXT_PUBLIC_CELO_RPC_URL || 'https://rpc.ankr.com/celo'),
+    transport: http(process.env.NEXT_PUBLIC_CELO_RPC_URL || 'https://forno.celo.org'),
   });
-}
-
-function getWalletClient() {
-  if (typeof window === 'undefined') return null;
-  const provider = (window as any).__web3AuthProvider || (window as any).ethereum;
-  if (!provider) return null;
-  return createWalletClient({
-    chain: celo,
-    transport: custom(provider),
-  });
-}
-
-export async function checkCanClaim(userAddress: string): Promise<{
-  canClaim: boolean;
-  secondsLeft: number;
-  nextClaimTime: Date | null;
-}> {
-  if (!FAUCET_ADDRESS) return { canClaim: false, secondsLeft: 0, nextClaimTime: null };
-  try {
-    const client = getPublicClient();
-    const [canClaimNow, secondsLeft] = await Promise.all([
-      client.readContract({
-        address: FAUCET_ADDRESS,
-        abi: FAUCET_ABI,
-        functionName: 'canClaim',
-        args: [userAddress as Address],
-      }),
-      client.readContract({
-        address: FAUCET_ADDRESS,
-        abi: FAUCET_ABI,
-        functionName: 'secondsUntilClaim',
-        args: [userAddress as Address],
-      }),
-    ]);
-
-    const secondsLeftNum = Number(secondsLeft);
-    const nextClaimTime = secondsLeftNum > 0
-      ? new Date(Date.now() + secondsLeftNum * 1000)
-      : null;
-
-    return { canClaim: Boolean(canClaimNow), secondsLeft: secondsLeftNum, nextClaimTime };
-  } catch (e) {
-    console.warn('checkCanClaim error:', e);
-    return { canClaim: false, secondsLeft: 0, nextClaimTime: null };
-  }
-}
-
-export async function claimFuel(): Promise<{
-  success: boolean;
-  txHash?: string;
-  error?: string;
-}> {
-  if (!FAUCET_ADDRESS) return { success: false, error: 'Faucet not configured' };
-  try {
-    const walletClient = getWalletClient();
-    if (!walletClient) return { success: false, error: 'Not connected' };
-
-    const [account] = await walletClient.getAddresses();
-    const hash = await walletClient.writeContract({
-      address: FAUCET_ADDRESS,
-      abi: FAUCET_ABI,
-      functionName: 'claimFuel',
-      account,
-    });
-
-    const publicClient = getPublicClient();
-    await publicClient.waitForTransactionReceipt({ hash });
-
-    return { success: true, txHash: hash };
-  } catch (e: any) {
-    const msg = e?.shortMessage || e?.reason || e?.message || 'Claim failed';
-    return { success: false, error: msg };
-  }
 }
 
 export async function getUserCeloBalance(userAddress: string): Promise<number> {
@@ -98,5 +15,59 @@ export async function getUserCeloBalance(userAddress: string): Promise<number> {
     return parseFloat(formatEther(balance));
   } catch {
     return 0;
+  }
+}
+
+/**
+ * Server-side faucet: pushes 0.02 CELO to the user from a funded server wallet.
+ * Safe to call speculatively — the server skips the drip if the user already has
+ * enough balance or hit the 24h cooldown.
+ * Returns true if CELO was actually sent.
+ */
+export async function requestServerFaucet(address: string): Promise<boolean> {
+  try {
+    const res = await fetch('/api/faucet', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address }),
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    return data.ok === true && !data.skipped;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Manual "Claim Fuel" from settings — delegates to the server faucet.
+ * Returns a result object compatible with the existing settings page handler.
+ */
+export async function claimFuel(): Promise<{ success: boolean; error?: string }> {
+  const address = typeof window !== 'undefined'
+    ? localStorage.getItem('proov_address') || ''
+    : '';
+  if (!address) return { success: false, error: 'Not connected' };
+
+  const sent = await requestServerFaucet(address);
+  if (sent) return { success: true };
+  return { success: false, error: 'Already topped up or faucet unavailable' };
+}
+
+/**
+ * Check if the user can claim (balance is low enough and cooldown has passed).
+ * Without a deployed faucet contract, we approximate using balance check only.
+ */
+export async function checkCanClaim(userAddress: string): Promise<{
+  canClaim: boolean;
+  secondsLeft: number;
+  nextClaimTime: Date | null;
+}> {
+  try {
+    const balance = await getUserCeloBalance(userAddress);
+    if (balance < 0.005) return { canClaim: true, secondsLeft: 0, nextClaimTime: null };
+    return { canClaim: false, secondsLeft: 86400, nextClaimTime: new Date(Date.now() + 86400_000) };
+  } catch {
+    return { canClaim: false, secondsLeft: 0, nextClaimTime: null };
   }
 }
