@@ -65,8 +65,20 @@ export class HabitCreated__Params {
     return this._event.parameters[2].value.toString();
   }
 
+  get habitType(): i32 {
+    return this._event.parameters[3].value.toI32();
+  }
+
+  get targetDuration(): BigInt {
+    return this._event.parameters[4].value.toBigInt();
+  }
+
+  get frequency(): i32 {
+    return this._event.parameters[5].value.toI32();
+  }
+
   get timestamp(): BigInt {
-    return this._event.parameters[3].value.toBigInt();
+    return this._event.parameters[6].value.toBigInt();
   }
 }
 
@@ -90,23 +102,9 @@ export class HabitDeactivated__Params {
   get habitId(): BigInt {
     return this._event.parameters[1].value.toBigInt();
   }
-}
 
-export class Initialized extends ethereum.Event {
-  get params(): Initialized__Params {
-    return new Initialized__Params(this);
-  }
-}
-
-export class Initialized__Params {
-  _event: Initialized;
-
-  constructor(event: Initialized) {
-    this._event = event;
-  }
-
-  get version(): BigInt {
-    return this._event.parameters[0].value.toBigInt();
+  get timestamp(): BigInt {
+    return this._event.parameters[2].value.toBigInt();
   }
 }
 
@@ -127,12 +125,12 @@ export class JournalLogged__Params {
     return this._event.parameters[0].value.toAddress();
   }
 
-  get day(): BigInt {
-    return this._event.parameters[1].value.toBigInt();
+  get contentHash(): Bytes {
+    return this._event.parameters[1].value.toBytes();
   }
 
-  get contentHash(): Bytes {
-    return this._event.parameters[2].value.toBytes();
+  get timestamp(): BigInt {
+    return this._event.parameters[2].value.toBigInt();
   }
 }
 
@@ -156,27 +154,9 @@ export class MilestoneReached__Params {
   get milestone(): BigInt {
     return this._event.parameters[1].value.toBigInt();
   }
-}
 
-export class OwnershipTransferred extends ethereum.Event {
-  get params(): OwnershipTransferred__Params {
-    return new OwnershipTransferred__Params(this);
-  }
-}
-
-export class OwnershipTransferred__Params {
-  _event: OwnershipTransferred;
-
-  constructor(event: OwnershipTransferred) {
-    this._event = event;
-  }
-
-  get previousOwner(): Address {
-    return this._event.parameters[0].value.toAddress();
-  }
-
-  get newOwner(): Address {
-    return this._event.parameters[1].value.toAddress();
+  get timestamp(): BigInt {
+    return this._event.parameters[2].value.toBigInt();
   }
 }
 
@@ -199,6 +179,10 @@ export class StreakBroken__Params {
 
   get oldStreak(): BigInt {
     return this._event.parameters[1].value.toBigInt();
+  }
+
+  get timestamp(): BigInt {
+    return this._event.parameters[2].value.toBigInt();
   }
 }
 
@@ -232,221 +216,61 @@ export class StreakUpdated__Params {
   }
 }
 
-export class Upgraded extends ethereum.Event {
-  get params(): Upgraded__Params {
-    return new Upgraded__Params(this);
+export class UsernameSet extends ethereum.Event {
+  get params(): UsernameSet__Params {
+    return new UsernameSet__Params(this);
   }
 }
 
-export class Upgraded__Params {
-  _event: Upgraded;
+export class UsernameSet__Params {
+  _event: UsernameSet;
 
-  constructor(event: Upgraded) {
+  constructor(event: UsernameSet) {
     this._event = event;
   }
 
-  get implementation(): Address {
+  get user(): Address {
     return this._event.parameters[0].value.toAddress();
   }
-}
 
-export class ProovCore__getHabitsResultValue0Struct extends ethereum.Tuple {
-  get id(): BigInt {
-    return this[0].toBigInt();
+  get username(): string {
+    return this._event.parameters[1].value.toString();
   }
 
-  get name(): string {
-    return this[1].toString();
-  }
-
-  get habitType(): i32 {
-    return this[2].toI32();
-  }
-
-  get targetDuration(): BigInt {
-    return this[3].toBigInt();
-  }
-
-  get frequency(): i32 {
-    return this[4].toI32();
-  }
-
-  get createdAt(): BigInt {
-    return this[5].toBigInt();
-  }
-
-  get active(): boolean {
-    return this[6].toBoolean();
+  get timestamp(): BigInt {
+    return this._event.parameters[2].value.toBigInt();
   }
 }
 
-export class ProovCore__getLeaderboardResult {
-  value0: Array<Address>;
-  value1: Array<BigInt>;
-
-  constructor(value0: Array<Address>, value1: Array<BigInt>) {
-    this.value0 = value0;
-    this.value1 = value1;
-  }
-
-  toMap(): TypedMap<string, ethereum.Value> {
-    let map = new TypedMap<string, ethereum.Value>();
-    map.set("value0", ethereum.Value.fromAddressArray(this.value0));
-    map.set("value1", ethereum.Value.fromUnsignedBigIntArray(this.value1));
-    return map;
-  }
-
-  getValue0(): Array<Address> {
-    return this.value0;
-  }
-
-  getValue1(): Array<BigInt> {
-    return this.value1;
+export class VisibilityUpdated extends ethereum.Event {
+  get params(): VisibilityUpdated__Params {
+    return new VisibilityUpdated__Params(this);
   }
 }
 
-export class ProovCore__getStatsResultValue0Struct extends ethereum.Tuple {
-  get currentStreak(): BigInt {
-    return this[0].toBigInt();
+export class VisibilityUpdated__Params {
+  _event: VisibilityUpdated;
+
+  constructor(event: VisibilityUpdated) {
+    this._event = event;
   }
 
-  get longestStreak(): BigInt {
-    return this[1].toBigInt();
+  get user(): Address {
+    return this._event.parameters[0].value.toAddress();
   }
 
-  get totalCompletions(): BigInt {
-    return this[2].toBigInt();
+  get visibilitySetting(): string {
+    return this._event.parameters[1].value.toString();
   }
 
-  get lastCompletionDay(): BigInt {
-    return this[3].toBigInt();
-  }
-
-  get journalCount(): BigInt {
-    return this[4].toBigInt();
-  }
-}
-
-export class ProovCore__statsResult {
-  value0: BigInt;
-  value1: BigInt;
-  value2: BigInt;
-  value3: BigInt;
-  value4: BigInt;
-
-  constructor(
-    value0: BigInt,
-    value1: BigInt,
-    value2: BigInt,
-    value3: BigInt,
-    value4: BigInt,
-  ) {
-    this.value0 = value0;
-    this.value1 = value1;
-    this.value2 = value2;
-    this.value3 = value3;
-    this.value4 = value4;
-  }
-
-  toMap(): TypedMap<string, ethereum.Value> {
-    let map = new TypedMap<string, ethereum.Value>();
-    map.set("value0", ethereum.Value.fromUnsignedBigInt(this.value0));
-    map.set("value1", ethereum.Value.fromUnsignedBigInt(this.value1));
-    map.set("value2", ethereum.Value.fromUnsignedBigInt(this.value2));
-    map.set("value3", ethereum.Value.fromUnsignedBigInt(this.value3));
-    map.set("value4", ethereum.Value.fromUnsignedBigInt(this.value4));
-    return map;
-  }
-
-  getCurrentStreak(): BigInt {
-    return this.value0;
-  }
-
-  getLongestStreak(): BigInt {
-    return this.value1;
-  }
-
-  getTotalCompletions(): BigInt {
-    return this.value2;
-  }
-
-  getLastCompletionDay(): BigInt {
-    return this.value3;
-  }
-
-  getJournalCount(): BigInt {
-    return this.value4;
+  get timestamp(): BigInt {
+    return this._event.parameters[2].value.toBigInt();
   }
 }
 
 export class ProovCore extends ethereum.SmartContract {
   static bind(address: Address): ProovCore {
     return new ProovCore("ProovCore", address);
-  }
-
-  STREAK_MILESTONES(param0: BigInt): BigInt {
-    let result = super.call(
-      "STREAK_MILESTONES",
-      "STREAK_MILESTONES(uint256):(uint256)",
-      [ethereum.Value.fromUnsignedBigInt(param0)],
-    );
-
-    return result[0].toBigInt();
-  }
-
-  try_STREAK_MILESTONES(param0: BigInt): ethereum.CallResult<BigInt> {
-    let result = super.tryCall(
-      "STREAK_MILESTONES",
-      "STREAK_MILESTONES(uint256):(uint256)",
-      [ethereum.Value.fromUnsignedBigInt(param0)],
-    );
-    if (result.reverted) {
-      return new ethereum.CallResult();
-    }
-    let value = result.value;
-    return ethereum.CallResult.fromValue(value[0].toBigInt());
-  }
-
-  UPGRADE_INTERFACE_VERSION(): string {
-    let result = super.call(
-      "UPGRADE_INTERFACE_VERSION",
-      "UPGRADE_INTERFACE_VERSION():(string)",
-      [],
-    );
-
-    return result[0].toString();
-  }
-
-  try_UPGRADE_INTERFACE_VERSION(): ethereum.CallResult<string> {
-    let result = super.tryCall(
-      "UPGRADE_INTERFACE_VERSION",
-      "UPGRADE_INTERFACE_VERSION():(string)",
-      [],
-    );
-    if (result.reverted) {
-      return new ethereum.CallResult();
-    }
-    let value = result.value;
-    return ethereum.CallResult.fromValue(value[0].toString());
-  }
-
-  circleManager(): Address {
-    let result = super.call("circleManager", "circleManager():(address)", []);
-
-    return result[0].toAddress();
-  }
-
-  try_circleManager(): ethereum.CallResult<Address> {
-    let result = super.tryCall(
-      "circleManager",
-      "circleManager():(address)",
-      [],
-    );
-    if (result.reverted) {
-      return new ethereum.CallResult();
-    }
-    let value = result.value;
-    return ethereum.CallResult.fromValue(value[0].toAddress());
   }
 
   createHabit(
@@ -490,328 +314,6 @@ export class ProovCore extends ethereum.SmartContract {
     }
     let value = result.value;
     return ethereum.CallResult.fromValue(value[0].toBigInt());
-  }
-
-  dailyCompletions(param0: Address, param1: BigInt): BigInt {
-    let result = super.call(
-      "dailyCompletions",
-      "dailyCompletions(address,uint256):(uint256)",
-      [
-        ethereum.Value.fromAddress(param0),
-        ethereum.Value.fromUnsignedBigInt(param1),
-      ],
-    );
-
-    return result[0].toBigInt();
-  }
-
-  try_dailyCompletions(
-    param0: Address,
-    param1: BigInt,
-  ): ethereum.CallResult<BigInt> {
-    let result = super.tryCall(
-      "dailyCompletions",
-      "dailyCompletions(address,uint256):(uint256)",
-      [
-        ethereum.Value.fromAddress(param0),
-        ethereum.Value.fromUnsignedBigInt(param1),
-      ],
-    );
-    if (result.reverted) {
-      return new ethereum.CallResult();
-    }
-    let value = result.value;
-    return ethereum.CallResult.fromValue(value[0].toBigInt());
-  }
-
-  dailyJournalHash(param0: Address, param1: BigInt): Bytes {
-    let result = super.call(
-      "dailyJournalHash",
-      "dailyJournalHash(address,uint256):(bytes32)",
-      [
-        ethereum.Value.fromAddress(param0),
-        ethereum.Value.fromUnsignedBigInt(param1),
-      ],
-    );
-
-    return result[0].toBytes();
-  }
-
-  try_dailyJournalHash(
-    param0: Address,
-    param1: BigInt,
-  ): ethereum.CallResult<Bytes> {
-    let result = super.tryCall(
-      "dailyJournalHash",
-      "dailyJournalHash(address,uint256):(bytes32)",
-      [
-        ethereum.Value.fromAddress(param0),
-        ethereum.Value.fromUnsignedBigInt(param1),
-      ],
-    );
-    if (result.reverted) {
-      return new ethereum.CallResult();
-    }
-    let value = result.value;
-    return ethereum.CallResult.fromValue(value[0].toBytes());
-  }
-
-  getHabits(user: Address): Array<ProovCore__getHabitsResultValue0Struct> {
-    let result = super.call(
-      "getHabits",
-      "getHabits(address):((uint256,string,uint8,uint256,uint8,uint256,bool)[])",
-      [ethereum.Value.fromAddress(user)],
-    );
-
-    return result[0].toTupleArray<ProovCore__getHabitsResultValue0Struct>();
-  }
-
-  try_getHabits(
-    user: Address,
-  ): ethereum.CallResult<Array<ProovCore__getHabitsResultValue0Struct>> {
-    let result = super.tryCall(
-      "getHabits",
-      "getHabits(address):((uint256,string,uint8,uint256,uint8,uint256,bool)[])",
-      [ethereum.Value.fromAddress(user)],
-    );
-    if (result.reverted) {
-      return new ethereum.CallResult();
-    }
-    let value = result.value;
-    return ethereum.CallResult.fromValue(
-      value[0].toTupleArray<ProovCore__getHabitsResultValue0Struct>(),
-    );
-  }
-
-  getLeaderboard(limit: BigInt): ProovCore__getLeaderboardResult {
-    let result = super.call(
-      "getLeaderboard",
-      "getLeaderboard(uint256):(address[],uint256[])",
-      [ethereum.Value.fromUnsignedBigInt(limit)],
-    );
-
-    return new ProovCore__getLeaderboardResult(
-      result[0].toAddressArray(),
-      result[1].toBigIntArray(),
-    );
-  }
-
-  try_getLeaderboard(
-    limit: BigInt,
-  ): ethereum.CallResult<ProovCore__getLeaderboardResult> {
-    let result = super.tryCall(
-      "getLeaderboard",
-      "getLeaderboard(uint256):(address[],uint256[])",
-      [ethereum.Value.fromUnsignedBigInt(limit)],
-    );
-    if (result.reverted) {
-      return new ethereum.CallResult();
-    }
-    let value = result.value;
-    return ethereum.CallResult.fromValue(
-      new ProovCore__getLeaderboardResult(
-        value[0].toAddressArray(),
-        value[1].toBigIntArray(),
-      ),
-    );
-  }
-
-  getStats(user: Address): ProovCore__getStatsResultValue0Struct {
-    let result = super.call(
-      "getStats",
-      "getStats(address):((uint256,uint256,uint256,uint256,uint256))",
-      [ethereum.Value.fromAddress(user)],
-    );
-
-    return changetype<ProovCore__getStatsResultValue0Struct>(
-      result[0].toTuple(),
-    );
-  }
-
-  try_getStats(
-    user: Address,
-  ): ethereum.CallResult<ProovCore__getStatsResultValue0Struct> {
-    let result = super.tryCall(
-      "getStats",
-      "getStats(address):((uint256,uint256,uint256,uint256,uint256))",
-      [ethereum.Value.fromAddress(user)],
-    );
-    if (result.reverted) {
-      return new ethereum.CallResult();
-    }
-    let value = result.value;
-    return ethereum.CallResult.fromValue(
-      changetype<ProovCore__getStatsResultValue0Struct>(value[0].toTuple()),
-    );
-  }
-
-  getUserCount(): BigInt {
-    let result = super.call("getUserCount", "getUserCount():(uint256)", []);
-
-    return result[0].toBigInt();
-  }
-
-  try_getUserCount(): ethereum.CallResult<BigInt> {
-    let result = super.tryCall("getUserCount", "getUserCount():(uint256)", []);
-    if (result.reverted) {
-      return new ethereum.CallResult();
-    }
-    let value = result.value;
-    return ethereum.CallResult.fromValue(value[0].toBigInt());
-  }
-
-  owner(): Address {
-    let result = super.call("owner", "owner():(address)", []);
-
-    return result[0].toAddress();
-  }
-
-  try_owner(): ethereum.CallResult<Address> {
-    let result = super.tryCall("owner", "owner():(address)", []);
-    if (result.reverted) {
-      return new ethereum.CallResult();
-    }
-    let value = result.value;
-    return ethereum.CallResult.fromValue(value[0].toAddress());
-  }
-
-  proxiableUUID(): Bytes {
-    let result = super.call("proxiableUUID", "proxiableUUID():(bytes32)", []);
-
-    return result[0].toBytes();
-  }
-
-  try_proxiableUUID(): ethereum.CallResult<Bytes> {
-    let result = super.tryCall(
-      "proxiableUUID",
-      "proxiableUUID():(bytes32)",
-      [],
-    );
-    if (result.reverted) {
-      return new ethereum.CallResult();
-    }
-    let value = result.value;
-    return ethereum.CallResult.fromValue(value[0].toBytes());
-  }
-
-  sessionManager(): Address {
-    let result = super.call("sessionManager", "sessionManager():(address)", []);
-
-    return result[0].toAddress();
-  }
-
-  try_sessionManager(): ethereum.CallResult<Address> {
-    let result = super.tryCall(
-      "sessionManager",
-      "sessionManager():(address)",
-      [],
-    );
-    if (result.reverted) {
-      return new ethereum.CallResult();
-    }
-    let value = result.value;
-    return ethereum.CallResult.fromValue(value[0].toAddress());
-  }
-
-  stats(param0: Address): ProovCore__statsResult {
-    let result = super.call(
-      "stats",
-      "stats(address):(uint256,uint256,uint256,uint256,uint256)",
-      [ethereum.Value.fromAddress(param0)],
-    );
-
-    return new ProovCore__statsResult(
-      result[0].toBigInt(),
-      result[1].toBigInt(),
-      result[2].toBigInt(),
-      result[3].toBigInt(),
-      result[4].toBigInt(),
-    );
-  }
-
-  try_stats(param0: Address): ethereum.CallResult<ProovCore__statsResult> {
-    let result = super.tryCall(
-      "stats",
-      "stats(address):(uint256,uint256,uint256,uint256,uint256)",
-      [ethereum.Value.fromAddress(param0)],
-    );
-    if (result.reverted) {
-      return new ethereum.CallResult();
-    }
-    let value = result.value;
-    return ethereum.CallResult.fromValue(
-      new ProovCore__statsResult(
-        value[0].toBigInt(),
-        value[1].toBigInt(),
-        value[2].toBigInt(),
-        value[3].toBigInt(),
-        value[4].toBigInt(),
-      ),
-    );
-  }
-}
-
-export class ConstructorCall extends ethereum.Call {
-  get inputs(): ConstructorCall__Inputs {
-    return new ConstructorCall__Inputs(this);
-  }
-
-  get outputs(): ConstructorCall__Outputs {
-    return new ConstructorCall__Outputs(this);
-  }
-}
-
-export class ConstructorCall__Inputs {
-  _call: ConstructorCall;
-
-  constructor(call: ConstructorCall) {
-    this._call = call;
-  }
-}
-
-export class ConstructorCall__Outputs {
-  _call: ConstructorCall;
-
-  constructor(call: ConstructorCall) {
-    this._call = call;
-  }
-}
-
-export class CompleteHabitCall extends ethereum.Call {
-  get inputs(): CompleteHabitCall__Inputs {
-    return new CompleteHabitCall__Inputs(this);
-  }
-
-  get outputs(): CompleteHabitCall__Outputs {
-    return new CompleteHabitCall__Outputs(this);
-  }
-}
-
-export class CompleteHabitCall__Inputs {
-  _call: CompleteHabitCall;
-
-  constructor(call: CompleteHabitCall) {
-    this._call = call;
-  }
-
-  get user(): Address {
-    return this._call.inputValues[0].value.toAddress();
-  }
-
-  get habitId(): BigInt {
-    return this._call.inputValues[1].value.toBigInt();
-  }
-
-  get verificationHash(): Bytes {
-    return this._call.inputValues[2].value.toBytes();
-  }
-}
-
-export class CompleteHabitCall__Outputs {
-  _call: CompleteHabitCall;
-
-  constructor(call: CompleteHabitCall) {
-    this._call = call;
   }
 }
 
@@ -891,32 +393,32 @@ export class DeactivateHabitCall__Outputs {
   }
 }
 
-export class InitializeCall extends ethereum.Call {
-  get inputs(): InitializeCall__Inputs {
-    return new InitializeCall__Inputs(this);
+export class EditUsernameCall extends ethereum.Call {
+  get inputs(): EditUsernameCall__Inputs {
+    return new EditUsernameCall__Inputs(this);
   }
 
-  get outputs(): InitializeCall__Outputs {
-    return new InitializeCall__Outputs(this);
+  get outputs(): EditUsernameCall__Outputs {
+    return new EditUsernameCall__Outputs(this);
   }
 }
 
-export class InitializeCall__Inputs {
-  _call: InitializeCall;
+export class EditUsernameCall__Inputs {
+  _call: EditUsernameCall;
 
-  constructor(call: InitializeCall) {
+  constructor(call: EditUsernameCall) {
     this._call = call;
   }
 
-  get initialOwner(): Address {
-    return this._call.inputValues[0].value.toAddress();
+  get newUsername(): string {
+    return this._call.inputValues[0].value.toString();
   }
 }
 
-export class InitializeCall__Outputs {
-  _call: InitializeCall;
+export class EditUsernameCall__Outputs {
+  _call: EditUsernameCall;
 
-  constructor(call: InitializeCall) {
+  constructor(call: EditUsernameCall) {
     this._call = call;
   }
 }
@@ -951,28 +453,32 @@ export class LogJournalEntryCall__Outputs {
   }
 }
 
-export class RenounceOwnershipCall extends ethereum.Call {
-  get inputs(): RenounceOwnershipCall__Inputs {
-    return new RenounceOwnershipCall__Inputs(this);
+export class RecordStreakIncrementCall extends ethereum.Call {
+  get inputs(): RecordStreakIncrementCall__Inputs {
+    return new RecordStreakIncrementCall__Inputs(this);
   }
 
-  get outputs(): RenounceOwnershipCall__Outputs {
-    return new RenounceOwnershipCall__Outputs(this);
+  get outputs(): RecordStreakIncrementCall__Outputs {
+    return new RecordStreakIncrementCall__Outputs(this);
   }
 }
 
-export class RenounceOwnershipCall__Inputs {
-  _call: RenounceOwnershipCall;
+export class RecordStreakIncrementCall__Inputs {
+  _call: RecordStreakIncrementCall;
 
-  constructor(call: RenounceOwnershipCall) {
+  constructor(call: RecordStreakIncrementCall) {
     this._call = call;
   }
+
+  get newStreak(): BigInt {
+    return this._call.inputValues[0].value.toBigInt();
+  }
 }
 
-export class RenounceOwnershipCall__Outputs {
-  _call: RenounceOwnershipCall;
+export class RecordStreakIncrementCall__Outputs {
+  _call: RecordStreakIncrementCall;
 
-  constructor(call: RenounceOwnershipCall) {
+  constructor(call: RecordStreakIncrementCall) {
     this._call = call;
   }
 }
@@ -998,7 +504,7 @@ export class SelfCompleteHabitCall__Inputs {
     return this._call.inputValues[0].value.toBigInt();
   }
 
-  get verificationHash(): Bytes {
+  get value1(): Bytes {
     return this._call.inputValues[1].value.toBytes();
   }
 }
@@ -1028,7 +534,7 @@ export class SetCircleManagerCall__Inputs {
     this._call = call;
   }
 
-  get _cm(): Address {
+  get value0(): Address {
     return this._call.inputValues[0].value.toAddress();
   }
 }
@@ -1058,7 +564,7 @@ export class SetSessionManagerCall__Inputs {
     this._call = call;
   }
 
-  get _sm(): Address {
+  get value0(): Address {
     return this._call.inputValues[0].value.toAddress();
   }
 }
@@ -1071,66 +577,62 @@ export class SetSessionManagerCall__Outputs {
   }
 }
 
-export class TransferOwnershipCall extends ethereum.Call {
-  get inputs(): TransferOwnershipCall__Inputs {
-    return new TransferOwnershipCall__Inputs(this);
+export class SetUsernameCall extends ethereum.Call {
+  get inputs(): SetUsernameCall__Inputs {
+    return new SetUsernameCall__Inputs(this);
   }
 
-  get outputs(): TransferOwnershipCall__Outputs {
-    return new TransferOwnershipCall__Outputs(this);
+  get outputs(): SetUsernameCall__Outputs {
+    return new SetUsernameCall__Outputs(this);
   }
 }
 
-export class TransferOwnershipCall__Inputs {
-  _call: TransferOwnershipCall;
+export class SetUsernameCall__Inputs {
+  _call: SetUsernameCall;
 
-  constructor(call: TransferOwnershipCall) {
+  constructor(call: SetUsernameCall) {
     this._call = call;
   }
 
-  get newOwner(): Address {
-    return this._call.inputValues[0].value.toAddress();
+  get username(): string {
+    return this._call.inputValues[0].value.toString();
   }
 }
 
-export class TransferOwnershipCall__Outputs {
-  _call: TransferOwnershipCall;
+export class SetUsernameCall__Outputs {
+  _call: SetUsernameCall;
 
-  constructor(call: TransferOwnershipCall) {
+  constructor(call: SetUsernameCall) {
     this._call = call;
   }
 }
 
-export class UpgradeToAndCallCall extends ethereum.Call {
-  get inputs(): UpgradeToAndCallCall__Inputs {
-    return new UpgradeToAndCallCall__Inputs(this);
+export class UpdateVisibilityCall extends ethereum.Call {
+  get inputs(): UpdateVisibilityCall__Inputs {
+    return new UpdateVisibilityCall__Inputs(this);
   }
 
-  get outputs(): UpgradeToAndCallCall__Outputs {
-    return new UpgradeToAndCallCall__Outputs(this);
+  get outputs(): UpdateVisibilityCall__Outputs {
+    return new UpdateVisibilityCall__Outputs(this);
   }
 }
 
-export class UpgradeToAndCallCall__Inputs {
-  _call: UpgradeToAndCallCall;
+export class UpdateVisibilityCall__Inputs {
+  _call: UpdateVisibilityCall;
 
-  constructor(call: UpgradeToAndCallCall) {
+  constructor(call: UpdateVisibilityCall) {
     this._call = call;
   }
 
-  get newImplementation(): Address {
-    return this._call.inputValues[0].value.toAddress();
-  }
-
-  get data(): Bytes {
-    return this._call.inputValues[1].value.toBytes();
+  get visibilitySetting(): string {
+    return this._call.inputValues[0].value.toString();
   }
 }
 
-export class UpgradeToAndCallCall__Outputs {
-  _call: UpgradeToAndCallCall;
+export class UpdateVisibilityCall__Outputs {
+  _call: UpdateVisibilityCall;
 
-  constructor(call: UpgradeToAndCallCall) {
+  constructor(call: UpdateVisibilityCall) {
     this._call = call;
   }
 }

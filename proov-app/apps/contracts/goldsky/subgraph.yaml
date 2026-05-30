@@ -10,9 +10,9 @@ dataSources:
     name: ProovCore
     network: celo
     source:
-      address: "0xdac1162E05B6BfA9e192C95fc38512bE4169eBBF"
+      address: "0xef6Bf51246A4B6972383632e66C87250Fc759922"
       abi: ProovCore
-      startBlock: 28000000
+      startBlock: 68262187
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -27,17 +27,17 @@ dataSources:
         - name: ProovCore
           file: ./abis/ProovCore.json
       eventHandlers:
-        - event: HabitCreated(indexed address,indexed uint256,string,uint256)
+        - event: HabitCreated(indexed address,indexed uint256,string,uint8,uint256,uint8,uint256)
           handler: handleHabitCreated
         - event: HabitCompleted(indexed address,indexed uint256,uint256,uint256)
           handler: handleHabitCompleted
-        - event: HabitDeactivated(indexed address,uint256)
+        - event: HabitDeactivated(indexed address,indexed uint256,uint256)
           handler: handleHabitDeactivated
         - event: StreakUpdated(indexed address,uint256,uint256,uint256)
           handler: handleStreakUpdated
-        - event: StreakBroken(indexed address,uint256)
+        - event: StreakBroken(indexed address,uint256,uint256)
           handler: handleStreakBroken
-        - event: MilestoneReached(indexed address,uint256)
+        - event: MilestoneReached(indexed address,uint256,uint256)
           handler: handleMilestoneReached
       file: ./src/proov-core.ts
 
@@ -45,9 +45,9 @@ dataSources:
     name: SessionManager
     network: celo
     source:
-      address: "0x8f67A90563b102313dde309A6Cd9056a31311e76"
+      address: "0x0bA82bb8de521d2D0BD63e0fa4ec2beF6ad9C1fb"
       abi: SessionManager
-      startBlock: 28000000
+      startBlock: 68262187
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -70,9 +70,9 @@ dataSources:
     name: CircleManager
     network: celo
     source:
-      address: "0xFDd2796CFA3e94494C53F58479EF56f48EBE640f"
+      address: "0xD5E46dE0fF1Cfd88ABe4bE5641650376516A7a5E"
       abi: CircleManager
-      startBlock: 28000000
+      startBlock: 68262187
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -88,6 +88,6 @@ dataSources:
           handler: handleMemberAdded
         - event: CheerSent(indexed address,indexed address,uint256)
           handler: handleCheerSent
-        - event: RemovedFromCircle(indexed address,indexed address)
+        - event: RemovedFromCircle(indexed address,indexed address,uint256)
           handler: handleRemovedFromCircle
       file: ./src/circle-manager.ts
