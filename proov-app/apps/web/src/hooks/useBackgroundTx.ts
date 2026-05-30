@@ -80,7 +80,8 @@ export function useBackgroundTx() {
   const waitForConnected = useCallback((): Promise<void> => {
     return new Promise((resolve, reject) => {
       if (wagmiConfig.state.status === 'connected') { resolve(); return; }
-      const timeout = setTimeout(() => { unsub(); reject(new Error('timeout')); }, 8000);
+      // 20s — Web3Auth + AA connector init can be slow on first page load
+      const timeout = setTimeout(() => { unsub(); reject(new Error('timeout')); }, 20000);
       const unsub = wagmiConfig.subscribe(
         (state) => state.status,
         (status) => {
@@ -102,11 +103,9 @@ export function useBackgroundTx() {
         try {
           await waitForConnected();
         } catch {
-          // Timed out waiting — session is genuinely gone
-          const hasLocalAuth = typeof window !== 'undefined'
-            && localStorage.getItem('proov_authenticated') === 'true';
-          if (hasLocalAuth) clearStaleSession();
-          else showError('Wallet not connected');
+          // Timed out — slow connection, not necessarily a dead session.
+          // AuthSessionGuard handles genuine expiry; here just surface the error.
+          showError('Connection timeout — please try again');
           return null;
         }
       }
