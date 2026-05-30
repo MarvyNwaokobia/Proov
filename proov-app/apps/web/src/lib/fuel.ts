@@ -65,7 +65,8 @@ export async function checkCanClaim(userAddress: string): Promise<{
 }> {
   try {
     const balance = await getUserCeloBalance(userAddress);
-    if (balance < 0.5) return { canClaim: true, secondsLeft: 0, nextClaimTime: null };
+    // Can claim only when genuinely insufficient — less than ~2 transactions worth
+    if (balance < 0.02) return { canClaim: true, secondsLeft: 0, nextClaimTime: null };
     return { canClaim: false, secondsLeft: 86400, nextClaimTime: new Date(Date.now() + 86400_000) };
   } catch {
     return { canClaim: false, secondsLeft: 0, nextClaimTime: null };

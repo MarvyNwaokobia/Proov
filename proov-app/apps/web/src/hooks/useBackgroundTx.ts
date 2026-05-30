@@ -47,7 +47,7 @@ function parseError(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
   if (/user rejected|rejected by user/i.test(msg)) return 'Transaction rejected';
   if (/insufficient.*funds|insufficient balance|error_forwarding_sequencer.*insufficient/i.test(msg))
-    return 'Out of fuel — go to Settings → Claim Fuel';
+    return '⚡ Tank's empty — head to Settings to claim more fuel';
   if (/network changed|chain.*mismatch/i.test(msg)) return 'Network mismatch. Please refresh.';
   if (/nonce/i.test(msg)) return 'Transaction conflict. Please try again.';
   const short = msg.split('\n')[0].slice(0, 120);
