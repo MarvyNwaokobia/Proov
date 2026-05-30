@@ -10,11 +10,12 @@ import {
 } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-type ToastState = { kind: 'error' | 'success'; message: string } | null;
+type ToastState = { kind: 'error' | 'success' | 'warning'; message: string } | null;
 
 const Ctx = createContext<{
   showError: (msg: string) => void;
   showSuccess: (msg: string) => void;
+  showWarning: (msg: string) => void;
 } | null>(null);
 
 export function useTxToast() {
@@ -36,14 +37,18 @@ export function TxToastProvider({ children }: { children: ReactNode }) {
     setToast({ kind: 'success', message: msg });
   }, []);
 
+  const showWarning = useCallback((msg: string) => {
+    setToast({ kind: 'warning', message: msg });
+  }, []);
+
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(dismiss, toast.kind === 'error' ? 5000 : 3500);
+    const t = setTimeout(dismiss, toast.kind === 'error' ? 5000 : toast.kind === 'warning' ? 5000 : 3500);
     return () => clearTimeout(t);
   }, [toast, dismiss]);
 
   return (
-    <Ctx.Provider value={{ showError, showSuccess }}>
+    <Ctx.Provider value={{ showError, showSuccess, showWarning }}>
       {children}
       <AnimatePresence>
         {toast && (
@@ -76,14 +81,22 @@ export function TxToastProvider({ children }: { children: ReactNode }) {
                 background:
                   toast.kind === 'error'
                     ? 'rgba(239,68,68,.15)'
+                    : toast.kind === 'warning'
+                    ? 'rgba(245,158,11,.15)'
                     : 'var(--success-bg)',
                 border: `1px solid ${
                   toast.kind === 'error'
                     ? 'rgba(239,68,68,.4)'
+                    : toast.kind === 'warning'
+                    ? 'rgba(245,158,11,.5)'
                     : 'var(--success)'
                 }`,
                 color:
-                  toast.kind === 'error' ? '#ef4444' : 'var(--success-text)',
+                  toast.kind === 'error'
+                    ? '#ef4444'
+                    : toast.kind === 'warning'
+                    ? '#f59e0b'
+                    : 'var(--success-text)',
                 boxShadow: '0 8px 32px rgba(0,0,0,.3)',
                 maxWidth: 340,
                 whiteSpace: 'nowrap',
@@ -92,7 +105,7 @@ export function TxToastProvider({ children }: { children: ReactNode }) {
               }}
             >
               <span style={{ fontSize: 15, flexShrink: 0 }}>
-                {toast.kind === 'error' ? '⚠' : '✓'}
+                {toast.kind === 'error' ? '⚠' : toast.kind === 'warning' ? '⛽' : '✓'}
               </span>
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {toast.message}

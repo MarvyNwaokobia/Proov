@@ -62,7 +62,7 @@ function isConnectorNotConnected(err: unknown): boolean {
 
 export function useBackgroundTx() {
   const { writeContract } = useWriteContract();
-  const { showError, showSuccess } = useTxToast();
+  const { showError, showSuccess, showWarning } = useTxToast();
   const publicClient = usePublicClient();
   const { address: connectedAddress } = useAccount();
   const router = useRouter();
@@ -121,6 +121,15 @@ export function useBackgroundTx() {
         return null;
       }
 
+      // Non-blocking low-balance warning — once per session to avoid spam
+      if (typeof window !== 'undefined' && !sessionStorage.getItem('proov_low_gas_warned')) {
+        const cachedBal = parseFloat(localStorage.getItem('proov_fuel_balance') || '0');
+        if (cachedBal > 0 && cachedBal < 0.01) {
+          sessionStorage.setItem('proov_low_gas_warned', '1');
+          showWarning('Running low on gas. Go to Settings → Claim Fuel.');
+        }
+      }
+
       const isOffline = typeof window !== 'undefined' ? !navigator.onLine : false;
       if (isOffline && !config._fromQueue) {
         addToOfflineQueue(config);
@@ -152,7 +161,7 @@ export function useBackgroundTx() {
         }
       });
     },
-    [connectedAddress, wagmiConfig, waitForConnected, writeContract, showSuccess, showError, clearStaleSession]
+    [connectedAddress, wagmiConfig, waitForConnected, writeContract, showSuccess, showError, showWarning, clearStaleSession]
   );
 
   const sendTxWithResult = useCallback(

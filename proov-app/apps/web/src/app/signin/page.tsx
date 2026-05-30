@@ -74,18 +74,14 @@ export default function SignInPage() {
       const emailVal = localStorage.getItem('proov_email') || '';
       resolveIdentity(connectedAddress, emailVal, 'google', 'web3auth');
 
-      return import('@/lib/supabase').then(({ getUsernameForAddress, getOnboardingComplete }) =>
-        getUsernameForAddress(connectedAddress).then(async (existingUsername) => {
+      return import('@/lib/supabase').then(({ getUsernameForAddress }) =>
+        getUsernameForAddress(connectedAddress).then((existingUsername) => {
           if (existingUsername) {
+            // Returning user — restore session and go straight to dashboard
             localStorage.setItem('proov_username', existingUsername as string);
             localStorage.setItem('proov_tutorial_done', '1');
-            const done = await getOnboardingComplete(connectedAddress).catch(() => false);
-            if (done) {
-              localStorage.setItem('proov_onboarding_done', '1');
-              router.push('/dashboard');
-            } else {
-              router.push('/onboarding?step=habit');
-            }
+            localStorage.setItem('proov_onboarding_done', '1');
+            router.push('/dashboard');
           } else {
             router.push('/onboarding');
           }

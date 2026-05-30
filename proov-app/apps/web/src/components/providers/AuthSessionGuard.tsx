@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAccount, useReconnect } from 'wagmi';
 import { clearWeb3AuthSession } from '@/lib/clearSession';
+import { runMigrations } from '@/lib/auth';
 
 const PROTECTED_PREFIXES = [
   '/dashboard',
@@ -42,6 +43,8 @@ export function AuthSessionGuard() {
 
   const reconnectAttemptedRef = useRef(false);
   const clearingRef = useRef(false);
+
+  useEffect(() => { runMigrations(); }, []);
 
   const hasRealWalletConnection = Boolean(
     isConnected &&

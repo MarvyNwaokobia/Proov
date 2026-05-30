@@ -3,8 +3,8 @@ import { createWalletClient, createPublicClient, http, parseEther, isAddress } f
 import { celo } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 
-// Each Celo L2 tx costs ~0.05–0.15 CELO. 0.5 CELO ≈ 3–10 txs for a new user.
-const DRIP = parseEther('0.5');
+// Each Celo L2 tx costs ~0.05–0.15 CELO. 0.2 CELO ≈ 2–4 txs for a new user.
+const DRIP = parseEther('0.2');
 const MIN_BALANCE = parseEther('0.05');
 const COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
