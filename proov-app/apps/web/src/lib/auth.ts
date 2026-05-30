@@ -113,3 +113,26 @@ export function signOut(): void {
   localStorage.removeItem('proov_authenticated');
   // Keep identity data so returning users are recognised on next sign-in
 }
+
+const SCHEMA_VERSION = '2';
+const SCHEMA_KEY = 'proov_schema_v';
+
+export function runMigrations(): void {
+  if (typeof window === 'undefined') return;
+  if (localStorage.getItem(SCHEMA_KEY) === SCHEMA_VERSION) return;
+
+  // Preserve theme preferences across the wipe
+  const theme = localStorage.getItem('proov_theme');
+  const mode = localStorage.getItem('proov_mode');
+
+  const keysToRemove: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('proov_')) keysToRemove.push(key);
+  }
+  keysToRemove.forEach(k => localStorage.removeItem(k));
+
+  if (theme) localStorage.setItem('proov_theme', theme);
+  if (mode) localStorage.setItem('proov_mode', mode);
+  localStorage.setItem(SCHEMA_KEY, SCHEMA_VERSION);
+}

@@ -46,7 +46,8 @@ function addToOfflineQueue(config: any) {
 function parseError(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
   if (/user rejected|rejected by user/i.test(msg)) return 'Transaction rejected';
-  if (/insufficient.*funds|insufficient balance/i.test(msg)) return 'Insufficient balance';
+  if (/insufficient.*funds|insufficient balance|error_forwarding_sequencer.*insufficient/i.test(msg))
+    return 'Out of gas — go to Settings → Claim Fuel';
   if (/network changed|chain.*mismatch/i.test(msg)) return 'Network mismatch. Please refresh.';
   if (/nonce/i.test(msg)) return 'Transaction conflict. Please try again.';
   const short = msg.split('\n')[0].slice(0, 120);
@@ -61,7 +62,7 @@ function isConnectorNotConnected(err: unknown): boolean {
 
 export function useBackgroundTx() {
   const { writeContract } = useWriteContract();
-  const { showError, showSuccess } = useTxToast();
+  const { showError, showSuccess, showWarning } = useTxToast();
   const publicClient = usePublicClient();
   const { address: connectedAddress } = useAccount();
   const router = useRouter();
@@ -120,6 +121,15 @@ export function useBackgroundTx() {
         return null;
       }
 
+      // Non-blocking low-balance warning — once per session to avoid spam
+      if (typeof window !== 'undefined' && !sessionStorage.getItem('proov_low_gas_warned')) {
+        const cachedBal = parseFloat(localStorage.getItem('proov_fuel_balance') || '0');
+        if (cachedBal > 0 && cachedBal < 0.01) {
+          sessionStorage.setItem('proov_low_gas_warned', '1');
+          showWarning('Running low on gas. Go to Settings → Claim Fuel.');
+        }
+      }
+
       const isOffline = typeof window !== 'undefined' ? !navigator.onLine : false;
       if (isOffline && !config._fromQueue) {
         addToOfflineQueue(config);
@@ -151,7 +161,7 @@ export function useBackgroundTx() {
         }
       });
     },
-    [connectedAddress, wagmiConfig, waitForConnected, writeContract, showSuccess, showError, clearStaleSession]
+    [connectedAddress, wagmiConfig, waitForConnected, writeContract, showSuccess, showError, showWarning, clearStaleSession]
   );
 
   const sendTxWithResult = useCallback(
@@ -181,24 +191,6 @@ export function useBackgroundTx() {
     },
     [publicClient, connectedAddress, sendTx, showError]
   );
-
-  // Auto-fund new users: silently top up if CELO balance is near zero
-  useEffect(() => {
-    if (!connectedAddress) return;
-    const key = `proov_fuel_checked_${connectedAddress.toLowerCase()}`;
-    if (typeof window !== 'undefined' && sessionStorage.getItem(key)) return;
-    if (typeof window !== 'undefined') sessionStorage.setItem(key, '1');
-
-    import('@/lib/fuel').then(({ getUserCeloBalance, requestServerFaucet }) => {
-      getUserCeloBalance(connectedAddress).then(balance => {
-        if (balance < 0.005) {
-          requestServerFaucet(connectedAddress).then(topped => {
-            if (topped) showSuccess('Gas funded — you\'re ready to go');
-          }).catch(() => {});
-        }
-      }).catch(() => {});
-    }).catch(() => {});
-  }, [connectedAddress, showSuccess]);
 
   // Drain offline queue when coming back online
   useEffect(() => {
