@@ -58,12 +58,18 @@ export const SESSION_MANAGER_ABI = [
   },
   {
     name: 'endSession', type: 'function', stateMutability: 'nonpayable',
-    inputs: [],
+    inputs: [
+      { name: 'habitId', type: 'uint256' },
+      { name: 'durationSeconds', type: 'uint256' },
+    ],
     outputs: [],
   },
   {
     name: 'abandonSession', type: 'function', stateMutability: 'nonpayable',
-    inputs: [],
+    inputs: [
+      { name: 'habitId', type: 'uint256' },
+      { name: 'durationSeconds', type: 'uint256' },
+    ],
     outputs: [],
   },
   {

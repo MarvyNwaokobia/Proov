@@ -29,11 +29,7 @@ export function useProovTx() {
       durationMinutes: number | undefined
     ) => {
       const catMap: Record<string, number> = {
-        focus: 0,
-        fitness: 1,
-        reading: 2,
-        hydration: 3,
-        sleep: 4,
+        focus: 0, fitness: 1, reading: 2, hydration: 3, sleep: 4,
       };
       const habitType = catMap[category.toLowerCase()] ?? 5;
       return sendTx({
@@ -47,7 +43,7 @@ export function useProovTx() {
     completeHabit: (onChainId: number | undefined) => {
       const id = safeId(onChainId);
       if (id === null) {
-        console.warn('[tx] completeHabit: no valid on_chain_id, skipping chain tx');
+        console.warn('[tx] completeHabit: no valid on_chain_id, skipping');
         return Promise.resolve('0x' as `0x${string}`);
       }
       return sendTx({
@@ -61,7 +57,7 @@ export function useProovTx() {
     removeHabit: (onChainId: number | undefined) => {
       const id = safeId(onChainId);
       if (id === null) {
-        console.warn('[tx] removeHabit: no valid on_chain_id, skipping chain tx');
+        console.warn('[tx] removeHabit: no valid on_chain_id, skipping');
         return Promise.resolve('0x' as `0x${string}`);
       }
       return sendTx({
@@ -72,14 +68,8 @@ export function useProovTx() {
       });
     },
 
-    editHabit: (
-      _onChainId: number | undefined,
-      _name: string,
-      _category: string,
-      _isTimed: boolean,
-      _durationMinutes: number | undefined
-    ) => {
-      console.warn('[tx] editHabit: on-chain edit not supported by legacy contract, skipping');
+    editHabit: () => {
+      // Edit is Supabase-only — no on-chain data to update in v2
       return Promise.resolve('0x' as `0x${string}`);
     },
 
@@ -114,12 +104,8 @@ export function useProovTx() {
     }),
 
     // ── SESSION ACTIONS ────────────────────────────────────────────────────
-    startSession: (onChainHabitId: number | undefined, _durationMinutes: number | undefined) => {
-      const id = safeId(onChainHabitId);
-      if (id === null) {
-        console.warn('[tx] startSession: no valid on_chain_habit_id, skipping chain tx');
-        return Promise.resolve({ ok: false } as { ok: boolean; result?: bigint });
-      }
+    startSession: (onChainHabitId: number | undefined) => {
+      const id = safeId(onChainHabitId) ?? 0n;
       return sendTx({
         address: CONTRACTS.SESSION_MANAGER,
         abi: SESSION_MANAGER_ABI,
@@ -128,22 +114,24 @@ export function useProovTx() {
       } as any).then(hash => ({ ok: !!hash, result: undefined as bigint | undefined }));
     },
 
+    endSession: (onChainHabitId: number | undefined, durationSeconds: number) =>
+      sendTx({
+        address: CONTRACTS.SESSION_MANAGER,
+        abi: SESSION_MANAGER_ABI,
+        functionName: 'endSession',
+        args: [safeId(onChainHabitId) ?? 0n, BigInt(Math.round(durationSeconds))],
+      } as any),
+
+    abandonSession: (onChainHabitId: number | undefined, durationSeconds: number) =>
+      sendTx({
+        address: CONTRACTS.SESSION_MANAGER,
+        abi: SESSION_MANAGER_ABI,
+        functionName: 'abandonSession',
+        args: [safeId(onChainHabitId) ?? 0n, BigInt(Math.round(durationSeconds))],
+      } as any),
+
     startCustomSession: (_label: string, _durationMinutes: number | undefined) =>
       Promise.resolve({ ok: true, result: undefined as bigint | undefined }),
-
-    endSession: (_sessionId: bigint, _completed: boolean) => sendTx({
-      address: CONTRACTS.SESSION_MANAGER,
-      abi: SESSION_MANAGER_ABI,
-      functionName: 'endSession',
-      args: [],
-    } as any),
-
-    cancelSession: (_sessionId: bigint) => sendTx({
-      address: CONTRACTS.SESSION_MANAGER,
-      abi: SESSION_MANAGER_ABI,
-      functionName: 'abandonSession',
-      args: [],
-    } as any),
 
     endCustomSession: (_sessionId: bigint, _completed: boolean) =>
       Promise.resolve('0x' as `0x${string}`),
