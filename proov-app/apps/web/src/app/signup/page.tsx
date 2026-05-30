@@ -8,6 +8,8 @@ import { getPostLoginRoute, resolveIdentity } from '@/lib/auth';
 import { isMiniPay, connectMiniPay } from '@/lib/minipay';
 import { clearWeb3AuthSession } from '@/lib/clearSession';
 
+type AltMethod = 'email' | 'sms';
+
 const GoogleIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -23,8 +25,9 @@ export default function SignUpPage() {
   const { connect, connectors, isPending } = useConnect();
 
   const [connecting, setConnecting] = useState(false);
-  const [email, setEmail] = useState('');
-  const [emailSent, setEmailSent] = useState(false);
+  const [altMethod, setAltMethod] = useState<AltMethod>('email');
+  const [input, setInput] = useState('');
+  const [sent, setSent] = useState(false);
 
   useEffect(() => {
     if (!isPending) setConnecting(false);
@@ -76,11 +79,16 @@ export default function SignUpPage() {
     else setConnecting(false);
   };
 
-  const handleEmailSend = () => {
-    if (!email.trim()) return;
-    triggerConnect('email_passwordless');
-    setEmailSent(true);
+  const handleAltSend = () => {
+    if (!input.trim()) return;
+    triggerConnect(altMethod === 'email' ? 'email_passwordless' : 'sms_passwordless');
+    setSent(true);
   };
+
+  const switchMethod = (m: AltMethod) => { setAltMethod(m); setInput(''); setSent(false); };
+
+  const btnActive = { background: 'var(--card-bg)', color: 'var(--text)', fontWeight: 700, boxShadow: '0 1px 4px rgba(0,0,0,0.07)' } as const;
+  const btnInactive = { background: 'transparent', color: 'var(--text3)', fontWeight: 500, boxShadow: 'none' } as const;
 
   return (
     <>
@@ -136,35 +144,48 @@ export default function SignUpPage() {
           {/* Divider */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
             <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-            <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 500 }}>or use email</span>
+            <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 500 }}>or continue with</span>
             <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
           </div>
 
-          {/* Email fallback */}
-          {!emailSent ? (
+          {/* Email / SMS toggle */}
+          <div style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 10, padding: 3, gap: 3, marginBottom: 10 }}>
+            {(['email', 'sms'] as AltMethod[]).map(m => (
+              <button key={m} onClick={() => switchMethod(m)} style={{ flex: 1, padding: '7px 0', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, transition: 'all .15s', ...(altMethod === m ? btnActive : btnInactive) }}>
+                {m === 'email' ? '✉️ Email' : '📱 SMS'}
+              </button>
+            ))}
+          </div>
+
+          {/* Input + send */}
+          {!sent ? (
             <>
               <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleEmailSend()}
-                placeholder="your@email.com"
+                type={altMethod === 'email' ? 'email' : 'tel'}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAltSend()}
+                placeholder={altMethod === 'email' ? 'your@email.com' : '+1 (555) 000-0000'}
                 style={{ width: '100%', padding: '11px 14px', borderRadius: 12, border: '1.5px solid var(--border2)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 13, marginBottom: 8, boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }}
               />
               <button
-                onClick={handleEmailSend}
-                disabled={!email.trim() || isPending}
-                style={{ width: '100%', padding: 12, borderRadius: 12, border: 'none', background: email.trim() ? 'var(--btn-primary-bg)' : 'var(--bg3)', color: email.trim() ? 'var(--btn-primary-text)' : 'var(--text3)', fontSize: 14, fontWeight: 600, cursor: email.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit', marginBottom: 16 }}>
-                Send magic link
+                onClick={handleAltSend}
+                disabled={!input.trim() || isPending}
+                style={{ width: '100%', padding: 12, borderRadius: 12, border: 'none', background: input.trim() ? 'var(--btn-primary-bg)' : 'var(--bg3)', color: input.trim() ? 'var(--btn-primary-text)' : 'var(--text3)', fontSize: 14, fontWeight: 600, cursor: input.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit', marginBottom: 16 }}>
+                {altMethod === 'email' ? 'Send magic link' : 'Send code'}
               </button>
             </>
           ) : (
             <div style={{ textAlign: 'center', padding: '8px 0 20px' }}>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>📬</div>
-              <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>Check your inbox</p>
-              <p style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 10 }}>We sent a link to {email}</p>
-              <button onClick={() => setEmailSent(false)} style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--accent-text)', cursor: 'pointer', fontFamily: 'inherit' }}>
-                Try a different email
+              <div style={{ fontSize: 32, marginBottom: 8 }}>{altMethod === 'email' ? '📬' : '💬'}</div>
+              <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>
+                {altMethod === 'email' ? 'Check your inbox' : 'Check your messages'}
+              </p>
+              <p style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 10 }}>
+                {altMethod === 'email' ? `We sent a link to ${input}` : `We sent a code to ${input}`}
+              </p>
+              <button onClick={() => setSent(false)} style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--accent-text)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                Try again
               </button>
             </div>
           )}
