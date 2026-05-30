@@ -475,10 +475,6 @@ export default function HabitsPage() {
   const handleSave = async (data: SaveData) => {
     setIsSaving(true);
 
-    // tx must be submitted before we write to Supabase
-    const txOk = await proovTx.createHabit(data.name, data.catId, data.hasTimer, data.hasTimer ? data.duration : 0);
-    if (!txOk) { setIsSaving(false); return; }
-
     const address = localStorage.getItem('proov_address') || '';
     const saved = await saveHabit({
       user_address: address.toLowerCase(),
@@ -506,9 +502,6 @@ export default function HabitsPage() {
 
   // ── Archive habit ───────────────────────────────────────────────────────────
   const handleArchive = async (habitId: string) => {
-    const habit = habits.find(h => h.id === habitId);
-    const txOk = await proovTx.removeHabit((habit as any)?.on_chain_id || 0);
-    if (!txOk) return;
     await supabaseDeactivate(habitId);
     setHabits(prev => prev.filter(h => h.id !== habitId));
     const cached = JSON.parse(localStorage.getItem('proov_habits_cache') || '[]');
@@ -545,8 +538,6 @@ export default function HabitsPage() {
   // ── Add from suggestion ─────────────────────────────────────────────────────
   const handleAddSuggestion = async (s: SuggestionItem) => {
     setIsSaving(true);
-    const txOk = await proovTx.createHabit(s.name, suggestionCategory.toLowerCase(), s.type === 'timed', s.duration || 0);
-    if (!txOk) { setIsSaving(false); return; }
     const address = localStorage.getItem('proov_address') || '';
     const saved = await saveHabit({
       user_address: address.toLowerCase(),
@@ -572,8 +563,6 @@ export default function HabitsPage() {
 
   // ── Add AI suggestion directly ──────────────────────────────────────────────
   const handleAddAiSuggestion = async (s: AiSuggestion) => {
-    const txOk = await proovTx.createHabit(s.name, s.category.toLowerCase(), s.type === 'timed', s.duration_minutes || 0);
-    if (!txOk) return;
     const address = localStorage.getItem('proov_address') || '';
     const saved = await saveHabit({
       user_address: address.toLowerCase(),

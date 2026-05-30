@@ -87,7 +87,6 @@ export default function HabitDetailPage() {
     setHabitStreak(prev => prev + 1);
     const streak = parseInt(localStorage.getItem('proov_streak_count') || '0');
     await saveHabitCompletion(habit.id, address, streak).catch(() => {});
-    proovTx.completeHabit((habit as any)?.on_chain_id || 0);
     showToast('Marked done');
   };
 
@@ -100,14 +99,6 @@ export default function HabitDetailPage() {
       visibility: editVisibility,
       visible_to: editVisibility === 'circle' ? editVisibleTo : [],
     });
-    proovTx.editHabit(
-      (habit as any)?.on_chain_id || 0,
-      editName,
-      habit.category,
-      habit.type === 'timed',
-      editDuration
-    );
-    proovTx.updateVisibility(editVisibility);
     setHabit(prev => prev ? {
       ...prev,
       name: editName,
@@ -124,7 +115,6 @@ export default function HabitDetailPage() {
     if (!habit) return;
     if (!confirm(`Archive "${habit.name}"?`)) return;
     await deactivateHabit(habit.id);
-    proovTx.removeHabit((habit as any)?.on_chain_id || 0);
     router.back();
   };
 

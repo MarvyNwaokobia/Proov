@@ -59,12 +59,7 @@ function OnboardingInner() {
           visible_to: [],
           active: true,
         });
-        if (habit) proovTx.createHabit(name, 'general', false, 0);
       }
-
-      // Fire setUsername silently — faucet should have landed by now
-      const username = typeof window !== 'undefined' ? localStorage.getItem('proov_username') || '' : '';
-      if (username) proovTx.setUsername(username);
 
       if (addr) await setOnboardingComplete(addr).catch(() => {});
       if (typeof window !== 'undefined') localStorage.setItem('proov_onboarding_done', '1');
