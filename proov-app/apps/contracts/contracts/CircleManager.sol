@@ -1,160 +1,47 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+/**
+ * CircleManager v2 — event-log only.
+ *
+ * Circle membership and social interactions live in Supabase.
+ * Accepting a request and sending cheers/nudges emit on-chain proof.
+ */
+contract CircleManager {
+    event MemberAdded(
+        address indexed circleOwner,
+        address indexed member,
+        uint256 timestamp
+    );
+    event CheerSent(
+        address indexed from,
+        address indexed to,
+        uint256 timestamp
+    );
+    event RemovedFromCircle(
+        address indexed user,
+        address indexed removed,
+        uint256 timestamp
+    );
 
-contract CircleManager is Initializable, UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuard {
+    // Sending a request is a Supabase-only operation (no on-chain proof needed).
+    function sendRequest(address) external {}
 
-    uint256 public constant MAX_CIRCLE_SIZE = 10;
-
-    struct Witness {
-        address witness;
-        uint256 habitId;
-        uint256 timestamp;
+    // Accepting proves the bond on-chain.
+    function acceptRequest(address from) external {
+        emit MemberAdded(from, msg.sender, block.timestamp);
     }
 
-    // CRITICAL: Never remove or reorder these variables in future upgrades.
-    mapping(address => address[]) private _circle;
-    mapping(address => mapping(address => bool)) public connected;
-    mapping(address => address[]) private _pendingRequests;
-    mapping(address => mapping(address => bool)) private _hasPending;
-    mapping(address => Witness[]) public witnesses;
-
-    uint256[50] private __gap;
-
-    // ── Events ─────────────────────────────────────────────────
-    event RequestSent(address indexed from, address indexed to);
-    event RequestAccepted(address indexed from, address indexed to);
-    event MemberAdded(address indexed circleOwner, address indexed member, uint256 timestamp);
-    event RequestRejected(address indexed from, address indexed to);
-    event RemovedFromCircle(address indexed user, address indexed removed);
-    event WitnessAdded(address indexed user, uint256 habitId, address indexed witness);
-    event StreakBrokenNotified(address indexed user, address[] circleMembers);
-    event CheerSent(address indexed from, address indexed to, uint256 timestamp);
-
-    // ── UUPS ───────────────────────────────────────────────────
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
-
-    function initialize(address initialOwner) public initializer {
-        __Ownable_init(initialOwner);
-
-        
-    }
-
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
-
-    // ── Circle Logic ───────────────────────────────────────────
-    function sendRequest(address to) external nonReentrant {
-        require(to != msg.sender, "CircleManager: cannot add self");
-        require(!connected[msg.sender][to], "CircleManager: already connected");
-        require(!_hasPending[to][msg.sender], "CircleManager: request already sent");
-        require(_circle[msg.sender].length < MAX_CIRCLE_SIZE, "CircleManager: circle full");
-
-        _pendingRequests[to].push(msg.sender);
-        _hasPending[to][msg.sender] = true;
-        emit RequestSent(msg.sender, to);
-    }
-
-    function acceptRequest(address from) external nonReentrant {
-        require(_hasPending[msg.sender][from], "CircleManager: no pending request");
-        require(_circle[msg.sender].length < MAX_CIRCLE_SIZE, "CircleManager: circle full");
-        require(_circle[from].length < MAX_CIRCLE_SIZE, "CircleManager: their circle full");
-
-        _removePending(msg.sender, from);
-        _hasPending[msg.sender][from] = false;
-
-        _circle[msg.sender].push(from);
-        _circle[from].push(msg.sender);
-        connected[msg.sender][from] = true;
-        connected[from][msg.sender] = true;
-
-        emit RequestAccepted(from, msg.sender);
-        emit MemberAdded(msg.sender, from, block.timestamp);
-    }
-
-    function rejectRequest(address from) external nonReentrant {
-        require(_hasPending[msg.sender][from], "CircleManager: no pending request");
-        _removePending(msg.sender, from);
-        _hasPending[msg.sender][from] = false;
-        emit RequestRejected(from, msg.sender);
-    }
-
-    function removeFromCircle(address member) external nonReentrant {
-        require(connected[msg.sender][member], "CircleManager: not connected");
-
-        _removeFromArray(_circle[msg.sender], member);
-        _removeFromArray(_circle[member], msg.sender);
-        connected[msg.sender][member] = false;
-        connected[member][msg.sender] = false;
-
-        emit RemovedFromCircle(msg.sender, member);
-    }
-
-    function witnessHabit(address user, uint256 habitId) external nonReentrant {
-        require(connected[msg.sender][user], "CircleManager: not in circle");
-        witnesses[user].push(Witness({
-            witness: msg.sender,
-            habitId: habitId,
-            timestamp: block.timestamp
-        }));
-        emit WitnessAdded(user, habitId, msg.sender);
-    }
-
-    function cheer(address to) external nonReentrant {
-        require(connected[msg.sender][to], "CircleManager: not in circle");
+    function sendCheer(address to) external {
         emit CheerSent(msg.sender, to, block.timestamp);
     }
 
-    function sendCheer(address to) external nonReentrant {
-        require(connected[msg.sender][to], "CircleManager: not in circle");
+    // Alias used in useProovTx
+    function cheer(address to) external {
         emit CheerSent(msg.sender, to, block.timestamp);
     }
 
-    function notifyStreakBroken(address user) external {
-        address[] memory circle = _circle[user];
-        emit StreakBrokenNotified(user, circle);
+    function removeFromCircle(address member) external {
+        emit RemovedFromCircle(msg.sender, member, block.timestamp);
     }
-
-    // ── Views ──────────────────────────────────────────────────
-    function getCircle(address user) external view returns (address[] memory) {
-        return _circle[user];
-    }
-
-    function getPending(address user) external view returns (address[] memory) {
-        return _pendingRequests[user];
-    }
-
-    function getWitnesses(address user) external view returns (Witness[] memory) {
-        return witnesses[user];
-    }
-
-    // ── Internals ─────────────────────────────────────────────
-    function _removeFromArray(address[] storage arr, address target) internal {
-        for (uint256 i = 0; i < arr.length; i++) {
-            if (arr[i] == target) {
-                arr[i] = arr[arr.length - 1];
-                arr.pop();
-                break;
-            }
-        }
-    }
-
-    function _removePending(address user, address from) internal {
-        address[] storage pending = _pendingRequests[user];
-        for (uint256 i = 0; i < pending.length; i++) {
-            if (pending[i] == from) {
-                pending[i] = pending[pending.length - 1];
-                pending.pop();
-                break;
-            }
-        }
-    }
-
-    receive() external payable { revert("CircleManager: no ETH accepted"); }
 }

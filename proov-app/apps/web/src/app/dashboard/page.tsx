@@ -272,29 +272,26 @@ export default function DashboardPage() {
     const addr = localStorage.getItem('proov_address') || '';
     const habit = habits.find(h => h.id === habitId);
 
-    // Optimistic UI update — Supabase is source of truth, no tx gate
+    // Tx first — proof goes on chain before Supabase write
+    setPendingHabits(prev => new Set(prev).add(habitId));
+    const txOk = await proovTx.completeHabit((habit as any)?.on_chain_id ?? undefined);
+    setPendingHabits(prev => { const s = new Set(prev); s.delete(habitId); return s; });
+
+    if (!txOk) return;
+
     const newCompleted = [...completedToday, habitId];
     setCompletedToday(newCompleted);
     setHabitStreaks(prev => ({ ...prev, [habitId]: (prev[habitId] || 0) + 1 }));
-    setPendingHabits(prev => new Set(prev).add(habitId));
     showToast('Done ✓');
-
     await saveHabitCompletion(habitId, addr, currentStreak).catch(() => {});
-    setPendingHabits(prev => { const s = new Set(prev); s.delete(habitId); return s; });
 
     const allDone = habits.every(h => newCompleted.includes(h.id));
     if (allDone && habits.length > 0) {
       const newStreak = await updateDailyStreak(addr).catch(() => currentStreak + 1);
       setCurrentStreak(newStreak);
       setLongestStreak(prev => Math.max(prev, newStreak));
-      // Only write to chain on milestone days — not every completion
-      const MILESTONE_DAYS = [7, 21, 30, 50, 100, 200];
-      if (MILESTONE_DAYS.includes(newStreak)) {
-        proovTx.recordStreakIncrement(newStreak);
-        showToast(`🏆 ${newStreak}-day milestone! Proof recorded on chain.`);
-      } else {
-        showToast(`${newStreak} day streak! 🔥`);
-      }
+      proovTx.recordStreakIncrement(newStreak);
+      showToast(`${newStreak} day streak! 🔥`);
     }
   };
 

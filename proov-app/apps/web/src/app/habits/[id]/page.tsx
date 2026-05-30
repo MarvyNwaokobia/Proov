@@ -86,6 +86,7 @@ export default function HabitDetailPage() {
     setIsDoneToday(true);
     setHabitStreak(prev => prev + 1);
     const streak = parseInt(localStorage.getItem('proov_streak_count') || '0');
+    proovTx.completeHabit((habit as any)?.on_chain_id ?? undefined);
     await saveHabitCompletion(habit.id, address, streak).catch(() => {});
     showToast('Marked done');
   };
@@ -114,6 +115,7 @@ export default function HabitDetailPage() {
   const handleArchive = async () => {
     if (!habit) return;
     if (!confirm(`Archive "${habit.name}"?`)) return;
+    proovTx.removeHabit((habit as any)?.on_chain_id ?? undefined);
     await deactivateHabit(habit.id);
     router.back();
   };

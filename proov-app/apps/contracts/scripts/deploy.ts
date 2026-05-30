@@ -28,7 +28,7 @@ async function main() {
   // 2. SessionManager
   console.log("2/3  Deploying SessionManager...");
   const SessionManager = await ethers.getContractFactory("SessionManager");
-  const sessionManager = await SessionManager.deploy(proovCoreAddr);
+  const sessionManager = await SessionManager.deploy();
   await sessionManager.waitForDeployment();
   const sessionManagerAddr = await sessionManager.getAddress();
   console.log(`     ✅ SessionManager: ${sessionManagerAddr}`);

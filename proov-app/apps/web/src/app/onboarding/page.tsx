@@ -61,6 +61,9 @@ function OnboardingInner() {
         });
       }
 
+      const username = typeof window !== 'undefined' ? localStorage.getItem('proov_username') || '' : '';
+      if (username) proovTx.setUsername(username);
+
       if (addr) await setOnboardingComplete(addr).catch(() => {});
       if (typeof window !== 'undefined') localStorage.setItem('proov_onboarding_done', '1');
     } catch {}
