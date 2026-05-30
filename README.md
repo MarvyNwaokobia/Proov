@@ -3,7 +3,7 @@
 > **Prove it. Every day.**  
 > Habits. Streaks. Accountability. All onchain.
 
-Proov is a habit-tracking and personal accountability dApp built on [Celo](https://celo.org). Users create habits, run focus timers, log fitness activities with AI verification, write journal entries, and build daily streaks. Friends connect to form accountability circles. When a streak breaks, the circle is automatically notified onchain. A global leaderboard ranks every user by streak.
+Proov is a habit-tracking and personal accountability dApp built on [Celo](https://celo.org). Users create habits, run focus timers, log activities with AI verification, write journal entries, and build daily streaks. Friends connect to form accountability circles. Every action fires an onchain transaction — the proof is permanent and publicly verifiable.
 
 ---
 
@@ -16,21 +16,22 @@ Proov is a habit-tracking and personal accountability dApp built on [Celo](https
 | Dashboard | Link |
 |-----------|------|
 | Dune (onchain) | [dune.com/marvyy/proov](https://dune.com/marvyy/proov) |
+| Goldsky subgraph | [API v2.0.0](https://api.goldsky.com/api/public/project_cmpdqb2n5s8s801x0h45a2npf/subgraphs/proov/2.0.0/gn) |
 | Admin panel (owner only) | `/admin` |
 
 ---
 
 ## Smart Contracts (Celo Mainnet)
 
-All three contracts are deployed behind **UUPS upgradeable proxies**. The proxy addresses below never change — only the implementation behind them is replaced on upgrades.
+Lightweight event-log contracts — every user action emits an onchain event at ~0.005–0.009 CELO per transaction. Data is stored in Supabase; the chain is the immutable proof layer indexed by Dune and Goldsky.
 
-| Contract | Proxy Address |
-|----------|--------------|
-| ProovCore | `0xdac1162E05B6BfA9e192C95fc38512bE4169eBBF` |
-| SessionManager | `0x8f67A90563b102313dde309A6Cd9056a31311e76` |
-| CircleManager | `0xFDd2796CFA3e94494C53F58479EF56f48EBE640f` |
+| Contract | Address | Celoscan |
+|----------|---------|---------|
+| ProovCore | `0xef6Bf51246A4B6972383632e66C87250Fc759922` | [view](https://celoscan.io/address/0xef6Bf51246A4B6972383632e66C87250Fc759922) |
+| SessionManager | `0x0bA82bb8de521d2D0BD63e0fa4ec2beF6ad9C1fb` | [view](https://celoscan.io/address/0x0bA82bb8de521d2D0BD63e0fa4ec2beF6ad9C1fb) |
+| CircleManager | `0xD5E46dE0fF1Cfd88ABe4bE5641650376516A7a5E` | [view](https://celoscan.io/address/0xD5E46dE0fF1Cfd88ABe4bE5641650376516A7a5E) |
 
-> Verified on [Celoscan](https://celoscan.io)
+Deployed at block **68,262,187** · May 30 2026
 
 ---
 
@@ -38,49 +39,38 @@ All three contracts are deployed behind **UUPS upgradeable proxies**. The proxy 
 
 ### Habit Tracking
 - Create habits across 6 categories: Focus, Fitness, Reading, Hydration, Sleep, Custom
-- Set a target duration (optional) and daily/weekly frequency
-- Every completion recorded permanently onchain — no edits, no deletes
+- Every creation, completion, and archive fires an onchain transaction
+- AI verification (Claude Sonnet 4.6) for fitness habits — proof hash stored in the tx
 - Deactivate habits you no longer track
 
 ### Streak System
 - Consecutive daily completions build your streak — miss a day and it resets
-- Longest-streak tracked separately so your best run is never lost
-- Milestones at 7, 21, 30, 50, 100, 200 days emit onchain events
-- Streak state derived from `block.timestamp / 86400` — fully verifiable
+- Milestones at 7, 21, 30, 50, 100, 200 days emit `MilestoneReached` onchain events
+- Streak data kept in Supabase; milestone proof lives onchain
 
 ### Focus Timer
-- 25-minute minimum session enforced at the contract level
-- Start/end session stored onchain via `SessionManager`
-- Timer reconstructs elapsed time from `startTimestamp` on every page load — survives tab switches, refreshes, and app restarts
-- Sessions under 25 min are recorded but earn no streak credit
+- Start/end sessions recorded onchain via `SessionManager`
+- Timer reconstructs elapsed time from local state — survives tab switches and refreshes
 
 ### AI Verification (Fitness Habits)
 - Powered by **Claude Sonnet 4.6**
-- Users describe their workout in plain text before submitting a completion
-- Claude judges the description: accepts specific effort, rejects vague claims ("did it", "yes", "completed")
-- The verification hash is stored in the transaction — the proof lives onchain
-- Sunday circle reports generated automatically every week by the same agent
+- Users describe their workout before submitting a completion
+- Claude judges the description — vague claims rejected, specific effort accepted
+- Verification hash stored in the transaction
 
 ### Accountability Circle
-- Add up to 10 friends by wallet address
-- Send/accept/reject connection requests — all onchain
-- Circle members see each other's streaks in real-time
-- When your streak breaks, `CircleManager.notifyStreakBroken()` emits an event visible to your whole circle
-- Witness a friend's habit completion onchain
+- Add up to 10 friends by wallet address or username
+- Accepting a circle request emits `MemberAdded` onchain (proof of the bond)
+- Cheers and nudges sent onchain
 
 ### Leaderboard
 - Top 50 users globally, sorted by current streak
 - Gold/silver/bronze podium for top 3
-- Tap any user to view their public profile: streak, habits, completions, journal count
+- Tap any user to view their public profile
 
 ### Journal
 - Log daily entries — content stored as a `keccak256` hash onchain (private, verifiable)
-- A journal entry counts as daily activity and keeps your streak alive
-
-### Profile
-- Upload a profile picture during onboarding or from settings
-- Avatar shown in the dashboard header and on public profile pages
-- Username and visibility settings stored onchain via `ProovCore`
+- Counts as daily activity and keeps your streak alive
 
 ---
 
@@ -89,75 +79,72 @@ All three contracts are deployed behind **UUPS upgradeable proxies**. The proxy 
 | Layer | Technology |
 |-------|-----------|
 | Blockchain | [Celo](https://celo.org) (L2, post-March 2025 migration) |
-| Smart contracts | Solidity 0.8.28, Hardhat, OpenZeppelin UUPS Upgradeable |
-| Frontend | Next.js 14, TypeScript, Tailwind CSS |
+| Smart contracts | Solidity 0.8.28, Hardhat |
+| Frontend | Next.js 14, TypeScript |
 | Wallet auth | [Web3Auth](https://web3auth.io) (social login — Google, Email OTP) |
-| Smart account | [Safe Smart Account](https://safe.global) v1.4.1 via [permissionless.js](https://docs.pimlico.io/permissionless) (`toSafeSmartAccount`) |
-| Gasless txs | [Pimlico](https://pimlico.io) bundler + paymaster (ERC-4337 EntryPoint v0.7, sponsored policy) |
 | Onchain reads/writes | [wagmi](https://wagmi.sh) v2 + [viem](https://viem.sh) v2 |
+| Database | [Supabase](https://supabase.com) (Postgres — app state) |
+| Indexing | [Goldsky](https://goldsky.com) subgraph v2.0.0 |
+| Analytics | [Dune](https://dune.com) |
 | AI verification | [Claude Sonnet 4.6](https://anthropic.com) via Anthropic API |
-| AI reports | Google Gemini 2.5 Flash Lite via `@google/generative-ai` |
+| AI reports | Google Gemini 2.5 Flash via `@google/generative-ai` |
 | Animations | [Framer Motion](https://www.framer.com/motion/) |
-| State | [Zustand](https://zustand-demo.pmnd.rs/) |
 
 ---
 
 ## Architecture
 
 ```
-packages/
+proov-app/
 ├── apps/contracts/              ← Hardhat workspace
 │   ├── contracts/
-│   │   ├── ProovCore.sol        ← habits + streaks + journal (merged)
-│   │   ├── SessionManager.sol   ← focus timer sessions
-│   │   └── CircleManager.sol    ← accountability circles
-│   ├── scripts/
-│   │   ├── deploy-upgradeable.ts ← UUPS proxy deploy (ProovCore, SessionManager, CircleManager)
-│   │   ├── deploy.ts             ← legacy direct deploy (kept for reference)
-│   │   └── register-agent.ts    ← ERC-8004 AI agent registration
-│   └── test/                    ← 58 tests, all passing
+│   │   ├── ProovCore.sol        ← habits + streaks + journal (event-log v2)
+│   │   ├── SessionManager.sol   ← focus timer sessions (event-log v2)
+│   │   └── CircleManager.sol    ← accountability circles (event-log v2)
+│   ├── goldsky/                 ← Goldsky subgraph (v2.0.0)
+│   └── scripts/
+│       ├── deploy.ts            ← mainnet deploy
+│       └── register-agent.ts   ← ERC-8004 AI agent registration
 │
 └── apps/web/                   ← Next.js 14 frontend
     ├── app/
-    │   ├── page.tsx             ← Onboarding / Login
-    │   ├── dashboard/           ← Dashboard + streak hero
+    │   ├── page.tsx             ← Landing page
+    │   ├── signup/ signin/      ← Web3Auth social login
+    │   ├── dashboard/           ← Streak hero + today's habits
     │   ├── habits/              ← Habit manager
     │   ├── timer/               ← Focus timer with live ring
     │   ├── circle/              ← Accountability circle
     │   ├── leaderboard/         ← Global leaderboard
-    │   ├── profile/[address]/   ← Public profile
-    │   └── api/agent/           ← Claude AI routes (verify + report)
-    ├── hooks/                  ← useHabits, useSession, useStreak, useCircle
-    ├── lib/                    ← wagmi-config, aa-provider, ABIs, constants
-    └── components/shared/      ← TxToast (used on every write)
+    │   └── api/
+    │       ├── faucet/          ← Server-side CELO drip for new users
+    │       └── verify-habit/    ← Claude AI verification
+    ├── hooks/                  ← useProovTx, useBackgroundTx, useSession
+    └── lib/                    ← wagmi-config, transactions ABIs, auth, fuel
 ```
 
 ---
 
-## Smart Contract Details
+## Smart Contract Design
+
+All three contracts are **event-log only** — no complex storage, just events. This keeps gas at ~0.005–0.009 CELO per transaction (~17–20 txs per 0.1 CELO at current Celo mainnet gas prices).
 
 ### ProovCore.sol
-The heart of Proov. Handles habits, streaks, journals, and the global user registry.
-
-- `createHabit(name, type, duration, frequency)` — registers user on first call
-- `selfCompleteHabit(habitId, verificationHash)` — direct user call for fitness/manual habits
-- `completeHabit(user, habitId, hash)` — called by authorized `SessionManager` after a timer session
-- `logJournalEntry(contentHash)` — logs journal; counts as daily activity for streak
-- `getLeaderboard(limit)` — returns top-N users sorted by current streak
-- Streak logic: consecutive days grow streak; any gap resets to 1 and emits `StreakBroken`
-- `receive()` reverts — no ETH/CELO accepted
+- `createHabit(name, type, duration, frequency)` → emits `HabitCreated`
+- `selfCompleteHabit(habitId, hash)` → emits `HabitCompleted`
+- `deactivateHabit(habitId)` → emits `HabitDeactivated`
+- `recordStreakIncrement(count)` → emits `StreakUpdated` + `MilestoneReached` on milestone days
+- `setUsername / editUsername` → emits `UsernameSet`
+- `logJournalEntry(hash)` → emits `JournalLogged`
 
 ### SessionManager.sol
-- `startSession(habitId)` — records `block.timestamp` onchain
-- `endSession()` — computes duration; calls `ProovCore.completeHabit` if ≥ 25 min
-- `abandonSession()` — records partial session, no credit
-- `getActiveSession(user)` — frontend reads `startTimestamp` to reconstruct elapsed time
+- `startSession(habitId)` → emits `SessionStarted`
+- `endSession(habitId, durationSeconds)` → emits `SessionCompleted`
+- `abandonSession(habitId, durationSeconds)` → emits `SessionAbandoned`
 
 ### CircleManager.sol
-- Bidirectional connection model: both users must agree (request → accept)
-- Max 10 members per circle
-- `witnessHabit(user, habitId)` — circle member cosigns a habit completion onchain
-- `notifyStreakBroken(user)` — emits `StreakBrokenNotified` with full circle member list
+- `acceptRequest(from)` → emits `MemberAdded` (proof of circle bond)
+- `sendCheer(to)` → emits `CheerSent`
+- `removeFromCircle(member)` → emits `RemovedFromCircle`
 
 ---
 
@@ -181,50 +168,27 @@ pnpm install
 ### 2. Configure environment
 
 ```bash
-cp .env.example apps/web/.env.local
+cp apps/web/.env.template apps/web/.env.local
 ```
 
 Fill in `apps/web/.env.local`:
 
 ```bash
-# Web3Auth — dashboard.web3auth.io
 NEXT_PUBLIC_WEB3AUTH_CLIENT_ID=your_client_id
-
-# Celo RPC — Alchemy (alchemy.com, Celo Mainnet app)
-NEXT_PUBLIC_CELO_RPC_URL=https://celo-mainnet.g.alchemy.com/v2/your_key
-
-# Pimlico — dashboard.pimlico.io (bundler + paymaster)
-NEXT_PUBLIC_BUNDLER_URL=https://api.pimlico.io/v2/42220/rpc?apikey=your_key
-NEXT_PUBLIC_PAYMASTER_URL=https://api.pimlico.io/v2/42220/rpc?apikey=your_key
-NEXT_PUBLIC_PAYMASTER_POLICY_ID=your_sponsorship_policy_id
-
-# Anthropic — console.anthropic.com
-ANTHROPIC_API_KEY=your_anthropic_key
-
-# Google Gemini — aistudio.google.com (free tier: 1,000 req/day)
-GEMINI_API_KEY=your_gemini_api_key
-
-# Contract addresses (fill after deploy)
-NEXT_PUBLIC_PROOV_CORE_ADDRESS=0x...
-NEXT_PUBLIC_SESSION_MANAGER_ADDRESS=0x...
-NEXT_PUBLIC_CIRCLE_MANAGER_ADDRESS=0x...
-
-# 11142220 = Celo Sepolia (dev) | 42220 = Celo Mainnet (prod)
-NEXT_PUBLIC_CHAIN_ID=11142220
+NEXT_PUBLIC_CELO_RPC_URL=https://forno.celo.org
+NEXT_PUBLIC_PROOV_CORE_ADDRESS=0xef6Bf51246A4B6972383632e66C87250Fc759922
+NEXT_PUBLIC_SESSION_MANAGER_ADDRESS=0x0bA82bb8de521d2D0BD63e0fa4ec2beF6ad9C1fb
+NEXT_PUBLIC_CIRCLE_MANAGER_ADDRESS=0xD5E46dE0fF1Cfd88ABe4bE5641650376516A7a5E
+NEXT_PUBLIC_GOLDSKY_URL=https://api.goldsky.com/api/public/project_cmpdqb2n5s8s801x0h45a2npf/subgraphs/proov/2.0.0/gn
+ANTHROPIC_API_KEY=your_key
+GEMINI_API_KEY=your_key
+FAUCET_PRIVATE_KEY=0x_your_faucet_wallet_key
 ```
 
-Fill in `apps/contracts/.env`:
+### 3. Run dev server
 
 ```bash
-PRIVATE_KEY=your_deployer_key_no_0x
-CELOSCAN_API_KEY=from_celoscan.io
-```
-
-### 3. Run the dev server
-
-```bash
-cd apps/web
-pnpm dev
+cd apps/web && pnpm dev
 # → http://localhost:3000
 ```
 
@@ -232,94 +196,33 @@ pnpm dev
 
 ## Deploying Contracts
 
-Contracts use the **UUPS upgradeable proxy pattern**. The proxy address is permanent; only the implementation changes on upgrades.
-
 ```bash
 cd apps/contracts
-
-# First deploy (creates proxies)
-npx hardhat run scripts/deploy-upgradeable.ts --network celo
-
-# Future upgrades (proxy address stays the same)
-npx hardhat run scripts/upgrade.ts --network celo
-
-# Verify proxy on Celoscan
-npx hardhat verify --network celo <PROXY_ADDRESS>
+npx hardhat run scripts/deploy.ts --network celo
 ```
 
-After the first deploy, update Vercel with the three proxy addresses printed by the script.
-
-### Register the AI Agent (ERC-8004)
-
-```bash
-AGENT_PRIVATE_KEY=... AGENT_METADATA_URI=https://... \
-  node -r ts-node/register scripts/register-agent.ts
-```
+The script prints the 3 new addresses. Update them in Vercel and `apps/web/.env.local`.
 
 ---
 
-## Running Tests
+## AI Agent (ERC-8004)
 
-```bash
-cd apps/contracts
-./node_modules/.bin/hardhat test
-```
+| Key | Value |
+|-----|-------|
+| Agent Address | `0xc8BF2144e4742230c8Fd692d940032E6277883e2` |
+| Metadata URI | https://raw.githubusercontent.com/MarvyNwaokobia/Proov/main/agent-metadata.json |
 
-**58 tests across 3 contract suites — all passing:**
-
-```
-CircleManager   ·  18 tests  (+ cheer, MemberAdded, UUPS upgrade)
-ProovCore       ·  22 tests  (+ UUPS upgrade x2)
-SessionManager  ·  18 tests  (+ SessionEnded, UUPS upgrade)
-─────────────────────────────
-58 passing
-```
-
----
-
-## Celo-Specific Implementation Notes
-
-| Rule | Implementation |
-|------|---------------|
-| Gasless transactions | All user transactions sponsored via Pimlico paymaster (ERC-4337 UserOperations) — users pay zero gas |
-| Smart account | Every user gets a Safe Smart Account (v1.4.1, EntryPoint v0.7) derived from their Web3Auth EOA |
-| EVM version | `evmVersion: "cancun"` in `hardhat.config.ts` — required since Celo's L2 migration (March 2025) |
-| Solidity version | `0.8.28` — per celopedia-skills spec |
-| No ETH accepted | `receive() external payable { revert(); }` on all 3 contracts |
-| Reentrancy | `nonReentrant` modifier on every state-changing function |
-
----
-
-## AI Agent
-
-The Proov agent is registered onchain via [ERC-8004](https://github.com/celo-org/CIPs/blob/main/CIPs/cip-0064.md) and performs two tasks:
-
-1. **Fitness verification** (`POST /api/agent/verify`) — Powered by **Claude Sonnet 4.6** (Anthropic API). Claude judges user workout descriptions before they can submit a completion. Vague claims ("did it", "yes", "done") are rejected; specific, effort-filled descriptions are accepted. The verification hash is stored in the transaction.
-
-2. **Sunday circle report** (`POST /api/agent/report`, Vercel cron `0 8 * * 0`) — Powered by **Google Gemini 2.5 Flash Lite** (free tier — 1,000 requests/day). Weekly plain-text summary for each accountability circle: who showed up, who needs encouragement, one practical tip for next week.
-
----
-
-## Screens
-
-| # | Route | Description |
-|---|-------|-------------|
-| 1 | `/` | Onboarding — social login via Web3Auth (Google, Email OTP) |
-| 2 | `/dashboard` | Home — streak hero, today's habits, active session banner, quick nav |
-| 3 | `/habits` | Habit manager — create, browse, deactivate; starter habits for new users |
-| 4 | `/timer` | Focus timer — SVG ring, contract-reconstructed elapsed time, 25min enforcement |
-| 5 | `/circle` | Accountability circle — requests, member streaks, habit witnessing |
-| 6 | `/leaderboard` | Global leaderboard — podium + ranked list; tap for public profile |
+1. **Fitness verification** — Claude Sonnet 4.6 judges workout descriptions before accepting a habit completion.
+2. **Sunday circle reports** — Gemini generates weekly plain-text summaries for each accountability circle.
 
 ---
 
 ## KarmaGAP Submission
 
 - **Track:** AI Agents
-- **Contracts:** Deployed and verified on Celo Mainnet (Celoscan)
+- **Contracts:** Deployed and verified on Celo Mainnet
 - **Agent:** Registered via ERC-8004
 - **Onchain activity:** 20+ real transactions on mainnet
-- **Farcaster:** linked for reward payout
 
 ---
 
