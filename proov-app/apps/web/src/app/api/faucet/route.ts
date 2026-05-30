@@ -4,13 +4,9 @@ import { celo } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 
 // Each Celo L2 tx costs ~0.005–0.009 CELO. 0.2 CELO ≈ 20 transactions.
-// Only drip if user genuinely can't afford a transaction (< 0.02 CELO = ~2 txs left).
+// Gate is balance only — drip whenever the user is genuinely insufficient.
 const DRIP = parseEther('0.2');
 const MIN_BALANCE = parseEther('0.02');
-const COOLDOWN_MS = 24 * 60 * 60 * 1000;
-
-// Module-level rate limit — persists across requests in same function instance
-const lastClaim = new Map<string, number>();
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,12 +21,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Faucet not configured' }, { status: 503 });
     }
 
-    const addr = address.toLowerCase();
-    const last = lastClaim.get(addr) ?? 0;
-    if (Date.now() - last < COOLDOWN_MS) {
-      return NextResponse.json({ ok: true, skipped: 'cooldown' });
-    }
-
     const rpc = process.env.NEXT_PUBLIC_CELO_RPC_URL || 'https://forno.celo.org';
     const publicClient = createPublicClient({ chain: celo, transport: http(rpc) });
 
@@ -43,7 +33,6 @@ export async function POST(req: NextRequest) {
     const wallet = createWalletClient({ account, chain: celo, transport: http(rpc) });
 
     const hash = await wallet.sendTransaction({ to: address, value: DRIP });
-    lastClaim.set(addr, Date.now());
 
     return NextResponse.json({ ok: true, hash });
   } catch (err: any) {
