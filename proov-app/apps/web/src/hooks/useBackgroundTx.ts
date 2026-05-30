@@ -1,7 +1,7 @@
 'use client';
 
 import { useWriteContract, usePublicClient, useAccount, useConfig } from 'wagmi';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { celo } from 'viem/chains';
 import { useTxToast } from '@/components/shared/TxToast';
@@ -67,6 +67,32 @@ export function useBackgroundTx() {
   const { address: connectedAddress } = useAccount();
   const router = useRouter();
   const wagmiConfig = useConfig();
+
+  // Nonce chain: serial promise that allocates unique nonces for rapid-fire txs.
+  // Each sendTx call chains onto the previous, fetching from chain once then
+  // incrementing locally — so 6 habit txs get nonces 16,17,18,19,20,21 instead
+  // of all getting 16 (which causes "nonce too low" conflicts).
+  const nonceChainRef = useRef<Promise<number>>(Promise.resolve(-1));
+
+  // Reset the chain whenever the wallet address changes
+  useEffect(() => {
+    nonceChainRef.current = Promise.resolve(-1);
+  }, [connectedAddress]);
+
+  const getNextNonce = useCallback(async (address: string): Promise<number | undefined> => {
+    if (!publicClient) return undefined;
+    const nonce = await (nonceChainRef.current = nonceChainRef.current.then(async (prev) => {
+      if (prev === -1) {
+        const count = await publicClient.getTransactionCount({
+          address: address as `0x${string}`,
+          blockTag: 'pending',
+        }).catch(() => null);
+        return count ?? -1;
+      }
+      return prev + 1;
+    }));
+    return nonce === -1 ? undefined : nonce;
+  }, [publicClient]);
 
   const clearStaleSession = useCallback(() => {
     if (typeof window !== 'undefined') {
@@ -135,10 +161,18 @@ export function useBackgroundTx() {
         return `0xoffline-${Date.now()}-${Math.random().toString(36).slice(2, 9)}` as `0x${string}`;
       }
 
+      // Allocate a unique nonce before submitting — prevents conflicts when
+      // multiple txs fire in the same block (e.g. completing several habits).
+      const nonce = await getNextNonce(liveAddress as string);
+
       return new Promise((resolve) => {
         try {
           writeContract(
-            { chainId: celo.id, ...config } as Parameters<typeof writeContract>[0],
+            {
+              chainId: celo.id,
+              ...config,
+              ...(nonce !== undefined ? { nonce } : {}),
+            } as Parameters<typeof writeContract>[0],
             {
               onSuccess: (hash) => {
                 showSuccess('Proof recorded ✓');
@@ -147,6 +181,10 @@ export function useBackgroundTx() {
               onError: (err) => {
                 console.error('[tx] failed:', err);
                 if (isConnectorNotConnected(err)) { clearStaleSession(); resolve(null); return; }
+                // Nonce error → reset chain so next tx re-fetches from chain
+                if (/nonce/i.test((err as Error).message ?? '')) {
+                  nonceChainRef.current = Promise.resolve(-1);
+                }
                 showError(parseError(err));
                 resolve(null);
               },
@@ -159,7 +197,7 @@ export function useBackgroundTx() {
         }
       });
     },
-    [connectedAddress, wagmiConfig, waitForConnected, writeContract, showSuccess, showError, showWarning, clearStaleSession]
+    [connectedAddress, wagmiConfig, waitForConnected, writeContract, showSuccess, showError, showWarning, clearStaleSession, getNextNonce]
   );
 
   const sendTxWithResult = useCallback(
