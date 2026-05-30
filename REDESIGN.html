@@ -254,24 +254,6 @@ signin:{title:'Sign In / Join Free — Google only',nav:false,notes:[
 
   </div>
 </div>
-<script>
-function authTab(t){
-  const isJoin=t==='join';
-  document.getElementById('tab-signin').style.background=isJoin?'transparent':'var(--card-bg)';
-  document.getElementById('tab-signin').style.color=isJoin?'var(--text3)':'var(--text)';
-  document.getElementById('tab-signin').style.fontWeight=isJoin?'500':'700';
-  document.getElementById('tab-signin').style.boxShadow=isJoin?'none':'0 1px 4px rgba(0,0,0,.07)';
-  document.getElementById('tab-join').style.background=isJoin?'var(--card-bg)':'transparent';
-  document.getElementById('tab-join').style.color=isJoin?'var(--text)':'var(--text3)';
-  document.getElementById('tab-join').style.fontWeight=isJoin?'700':'500';
-  document.getElementById('tab-join').style.boxShadow=isJoin?'0 1px 4px rgba(0,0,0,.07)':'none';
-  document.getElementById('auth-heading').textContent=isJoin?'Welcome to Proov':'Welcome back';
-  document.getElementById('auth-sub').textContent=isJoin?'Your discipline. Onchain.':'Take accountability for your habits';
-  document.getElementById('auth-footer').innerHTML=isJoin?'Already have an account? <span style="color:var(--accent-text);font-weight:700;border-bottom:1.5px solid var(--accent-text);padding-bottom:1px;cursor:pointer" onclick="authTab(\'signin\')">Sign in →</span>':'No account? <span style="color:var(--accent-text);font-weight:700;border-bottom:1.5px solid var(--accent-text);padding-bottom:1px;cursor:pointer" onclick="authTab(\'join\')">Join free →</span>';
-  // show notice when signing in
-  document.getElementById('auth-notice').style.display=isJoin?'none':'block';
-}
-</script>
 `},
 
 onboarding:{title:'Onboarding — No Redesign',nav:false,notes:[
@@ -837,6 +819,18 @@ proofsheet_approved:{title:'AI Verify — Approved ✓',nav:false,notes:[
 
 const navMap={dashboard:'home',habits:'habit',discover:'habit',habit_detail:'habit',create_habit:'habit',timer_pick:'timer',timer_running:'timer',timer_done:'timer',circle:'circle',settings:'settings',leaderboard:'settings',profile:'settings',landing:'',signin:'',onboarding:'',walkthrough:'',walkthrough_last:'',proofsheet:'',proofsheet_ready:'',proofsheet_approved:''};
 
+function authTab(t){
+  const isJoin=t==='join';
+  const ts=document.getElementById('tab-signin');const tj=document.getElementById('tab-join');
+  if(!ts||!tj)return;
+  ts.style.background=isJoin?'transparent':'var(--card-bg)';ts.style.color=isJoin?'var(--text3)':'var(--text)';ts.style.fontWeight=isJoin?'500':'700';ts.style.boxShadow=isJoin?'none':'0 1px 4px rgba(0,0,0,.07)';
+  tj.style.background=isJoin?'var(--card-bg)':'transparent';tj.style.color=isJoin?'var(--text)':'var(--text3)';tj.style.fontWeight=isJoin?'700':'500';tj.style.boxShadow=isJoin?'0 1px 4px rgba(0,0,0,.07)':'none';
+  const h=document.getElementById('auth-heading');const s=document.getElementById('auth-sub');const f=document.getElementById('auth-footer');const n=document.getElementById('auth-notice');
+  if(h)h.textContent=isJoin?'Welcome to Proov':'Welcome back';
+  if(s)s.textContent=isJoin?'Your discipline. Onchain.':'Take accountability for your habits';
+  if(f)f.innerHTML=isJoin?'Already have an account? <span style="color:var(--accent-text);font-weight:700;border-bottom:1.5px solid var(--accent-text);padding-bottom:1px;cursor:pointer" onclick="authTab(\'signin\')">Sign in →</span>':'No account? <span style="color:var(--accent-text);font-weight:700;border-bottom:1.5px solid var(--accent-text);padding-bottom:1px;cursor:pointer" onclick="authTab(\'join\')">Join free →</span>';
+  if(n)n.style.display=isJoin?'none':'block';
+}
 function applyTheme(id){
   const t=T[id];const ph=document.getElementById('phone');
   Object.entries(t).forEach(([k,v])=>ph.style.setProperty(k,v));
