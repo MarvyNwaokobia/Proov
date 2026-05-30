@@ -14,6 +14,7 @@ const PROTECTED_PREFIXES = [
   '/settings',
   '/onboarding',
   '/username-setup',
+  '/admin',
 ];
 
 const PROTECTED_EXACT_PATHS = ['/profile'];

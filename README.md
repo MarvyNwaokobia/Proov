@@ -11,6 +11,13 @@ Proov is a habit-tracking and personal accountability dApp built on [Celo](https
 
 [https://proov-one.vercel.app](https://proov-one.vercel.app)
 
+## Analytics
+
+| Dashboard | Link |
+|-----------|------|
+| Dune (onchain) | [dune.com/marvyy/proov](https://dune.com/marvyy/proov) |
+| Admin panel (owner only) | `/admin` |
+
 ---
 
 ## Smart Contracts (Celo Mainnet)
