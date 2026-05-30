@@ -104,7 +104,8 @@ export function useProovTx() {
     }),
 
     // ── SESSION ACTIONS ────────────────────────────────────────────────────
-    startSession: (onChainHabitId: number | undefined) => {
+    // _durationMinutes kept for backward compat with timer page call signature
+    startSession: (onChainHabitId: number | undefined, _durationMinutes?: number) => {
       const id = safeId(onChainHabitId) ?? 0n;
       return sendTx({
         address: CONTRACTS.SESSION_MANAGER,
@@ -114,13 +115,18 @@ export function useProovTx() {
       } as any).then(hash => ({ ok: !!hash, result: undefined as bigint | undefined }));
     },
 
-    endSession: (onChainHabitId: number | undefined, durationSeconds: number) =>
-      sendTx({
+    // habitId + elapsed seconds emitted on-chain for Dune. Timer page passes
+    // (sessionOCId, true) from old API — we coerce safely.
+    endSession: (habitIdOrLegacyId: bigint | number | undefined, durationOrCompleted: number | boolean) => {
+      const habitId = typeof habitIdOrLegacyId === 'bigint' ? 0n : BigInt(habitIdOrLegacyId ?? 0);
+      const secs = typeof durationOrCompleted === 'number' ? BigInt(Math.round(durationOrCompleted)) : 0n;
+      return sendTx({
         address: CONTRACTS.SESSION_MANAGER,
         abi: SESSION_MANAGER_ABI,
         functionName: 'endSession',
-        args: [safeId(onChainHabitId) ?? 0n, BigInt(Math.round(durationSeconds))],
-      } as any),
+        args: [habitId, secs],
+      } as any);
+    },
 
     abandonSession: (onChainHabitId: number | undefined, durationSeconds: number) =>
       sendTx({
@@ -128,6 +134,15 @@ export function useProovTx() {
         abi: SESSION_MANAGER_ABI,
         functionName: 'abandonSession',
         args: [safeId(onChainHabitId) ?? 0n, BigInt(Math.round(durationSeconds))],
+      } as any),
+
+    // Alias used by timer page
+    cancelSession: (_legacySessionId: bigint) =>
+      sendTx({
+        address: CONTRACTS.SESSION_MANAGER,
+        abi: SESSION_MANAGER_ABI,
+        functionName: 'abandonSession',
+        args: [0n, 0n],
       } as any),
 
     startCustomSession: (_label: string, _durationMinutes: number | undefined) =>
