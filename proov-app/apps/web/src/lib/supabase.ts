@@ -384,7 +384,7 @@ export async function getStreakData(userAddress: string): Promise<{
     .from('streaks')
     .select('current_streak, longest_streak, last_completion_date')
     .eq('user_address', userAddress.toLowerCase())
-    .single();
+    .maybeSingle();
 
   if (!data) return { currentStreak: 0, longestStreak: 0, lastCompletionDate: null };
 
