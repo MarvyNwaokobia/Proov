@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { validateUsername, isUsernameTaken, registerUsername, generateSuggestions } from '@/lib/username';
+import { requestServerFaucet } from '@/lib/fuel';
 import { setIdentityUsername } from '@/lib/auth';
 import {
   isUsernameAvailable,
@@ -84,15 +85,19 @@ export default function UsernameSetupPage() {
     localStorage.setItem('proov_username', clean);
     setIdentityUsername(address, clean);
 
+    // Kick off faucet now — gives the user fuel before on-chain calls in onboarding
+    if (address) requestServerFaucet(address).catch(() => {});
+
     localStorage.setItem('proov_is_new_user', 'true');
-    router.push('/onboarding?step=habit');
+    router.push('/onboarding');
   };
 
   const handleSkip = () => {
     const temp = 'user_' + Math.random().toString(36).slice(2, 7);
     registerUsername(temp, address);
+    if (address) requestServerFaucet(address).catch(() => {});
     localStorage.setItem('proov_is_new_user', 'true');
-    router.push('/onboarding?step=habit');
+    router.push('/onboarding');
   };
 
   const borderColor = hint === '✓ Available'
