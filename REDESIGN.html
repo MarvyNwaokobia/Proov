@@ -183,16 +183,78 @@ landing:{title:'Landing',nav:false,notes:[
 <div style="text-align:center;font-size:10px;color:var(--text3);border-top:1px solid var(--border);padding-top:12px">Free to join · proov.app</div>
 </div></div>`},
 
-signin:{title:'Sign In — No Redesign',nav:false,notes:[
-{t:'nochange',s:'No redesign — stays exactly as current implementation'},
-{t:'kept',s:'Email + password form only'},
-{t:'kept',s:'No wallet connection, no MiniPay'},
-],html:`<div style="background:var(--bg);min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;gap:14px">
-<div style="width:60px;height:60px;border-radius:18px;background:var(--bg2);border:2px dashed var(--border2);display:flex;align-items:center;justify-content:center;color:var(--text3)"><i class="ti ti-lock" style="font-size:26px"></i></div>
-<div style="font-size:15px;font-weight:700;color:var(--text)">Sign In</div>
-<div style="font-size:12px;color:var(--text2);line-height:1.65;max-width:210px">No redesign. This screen stays exactly as it currently is in the app — email and password form.</div>
-<div style="background:var(--accent-bg);border:1px solid var(--accent-border);border-radius:10px;padding:8px 14px;font-size:10px;color:var(--accent-text);font-weight:600">No changes needed here</div>
-</div>`},
+signin:{title:'Sign In / Join Free — Google only',nav:false,notes:[
+{t:'new',s:'Google is the only social option — Twitter, Facebook, Discord removed'},
+{t:'new',s:'Tab switcher: Sign in | Join free — same screen, same logic'},
+{t:'kept',s:'Email OTP kept as secondary fallback option'},
+{t:'removed',s:'"More options" button removed'},
+{t:'removed',s:'Twitter, Facebook, Discord, Reddit buttons removed'},
+{t:'kept',s:'Session expired notice banner stays'},
+],html:`<div style="background:var(--bg);min-height:100%;display:flex;flex-direction:column;align-items:center;padding:0 20px 32px;position:relative">
+
+  <!-- blobs -->
+  <div style="position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0">
+    <div style="position:absolute;width:220px;height:220px;border-radius:50%;background:var(--accent);opacity:.06;filter:blur(60px);top:-40px;left:-60px"></div>
+    <div style="position:absolute;width:180px;height:180px;border-radius:50%;background:var(--accent2,var(--accent));opacity:.05;filter:blur(50px);bottom:80px;right:-40px"></div>
+  </div>
+
+  <div style="position:relative;z-index:1;width:100%;max-width:340px">
+
+    <!-- Logo -->
+    <div style="display:flex;flex-direction:column;align-items:center;padding:32px 0 22px">
+      <div style="width:48px;height:48px;border-radius:14px;background:var(--btn-primary-bg);display:flex;align-items:center;justify-content:center;margin-bottom:12px;box-shadow:0 4px 16px rgba(0,0,0,.12)">
+        <span style="font-size:24px;font-weight:800;color:#fff">P</span>
+      </div>
+      <div id="auth-heading" style="font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.5px;margin-bottom:3px">Welcome back</div>
+      <div id="auth-sub" style="font-size:13px;color:var(--text2)">Take accountability for your habits</div>
+    </div>
+
+    <!-- Tab switcher -->
+    <div style="display:flex;background:var(--bg2);border-radius:12px;padding:4px;gap:4px;margin-bottom:18px">
+      <button id="tab-signin" onclick="authTab('signin')" style="flex:1;text-align:center;padding:9px 0;border-radius:9px;border:none;cursor:pointer;font-family:inherit;font-size:13px;transition:all 0.2s;background:var(--card-bg);color:var(--text);font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.07)">Sign in</button>
+      <button id="tab-join" onclick="authTab('join')" style="flex:1;text-align:center;padding:9px 0;border-radius:9px;border:none;cursor:pointer;font-family:inherit;font-size:13px;transition:all 0.2s;background:transparent;color:var(--text3);font-weight:500;box-shadow:none">Join free</button>
+    </div>
+
+    <!-- Session notice -->
+    <div id="auth-notice" style="display:none;background:rgba(244,63,94,.08);border:1px solid rgba(244,63,94,.2);border-radius:10px;padding:9px 12px;font-size:11px;color:#f43f5e;margin-bottom:14px;line-height:1.5">
+      Your session expired. Tap "Continue with Google" to pick up where you left off.
+    </div>
+
+    <!-- Google button -->
+    <button onclick="void 0" style="width:100%;padding:13px 16px;border-radius:13px;border:1.5px solid var(--border);background:var(--card-bg);color:var(--text);font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:12px;cursor:pointer;font-family:inherit;margin-bottom:16px;transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,.06)"
+      onmouseover="this.style.background='var(--bg3)';this.style.borderColor='var(--border2)'"
+      onmouseout="this.style.background='var(--card-bg)';this.style.borderColor='var(--border)'">
+      <!-- Google SVG -->
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="flex-shrink:0">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Continue with Google
+    </button>
+
+    <!-- Divider -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+      <span style="font-size:11px;color:var(--text3);font-weight:500">or use email</span>
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+    </div>
+
+    <!-- Email field -->
+    <input type="email" placeholder="your@email.com" style="width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid var(--border2);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:10px;font-family:inherit;outline:none"/>
+    <button style="width:100%;padding:12px;border-radius:12px;border:none;background:var(--btn-primary-bg);color:var(--btn-primary-text);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:18px">
+      Send magic link
+    </button>
+
+    <!-- Footer -->
+    <div id="auth-footer" style="text-align:center;font-size:12px;color:var(--text3)">
+      No account? <span style="color:var(--accent-text);font-weight:700;border-bottom:1.5px solid var(--accent-text);padding-bottom:1px;cursor:pointer" onclick="authTab('join')">Join free →</span>
+    </div>
+
+  </div>
+</div>
+`},
 
 onboarding:{title:'Onboarding — No Redesign',nav:false,notes:[
 {t:'nochange',s:'No redesign — stays exactly as current implementation'},
@@ -757,6 +819,18 @@ proofsheet_approved:{title:'AI Verify — Approved ✓',nav:false,notes:[
 
 const navMap={dashboard:'home',habits:'habit',discover:'habit',habit_detail:'habit',create_habit:'habit',timer_pick:'timer',timer_running:'timer',timer_done:'timer',circle:'circle',settings:'settings',leaderboard:'settings',profile:'settings',landing:'',signin:'',onboarding:'',walkthrough:'',walkthrough_last:'',proofsheet:'',proofsheet_ready:'',proofsheet_approved:''};
 
+function authTab(t){
+  const isJoin=t==='join';
+  const ts=document.getElementById('tab-signin');const tj=document.getElementById('tab-join');
+  if(!ts||!tj)return;
+  ts.style.background=isJoin?'transparent':'var(--card-bg)';ts.style.color=isJoin?'var(--text3)':'var(--text)';ts.style.fontWeight=isJoin?'500':'700';ts.style.boxShadow=isJoin?'none':'0 1px 4px rgba(0,0,0,.07)';
+  tj.style.background=isJoin?'var(--card-bg)':'transparent';tj.style.color=isJoin?'var(--text)':'var(--text3)';tj.style.fontWeight=isJoin?'700':'500';tj.style.boxShadow=isJoin?'0 1px 4px rgba(0,0,0,.07)':'none';
+  const h=document.getElementById('auth-heading');const s=document.getElementById('auth-sub');const f=document.getElementById('auth-footer');const n=document.getElementById('auth-notice');
+  if(h)h.textContent=isJoin?'Welcome to Proov':'Welcome back';
+  if(s)s.textContent=isJoin?'Your discipline. Onchain.':'Take accountability for your habits';
+  if(f)f.innerHTML=isJoin?'Already have an account? <span style="color:var(--accent-text);font-weight:700;border-bottom:1.5px solid var(--accent-text);padding-bottom:1px;cursor:pointer" onclick="authTab(\'signin\')">Sign in →</span>':'No account? <span style="color:var(--accent-text);font-weight:700;border-bottom:1.5px solid var(--accent-text);padding-bottom:1px;cursor:pointer" onclick="authTab(\'join\')">Join free →</span>';
+  if(n)n.style.display=isJoin?'none':'block';
+}
 function applyTheme(id){
   const t=T[id];const ph=document.getElementById('phone');
   Object.entries(t).forEach(([k,v])=>ph.style.setProperty(k,v));
