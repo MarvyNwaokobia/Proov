@@ -83,13 +83,21 @@ export default function SignUpPage() {
     });
   }, [isConnected, connectedAddress, router]);
 
-  const triggerConnect = async () => {
+  const triggerConnect = async (loginProvider = 'google') => {
     setConnecting(true);
     await clearWeb3AuthSession();
+    const { getWeb3Auth } = await import('@/lib/wagmi-config');
+    const web3auth = getWeb3Auth();
+    try { await web3auth.logout({ cleanup: true }); } catch {}
     try {
-      const { getWeb3Auth } = await import('@/lib/wagmi-config');
-      await getWeb3Auth().logout({ cleanup: true });
-    } catch {}
+      // Init adapter if needed, then connect directly to the provider — skips Web3Auth modal
+      if ((web3auth as any).status === 'not_ready') await (web3auth as any).initModal();
+      const { WALLET_ADAPTERS } = await import('@web3auth/base');
+      await (web3auth as any).connectTo(WALLET_ADAPTERS.AUTH, { loginProvider });
+    } catch {
+      // connectTo failed — fall back to full modal
+    }
+    // Sync wagmi: connector.connect() sees web3auth is already connected and skips re-auth
     const c = connectors[0];
     if (c) connect({ connector: c });
     else setConnecting(false);
@@ -227,7 +235,7 @@ export default function SignUpPage() {
             {error && <p style={{ fontSize: 12, color: '#f43f5e', marginBottom: 8 }}>{error}</p>}
 
             <button
-              onClick={triggerConnect}
+              onClick={() => triggerConnect('google')}
               disabled={isPending}
               style={{
                 width: '100%', padding: '11px 14px', borderRadius: 11,
@@ -244,7 +252,7 @@ export default function SignUpPage() {
             </button>
 
             <button
-              onClick={triggerConnect}
+              onClick={() => triggerConnect('google')}
               disabled={isPending}
               style={{
                 width: '100%', padding: '11px 14px', borderRadius: 11,

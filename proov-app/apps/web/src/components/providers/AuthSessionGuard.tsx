@@ -29,7 +29,7 @@ function isProtectedPath(pathname: string): boolean {
 async function clearExpiredSession() {
   if (typeof window === 'undefined') return;
 
-  localStorage.setItem('proov_auth_notice', 'Your session expired. Please sign in again.');
+  localStorage.setItem('proov_auth_notice', 'Your session expired. Tap "Continue with Google" to pick up where you left off.');
   localStorage.removeItem('proov_authenticated');
   localStorage.removeItem('proov_address');
 
