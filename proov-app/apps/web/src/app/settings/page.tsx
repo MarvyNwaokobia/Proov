@@ -234,12 +234,14 @@ export default function SettingsPage() {
     const { claimFuel, getUserCeloBalance } = await import('@/lib/fuel');
     const result = await claimFuel();
     if (result.success) {
-      showToast('✓ Fuel claimed');
+      showToast('✓ Fuel claimed! Your balance will update shortly.');
       setCanClaimFuel(false);
       setSecondsUntilClaim(86400);
       const addr = localStorage.getItem('proov_address') || '';
       const newBalance = await getUserCeloBalance(addr);
       setCeloBalance(newBalance);
+    } else {
+      showToast(result.error || 'Faucet unavailable — try again later');
     }
     setClaimingFuel(false);
   };
