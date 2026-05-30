@@ -3,9 +3,10 @@ import { createWalletClient, createPublicClient, http, parseEther, isAddress } f
 import { celo } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 
-// Each Celo L2 tx costs ~0.05–0.25 CELO. 0.5 CELO covers onboarding (setUsername + createHabit) + several more txs.
-const DRIP = parseEther('0.5');
-const MIN_BALANCE = parseEther('0.1');
+// Each Celo L2 tx costs ~0.005–0.009 CELO. 0.2 CELO ≈ 20 transactions.
+// Only drip if user genuinely can't afford a transaction (< 0.02 CELO = ~2 txs left).
+const DRIP = parseEther('0.2');
+const MIN_BALANCE = parseEther('0.02');
 const COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 // Module-level rate limit — persists across requests in same function instance
