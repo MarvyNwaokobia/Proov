@@ -321,15 +321,11 @@ export default function GrindTimerPage() {
     setTxPending('ending');
 
     if (!isCustom && selectedHabit) {
-      // 1. End the on-chain session record
+      // One tx: endSession proves the session happened — no separate completeHabit needed.
+      // Firing two txs back-to-back causes nonce conflicts before the first is mined.
       const endOk = await proovTx.endSession(sessionOCId, true);
       if (!endOk) { setTxPending(null); return; }
 
-      // 2. Mark the habit complete on-chain
-      const completeOk = await proovTx.completeHabit((selectedHabit as any)?.on_chain_id || 0);
-      if (!completeOk) { setTxPending(null); return; }
-
-      // 3. Both confirmed — now write to Supabase
       await saveHabitCompletion(selectedHabit.id, address, streak).catch(() => {});
       setCompletedToday(prev => prev.includes(selectedHabit.id) ? prev : [...prev, selectedHabit.id]);
     }
@@ -366,13 +362,22 @@ export default function GrindTimerPage() {
     localStorage.removeItem('proov_active_timer');
 
     const sessionOCId = onChainSessionId ?? 0n;
+    const elapsed = totalSeconds - secondsLeft;
 
-    // Fire cancel in background — user is not blocked waiting for this
-    if (isCustom) proovTx.endCustomSession(sessionOCId, false);
-    else proovTx.cancelSession(sessionOCId);
+    // Fire abandon tx in background — user not blocked
+    if (!isCustom) proovTx.cancelSession(sessionOCId);
+
+    // Mark session as not completed in Supabase
+    if (sessionId) {
+      updateTimerSession(sessionId, {
+        ended_at: new Date().toISOString(),
+        completed: false,
+      }).catch(() => {});
+    }
 
     setView('pick');
     setOnChainSessionId(null);
+    setSessionId(null);
   };
 
   const handleRedo = (session: TimerSession) => {
@@ -464,9 +469,8 @@ export default function GrindTimerPage() {
             }} />
             <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
-              {txPending === 'starting' ? 'Starting session on-chain…' : 'Recording on-chain…'}
+              {txPending === 'starting' ? 'Getting ready…' : 'Saving your progress…'}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text3)' }}>Gasless · Powered by Pimlico</div>
           </div>
         </div>
       )}
@@ -567,7 +571,7 @@ export default function GrindTimerPage() {
             }}
           >
             <IconCheck size={15} stroke={2} />
-            {txPending === 'ending' ? 'Recording on-chain…' : 'Mark complete'}
+            {txPending === 'ending' ? 'Saving…' : 'Mark complete'}
           </button>
         </div>
       )}
@@ -979,7 +983,7 @@ export default function GrindTimerPage() {
               onMouseEnter={e => { if (!txPending) e.currentTarget.style.transform = 'translateY(-2px)'; }}
               onMouseLeave={e => (e.currentTarget.style.transform = '')}
             >
-              {txPending === 'starting' ? 'Starting on-chain…' : `Start ${fmtDur(duration)} session`}
+              {txPending === 'starting' ? 'Starting…' : `Start ${fmtDur(duration)} session`}
             </button>
           </div>
         )}
