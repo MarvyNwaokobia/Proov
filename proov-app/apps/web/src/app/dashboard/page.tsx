@@ -272,18 +272,16 @@ export default function DashboardPage() {
     const addr = localStorage.getItem('proov_address') || '';
     const habit = habits.find(h => h.id === habitId);
 
-    // Tx first — proof goes on chain before Supabase write
-    setPendingHabits(prev => new Set(prev).add(habitId));
-    const txOk = await proovTx.completeHabit((habit as any)?.on_chain_id ?? undefined);
-    setPendingHabits(prev => { const s = new Set(prev); s.delete(habitId); return s; });
-
-    if (!txOk) return;
-
+    // Optimistic UI — Supabase is source of truth
+    // No per-habit tx: firing one tx per habit causes nonce conflicts when completing multiple
+    // habits in quick succession. One recordStreakIncrement when all are done is enough proof.
     const newCompleted = [...completedToday, habitId];
     setCompletedToday(newCompleted);
     setHabitStreaks(prev => ({ ...prev, [habitId]: (prev[habitId] || 0) + 1 }));
-    showToast('Done ✓');
+    setPendingHabits(prev => new Set(prev).add(habitId));
+    showToast('Habit done ✓');
     await saveHabitCompletion(habitId, addr, currentStreak).catch(() => {});
+    setPendingHabits(prev => { const s = new Set(prev); s.delete(habitId); return s; });
 
     const allDone = habits.every(h => newCompleted.includes(h.id));
     if (allDone && habits.length > 0) {

@@ -507,7 +507,7 @@ export default function SettingsPage() {
             <span style={{ fontSize: 13, color: 'var(--text2)' }}>Balance</span>
             <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 4 }}>
               <IconBolt size={14} stroke={2} color="var(--accent-text)" />
-              {Math.floor(celoBalance)} Fuel
+              {celoBalance >= 0.01 ? celoBalance.toFixed(2) : '0.00'} Fuel
             </span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
