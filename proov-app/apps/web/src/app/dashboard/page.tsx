@@ -350,10 +350,10 @@ export default function DashboardPage() {
             <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>{formatDate()}</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            {fuelBalance > 0 && (
+            {fuelBalance >= 0.01 && (
               <div style={{ padding: '5px 10px', borderRadius: 20, background: 'var(--bg2)', border: '1px solid var(--border)', fontSize: 11, color: 'var(--accent-text)', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
                 <IconBolt size={12} stroke={2} />
-                {Math.floor(fuelBalance)} Fuel
+                {fuelBalance.toFixed(2)} Fuel
               </div>
             )}
             <button

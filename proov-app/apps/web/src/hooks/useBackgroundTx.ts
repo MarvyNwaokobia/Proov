@@ -80,8 +80,8 @@ export function useBackgroundTx() {
   const waitForConnected = useCallback((): Promise<void> => {
     return new Promise((resolve, reject) => {
       if (wagmiConfig.state.status === 'connected') { resolve(); return; }
-      // 20s — Web3Auth + AA connector init can be slow on first page load
-      const timeout = setTimeout(() => { unsub(); reject(new Error('timeout')); }, 20000);
+      // 5s — if Web3Auth hasn't reconnected by then, treat as expired session
+      const timeout = setTimeout(() => { unsub(); reject(new Error('timeout')); }, 5000);
       const unsub = wagmiConfig.subscribe(
         (state) => state.status,
         (status) => {
@@ -103,9 +103,8 @@ export function useBackgroundTx() {
         try {
           await waitForConnected();
         } catch {
-          // Timed out — slow connection, not necessarily a dead session.
-          // AuthSessionGuard handles genuine expiry; here just surface the error.
-          showError('Connection timeout — please try again');
+          // Wallet didn't reconnect in time — send them back to sign in.
+          clearStaleSession();
           return null;
         }
       }
@@ -142,7 +141,7 @@ export function useBackgroundTx() {
             { chainId: celo.id, ...config } as Parameters<typeof writeContract>[0],
             {
               onSuccess: (hash) => {
-                showSuccess('Transaction submitted');
+                showSuccess('Proof recorded ✓');
                 resolve(hash);
               },
               onError: (err) => {
