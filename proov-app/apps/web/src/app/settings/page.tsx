@@ -172,7 +172,6 @@ export default function SettingsPage() {
     localStorage.setItem('proov_username', clean);
     setIdentityUsername(address, clean);
 
-    proovTx.editUsername(clean);
     setUsername(clean);
     setEditingUsername(false);
     setNewUsername('');
