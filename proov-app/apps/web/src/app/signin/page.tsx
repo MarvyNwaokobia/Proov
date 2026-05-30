@@ -17,6 +17,8 @@ const GoogleIcon = () => (
   </svg>
 );
 
+type AltMethod = 'email' | 'sms';
+
 export default function SignInPage() {
   const router = useRouter();
   const { isConnected, address: connectedAddress } = useAccount();
@@ -24,8 +26,9 @@ export default function SignInPage() {
 
   const [notice, setNotice] = useState('');
   const [connecting, setConnecting] = useState(false);
-  const [email, setEmail] = useState('');
-  const [emailSent, setEmailSent] = useState(false);
+  const [altMethod, setAltMethod] = useState<AltMethod>('email');
+  const [input, setInput] = useState('');
+  const [sent, setSent] = useState(false);
 
   useEffect(() => {
     if (!isPending) setConnecting(false);
@@ -83,11 +86,20 @@ export default function SignInPage() {
     else setConnecting(false);
   };
 
-  const handleEmailSend = () => {
-    if (!email.trim()) return;
-    triggerConnect('email_passwordless');
-    setEmailSent(true);
+  const handleAltSend = () => {
+    if (!input.trim()) return;
+    triggerConnect(altMethod === 'email' ? 'email_passwordless' : 'sms_passwordless');
+    setSent(true);
   };
+
+  const switchMethod = (m: AltMethod) => {
+    setAltMethod(m);
+    setInput('');
+    setSent(false);
+  };
+
+  const btnActive = { background: 'var(--card-bg)', color: 'var(--text)', fontWeight: 700, boxShadow: '0 1px 4px rgba(0,0,0,0.07)' } as const;
+  const btnInactive = { background: 'transparent', color: 'var(--text3)', fontWeight: 500, boxShadow: 'none' } as const;
 
   return (
     <>
@@ -119,12 +131,12 @@ export default function SignInPage() {
 
         <div style={{ width: '100%', maxWidth: 400 }}>
 
-          {/* Tab switcher */}
+          {/* Tab switcher — Sign in / Join free */}
           <div style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 12, padding: 4, gap: 4, marginBottom: 18 }}>
-            <button style={{ flex: 1, textAlign: 'center', padding: '9px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, background: 'var(--card-bg)', color: 'var(--text)', fontWeight: 700, boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}>
+            <button style={{ flex: 1, textAlign: 'center', padding: '9px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, ...btnActive }}>
               Sign in
             </button>
-            <button onClick={() => router.push('/signup')} style={{ flex: 1, textAlign: 'center', padding: '9px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, background: 'transparent', color: 'var(--text3)', fontWeight: 500 }}>
+            <button onClick={() => router.push('/signup')} style={{ flex: 1, textAlign: 'center', padding: '9px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, ...btnInactive }}>
               Join free
             </button>
           </div>
@@ -136,13 +148,13 @@ export default function SignInPage() {
             </div>
           )}
 
-          {/* Google — primary */}
+          {/* Google */}
           <button
             onClick={() => triggerConnect('google')}
             disabled={isPending}
             style={{ width: '100%', padding: '13px 16px', borderRadius: 13, border: '1.5px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,.06)', transition: 'all .15s' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg3)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border2)'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--card-bg)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; }}>
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg3)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--card-bg)'; }}>
             <GoogleIcon />
             Continue with Google
           </button>
@@ -150,35 +162,48 @@ export default function SignInPage() {
           {/* Divider */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
             <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-            <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 500 }}>or use email</span>
+            <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 500 }}>or continue with</span>
             <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
           </div>
 
-          {/* Email fallback */}
-          {!emailSent ? (
+          {/* Email / SMS toggle */}
+          <div style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 10, padding: 3, gap: 3, marginBottom: 10 }}>
+            {(['email', 'sms'] as AltMethod[]).map(m => (
+              <button key={m} onClick={() => switchMethod(m)} style={{ flex: 1, padding: '7px 0', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, transition: 'all .15s', ...(altMethod === m ? btnActive : btnInactive) }}>
+                {m === 'email' ? '✉️ Email' : '📱 SMS'}
+              </button>
+            ))}
+          </div>
+
+          {/* Input + send */}
+          {!sent ? (
             <>
               <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleEmailSend()}
-                placeholder="your@email.com"
+                type={altMethod === 'email' ? 'email' : 'tel'}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAltSend()}
+                placeholder={altMethod === 'email' ? 'your@email.com' : '+1 (555) 000-0000'}
                 style={{ width: '100%', padding: '11px 14px', borderRadius: 12, border: '1.5px solid var(--border2)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 13, marginBottom: 8, boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }}
               />
               <button
-                onClick={handleEmailSend}
-                disabled={!email.trim() || isPending}
-                style={{ width: '100%', padding: 12, borderRadius: 12, border: 'none', background: email.trim() ? 'var(--btn-primary-bg)' : 'var(--bg3)', color: email.trim() ? 'var(--btn-primary-text)' : 'var(--text3)', fontSize: 14, fontWeight: 600, cursor: email.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit', marginBottom: 16 }}>
-                Send magic link
+                onClick={handleAltSend}
+                disabled={!input.trim() || isPending}
+                style={{ width: '100%', padding: 12, borderRadius: 12, border: 'none', background: input.trim() ? 'var(--btn-primary-bg)' : 'var(--bg3)', color: input.trim() ? 'var(--btn-primary-text)' : 'var(--text3)', fontSize: 14, fontWeight: 600, cursor: input.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit', marginBottom: 16 }}>
+                {altMethod === 'email' ? 'Send magic link' : 'Send code'}
               </button>
             </>
           ) : (
             <div style={{ textAlign: 'center', padding: '8px 0 20px' }}>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>📬</div>
-              <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>Check your inbox</p>
-              <p style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 10 }}>We sent a link to {email}</p>
-              <button onClick={() => setEmailSent(false)} style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--accent-text)', cursor: 'pointer', fontFamily: 'inherit' }}>
-                Try a different email
+              <div style={{ fontSize: 32, marginBottom: 8 }}>{altMethod === 'email' ? '📬' : '💬'}</div>
+              <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>
+                {altMethod === 'email' ? 'Check your inbox' : 'Check your messages'}
+              </p>
+              <p style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 10 }}>
+                {altMethod === 'email' ? `We sent a link to ${input}` : `We sent a code to ${input}`}
+              </p>
+              <button onClick={() => setSent(false)} style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--accent-text)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                Try again
               </button>
             </div>
           )}
