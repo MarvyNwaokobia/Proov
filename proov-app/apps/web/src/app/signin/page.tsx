@@ -29,6 +29,10 @@ export default function SignInPage() {
   const [altMethod, setAltMethod] = useState<AltMethod>('magic');
   const [input, setInput] = useState('');
   const [sent, setSent] = useState(false);
+  const [usernameInput, setUsernameInput] = useState('');
+  const [usernameSearching, setUsernameSearching] = useState(false);
+  const [usernameError, setUsernameError] = useState('');
+  const [showUsername, setShowUsername] = useState(false);
 
   useEffect(() => { if (!isPending) setConnecting(false); }, [isPending]);
 
@@ -74,14 +78,44 @@ export default function SignInPage() {
     const { getWeb3Auth } = await import('@/lib/wagmi-config');
     const web3auth = getWeb3Auth();
     try { await web3auth.logout({ cleanup: true }); } catch {}
-    try {
-      if ((web3auth as any).status === 'not_ready') await (web3auth as any).initModal();
-      const { WALLET_ADAPTERS } = await import('@web3auth/base');
-      await (web3auth as any).connectTo(WALLET_ADAPTERS.AUTH, { loginProvider });
-    } catch {}
+    if (loginProvider !== 'google') {
+      // email/SMS: connectTo is fine — these don't open a popup
+      try {
+        if ((web3auth as any).status === 'not_ready') await (web3auth as any).initModal();
+        const { WALLET_ADAPTERS } = await import('@web3auth/base');
+        await (web3auth as any).connectTo(WALLET_ADAPTERS.AUTH, { loginProvider });
+      } catch {}
+    }
+    // Google uses connect() so the Web3Auth modal opens in-page — no popup to block
     const c = connectors[0];
     if (c) connect({ connector: c });
     else setConnecting(false);
+  };
+
+  const handleUsernameLookup = async () => {
+    const clean = usernameInput.replace(/^@/, '').toLowerCase().trim();
+    if (!clean) return;
+    setUsernameSearching(true);
+    setUsernameError('');
+    try {
+      const { getAddressForUsername } = await import('@/lib/supabase');
+      let address = await getAddressForUsername(clean);
+      if (!address) {
+        const { findAddressByUsername } = await import('@/lib/username');
+        address = findAddressByUsername(clean) || null;
+      }
+      if (!address) { setUsernameError(`@${clean} not found`); return; }
+      localStorage.setItem('proov_authenticated', 'true');
+      localStorage.setItem('proov_address', address);
+      localStorage.setItem('proov_username', clean);
+      localStorage.setItem('proov_onboarding_done', '1');
+      localStorage.setItem('proov_tutorial_done', '1');
+      router.push('/dashboard');
+    } catch {
+      setUsernameError('Could not sign in. Try Google instead.');
+    } finally {
+      setUsernameSearching(false);
+    }
   };
 
   const handleSend = () => {
@@ -221,6 +255,39 @@ export default function SignInPage() {
               </button>
             </div>
           )}
+
+          {/* Username login */}
+          <div style={{ marginBottom: 16 }}>
+            <button
+              onClick={() => { setShowUsername(v => !v); setUsernameError(''); setUsernameInput(''); }}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: 11, border: `1px solid ${showUsername ? 'var(--accent-border)' : 'var(--border)'}`, background: showUsername ? 'var(--accent-bg)' : 'var(--bg2)', color: showUsername ? 'var(--accent-text)' : 'var(--text2)', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'space-between', transition: 'all .15s' }}>
+              <span>Sign in with @username</span>
+              <span style={{ fontSize: 10, opacity: 0.6, display: 'inline-block', transform: showUsername ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>▾</span>
+            </button>
+            <div style={{ overflow: 'hidden', maxHeight: showUsername ? 120 : 0, transition: 'max-height .25s ease', marginTop: showUsername ? 8 : 0 }}>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', background: 'var(--card-bg)', border: '1px solid var(--border2)', borderRadius: 11, padding: '0 12px' }}>
+                  <span style={{ color: 'var(--accent-text)', fontWeight: 800, fontSize: 15, marginRight: 4 }}>@</span>
+                  <input
+                    type="text"
+                    placeholder="yourname"
+                    value={usernameInput}
+                    onChange={e => { setUsernameInput(e.target.value); setUsernameError(''); }}
+                    onKeyDown={e => e.key === 'Enter' && handleUsernameLookup()}
+                    style={{ flex: 1, border: 'none', background: 'transparent', color: 'var(--text)', fontSize: 13, fontWeight: 600, padding: '10px 0', outline: 'none', fontFamily: 'inherit' }}
+                    autoComplete="off"
+                  />
+                </div>
+                <button
+                  onClick={handleUsernameLookup}
+                  disabled={usernameSearching || !usernameInput.trim()}
+                  style={{ padding: '10px 16px', borderRadius: 11, border: 'none', background: usernameInput.trim() ? 'var(--btn-primary-bg)' : 'var(--bg3)', color: usernameInput.trim() ? 'var(--btn-primary-text)' : 'var(--text3)', fontSize: 13, fontWeight: 700, cursor: usernameInput.trim() ? 'pointer' : 'default', fontFamily: 'inherit' }}>
+                  {usernameSearching ? '…' : 'Go'}
+                </button>
+              </div>
+              {usernameError && <p style={{ fontSize: 12, color: '#f43f5e', marginTop: 6, padding: '0 4px' }}>{usernameError}</p>}
+            </div>
+          </div>
 
           <div style={{ textAlign: 'center' }}>
             <span style={{ fontSize: 13, color: 'var(--text3)' }}>No account? </span>

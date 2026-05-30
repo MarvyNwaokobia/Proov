@@ -417,7 +417,8 @@ export default function HabitsPage() {
   const [toast, setToast] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<"my" | "all" | "templates">("my");
+  const [activeTab, setActiveTab] = useState<"my" | "all" | "templates" | "archived">("my");
+  const [archivedHabits, setArchivedHabits] = useState<Habit[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [prefill, setPrefill] = useState<{ name: string; categoryId: string; duration: number } | undefined>();
   const [catFilter, setCatFilter] = useState("All");
@@ -439,6 +440,12 @@ export default function HabitsPage() {
         setCompletedToday(todayDone);
         localStorage.setItem('proov_habits_cache', JSON.stringify(userHabits));
         setLoading(false);
+        // Also load archived habits
+        import('@/lib/supabase').then(({ supabase }) => {
+          if (!supabase) return;
+          supabase.from('habits').select('*').eq('user_address', address.toLowerCase()).eq('active', false).order('created_at', { ascending: false })
+            .then(({ data }) => { if (data) setArchivedHabits(data as Habit[]); });
+        });
       })
       .catch(() => {
         const cached = JSON.parse(localStorage.getItem('proov_habits_cache') || '[]');
@@ -512,6 +519,8 @@ export default function HabitsPage() {
     setHabits(prev => prev.filter(h => h.id !== habitId));
     const cached = JSON.parse(localStorage.getItem('proov_habits_cache') || '[]');
     localStorage.setItem('proov_habits_cache', JSON.stringify(cached.filter((h: any) => h.id !== habitId)));
+    showToast('Habit archived');
+    setArchivedHabits(prev => [...prev, habits.find(h => h.id === habitId)!].filter(Boolean));
   };
 
   // ── Use template ────────────────────────────────────────────────────────────
@@ -794,7 +803,7 @@ export default function HabitsPage() {
         {/* Tab switcher */}
         {!showForm && (
           <div style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 12, padding: 4, gap: 3, marginBottom: 14 }}>
-            {([['my', 'My habits'], ['all', 'Discover'], ['templates', 'Templates']] as const).map(([tab, label]) => (
+            {([['my', 'My habits'], ['all', 'Discover'], ['templates', 'Templates'], ['archived', `🗑 ${archivedHabits.length > 0 ? archivedHabits.length : ''}`]] as const).map(([tab, label]) => (
               <button key={tab} onClick={() => setActiveTab(tab)} style={{
                 flex: 1, textAlign: 'center', padding: '7px 0',
                 borderRadius: 9, border: 'none', cursor: 'pointer',
@@ -1006,6 +1015,42 @@ export default function HabitsPage() {
         {/* Templates tab */}
         {activeTab === 'templates' && !showForm && (
           <TemplatesTab onUseTemplate={handleUseTemplate} />
+        )}
+
+        {/* ── Archived / Bin ─────────────────────────────────────────────── */}
+        {activeTab === 'archived' && !showForm && (
+          <div style={{ padding: '0 4px' }}>
+            {archivedHabits.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text3)' }}>
+                <div style={{ fontSize: 36, marginBottom: 10 }}>🗑</div>
+                <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text2)', marginBottom: 4 }}>No archived habits</p>
+                <p style={{ fontSize: 12, color: 'var(--text3)' }}>Archived habits will appear here.</p>
+              </div>
+            ) : archivedHabits.map(h => (
+              <div key={h.id} style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14, padding: '12px 14px', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: 0.75 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 22 }}>{h.emoji}</span>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>{h.name}</p>
+                    <p style={{ fontSize: 11, color: 'var(--text3)' }}>Archived</p>
+                  </div>
+                </div>
+                <button
+                  onClick={async () => {
+                    const addr = localStorage.getItem('proov_address') || '';
+                    const { supabase } = await import('@/lib/supabase');
+                    if (!supabase) return;
+                    await supabase.from('habits').update({ active: true }).eq('id', h.id);
+                    setArchivedHabits(prev => prev.filter(a => a.id !== h.id));
+                    setHabits(prev => [...prev, { ...h, active: true }]);
+                    showToast('Habit restored ✓');
+                  }}
+                  style={{ padding: '6px 12px', borderRadius: 9, border: '1px solid var(--accent-border)', background: 'var(--accent-bg)', color: 'var(--accent-text)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Restore
+                </button>
+              </div>
+            ))}
+          </div>
         )}
 
       </div>

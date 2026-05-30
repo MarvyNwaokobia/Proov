@@ -88,7 +88,7 @@ export default function HabitDetailPage() {
     const streak = parseInt(localStorage.getItem('proov_streak_count') || '0');
     proovTx.completeHabit((habit as any)?.on_chain_id ?? undefined);
     await saveHabitCompletion(habit.id, address, streak).catch(() => {});
-    showToast('Marked done');
+    showToast('Habit done ✓');
   };
 
   const handleSaveEdit = async () => {
@@ -109,7 +109,7 @@ export default function HabitDetailPage() {
     } : null);
     setEditing(false);
     setSaving(false);
-    showToast('Habit updated');
+    showToast('Changes saved ✓');
   };
 
   const handleArchive = async () => {
@@ -117,7 +117,8 @@ export default function HabitDetailPage() {
     if (!confirm(`Archive "${habit.name}"?`)) return;
     proovTx.removeHabit((habit as any)?.on_chain_id ?? undefined);
     await deactivateHabit(habit.id);
-    router.back();
+    showToast('Habit archived');
+    setTimeout(() => router.back(), 800);
   };
 
   const showToast = (msg: string) => {
