@@ -122,6 +122,16 @@ export async function runMigrations(): Promise<boolean> {
   if (typeof window === 'undefined') return false;
   if (localStorage.getItem(SCHEMA_KEY) === SCHEMA_VERSION) return false;
 
+  // Fresh install — no prior proov_ data exists, just stamp the version and skip.
+  // Without this check every brand-new visitor gets redirected to /signin before
+  // seeing the landing page, because the schema key is absent for them too.
+  const hasPriorData = Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i))
+    .some(k => k && k.startsWith('proov_') && k !== SCHEMA_KEY);
+  if (!hasPriorData) {
+    localStorage.setItem(SCHEMA_KEY, SCHEMA_VERSION);
+    return false;
+  }
+
   // Preserve theme preferences across the wipe
   const theme = localStorage.getItem('proov_theme');
   const mode = localStorage.getItem('proov_mode');
