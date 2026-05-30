@@ -24,3 +24,25 @@
 | Live URL | https://proov-one.vercel.app |
 | Deployed | 2026-05-16 |
 | Chain | Celo Mainnet (42220) |
+
+## Analytics
+
+| Source | Link |
+|--------|------|
+| Dune dashboard (onchain) | https://dune.com/marvyy/proov |
+| Admin panel | https://proov-one.vercel.app/admin |
+
+## Admin Panel Env Vars (Vercel)
+
+```
+NEXT_PUBLIC_ADMIN_ADDRESS=0xYourWalletAddress
+CELOSCAN_API_KEY=from_celoscan.io/myapikey          # optional but prevents rate-limiting
+DUNE_API_KEY=from_dune.com/settings/api             # optional — only needed for Dune sections
+DUNE_QUERY_TOTAL_TXS=query_id
+DUNE_QUERY_UNIQUE_USERS=query_id
+DUNE_QUERY_DAILY_TXS=query_id
+DUNE_QUERY_CONTRACT_ACTIVITY=query_id
+DUNE_QUERY_RECENT_TXS=query_id
+```
+
+The Supabase and Celoscan sections work without Dune keys. Only add Dune vars if you want the Dune chart sections to appear.

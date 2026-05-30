@@ -4,251 +4,246 @@ import { useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
 
 const ADMIN_ADDRESS = (process.env.NEXT_PUBLIC_ADMIN_ADDRESS || '').toLowerCase();
-const REFRESH_MS = 5 * 60 * 1000;
+const REFRESH_MS    = 5 * 60 * 1000;
+const CELOSCAN_BASE = 'https://celoscan.io/tx/';
 
-interface QueryResult {
-  rows: Record<string, unknown>[];
-  columns: string[];
-  missing?: boolean;
-  error?: string;
+interface DAU        { date: string; users: number }
+interface RecentTx   { hash: string; from: string; contract: string; functionName: string; timestamp: number; isError: boolean }
+interface SupaStats  { totalUsers: number; totalHabits: number; completionsAllTime: number; completionsToday: number; totalSessions: number; dau: DAU[] }
+interface DuneResult { rows: Record<string, unknown>[]; columns: string[] }
+interface Analytics  { supabaseStats: SupaStats; recentTxs: RecentTx[]; dune: { totalTxs: DuneResult | null; uniqueUsers: DuneResult | null; dailyTxs: DuneResult | null; contractActivity: DuneResult | null } | null }
+
+// ── tiny helpers ──────────────────────────────────────────────────────────
+function fmt(n: number) { return n.toLocaleString(); }
+function shortAddr(a: string) { return a.slice(0, 6) + '…' + a.slice(-4); }
+function fmtTime(ts: number) {
+  return new Date(ts * 1000).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+function firstNum(row: Record<string, unknown>): string {
+  const v = Object.values(row).find(x => typeof x === 'number');
+  return v !== undefined ? fmt(Number(v)) : String(Object.values(row)[0] ?? '—');
 }
 
-interface Analytics {
-  totalTxs: QueryResult;
-  uniqueUsers: QueryResult;
-  dailyTxs: QueryResult;
-  contractActivity: QueryResult;
-  recentTxs: QueryResult;
-}
-
-function firstNumeric(row: Record<string, unknown>): string {
-  if (!row) return '—';
-  const val = Object.values(row).find(v => typeof v === 'number');
-  return val !== undefined ? Number(val).toLocaleString() : String(Object.values(row)[0] ?? '—');
-}
-
-function BarChart({ rows, columns }: { rows: Record<string, unknown>[]; columns: string[] }) {
-  if (!rows.length) return <Empty />;
-
-  // Heuristic: first col = label (date/name), second col = numeric value
-  const labelCol = columns[0] ?? Object.keys(rows[0])[0];
-  const valueCol = columns.find((c, i) => i > 0 && typeof rows[0][c] === 'number') ??
-    columns[1] ?? Object.keys(rows[0])[1];
-
-  const values = rows.map(r => Number(r[valueCol] ?? 0));
-  const max = Math.max(...values, 1);
-  const slice = rows.slice(-30); // last 30 entries
-  const sliceVals = slice.map(r => Number(r[valueCol] ?? 0));
-
+// ── sub-components ─────────────────────────────────────────────────────────
+function Stat({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 120, minWidth: slice.length * 18, paddingBottom: 24, position: 'relative' }}>
-        {slice.map((row, i) => {
-          const pct = (sliceVals[i] / max) * 100;
-          const label = String(row[labelCol] ?? '').slice(0, 10);
-          return (
-            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, height: '100%', justifyContent: 'flex-end', position: 'relative' }} title={`${label}: ${sliceVals[i].toLocaleString()}`}>
-              <div style={{ width: '100%', height: `${pct}%`, background: 'var(--accent)', borderRadius: '3px 3px 0 0', opacity: 0.85, minHeight: 2, transition: 'height .3s ease' }} />
-              {i % Math.ceil(slice.length / 6) === 0 && (
-                <div style={{ position: 'absolute', bottom: -20, fontSize: 8, color: 'var(--text3)', whiteSpace: 'nowrap', transform: 'rotate(-30deg)', transformOrigin: 'top left' }}>{label}</div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-      <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 28 }}>
-        {valueCol} — last {slice.length} entries · max {max.toLocaleString()}
+    <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '14px 18px', background: '#fff' }}>
+      <div style={{ fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 32, fontWeight: 800, color: '#111', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>{typeof value === 'number' ? fmt(value) : value}</div>
+      {sub && <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 3 }}>{sub}</div>}
+    </div>
+  );
+}
+
+function DAUChart({ data }: { data: DAU[] }) {
+  if (!data.length) return <Empty msg="No completions in the last 7 days" />;
+  const max = Math.max(...data.map(d => d.users), 1);
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 100 }}>
+        {data.map(({ date, users }) => (
+          <div key={date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }}>
+            <div style={{ fontSize: 10, color: '#374151', fontWeight: 600 }}>{users}</div>
+            <div title={`${date}: ${users} users`} style={{ width: '100%', height: `${Math.max((users / max) * 80, 4)}px`, background: '#2563eb', borderRadius: '3px 3px 0 0' }} />
+            <div style={{ fontSize: 9, color: '#9ca3af', whiteSpace: 'nowrap' }}>{date.slice(5)}</div>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-function GenericTable({ rows, columns }: { rows: Record<string, unknown>[]; columns: string[] }) {
-  if (!rows.length) return <Empty />;
-  const cols = columns.length ? columns : Object.keys(rows[0]);
+function DuneTable({ result, label }: { result: DuneResult | null; label: string }) {
+  if (!result) return <Empty msg={`Set ${label} in env vars`} />;
+  if (!result.rows.length) return <Empty msg="No data" />;
+  const cols = result.columns.length ? result.columns : Object.keys(result.rows[0]);
   return (
     <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
         <thead>
-          <tr>
-            {cols.map(c => (
-              <th key={c} style={{ padding: '6px 10px', textAlign: 'left', fontWeight: 700, fontSize: 10, textTransform: 'uppercase', letterSpacing: '.6px', color: 'var(--text3)', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{c}</th>
-            ))}
+          <tr style={{ background: '#f9fafb' }}>
+            {cols.map(c => <th key={c} style={{ padding: '6px 10px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.6px', color: '#6b7280', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>{c}</th>)}
           </tr>
         </thead>
         <tbody>
-          {rows.slice(0, 20).map((row, i) => (
-            <tr key={i} style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? 'transparent' : 'var(--bg2)' }}>
+          {result.rows.slice(0, 15).map((row, i) => (
+            <tr key={i} style={{ borderBottom: '1px solid #f3f4f6' }}>
               {cols.map(c => {
                 const v = row[c];
-                const str = typeof v === 'string' && v.startsWith('0x')
-                  ? v.slice(0, 10) + '…'
-                  : typeof v === 'number'
-                  ? v.toLocaleString()
-                  : String(v ?? '—');
-                return (
-                  <td key={c} style={{ padding: '6px 10px', color: 'var(--text2)', fontFamily: typeof v === 'string' && v.startsWith('0x') ? 'monospace' : 'inherit', whiteSpace: 'nowrap' }}>{str}</td>
-                );
+                const s = typeof v === 'string' && v.startsWith('0x') ? shortAddr(v) : typeof v === 'number' ? fmt(v) : String(v ?? '—');
+                return <td key={c} style={{ padding: '6px 10px', color: '#374151', fontFamily: typeof v === 'string' && v.startsWith('0x') ? 'monospace' : 'inherit', whiteSpace: 'nowrap' }}>{s}</td>;
               })}
             </tr>
           ))}
         </tbody>
       </table>
-      {rows.length > 20 && <div style={{ fontSize: 10, color: 'var(--text3)', padding: '6px 10px' }}>Showing 20 of {rows.length} rows</div>}
     </div>
   );
 }
 
-function Empty() {
-  return <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text3)', fontSize: 12 }}>No data — set the Dune query ID in env vars</div>;
+function Empty({ msg }: { msg: string }) {
+  return <div style={{ padding: '1rem', color: '#9ca3af', fontSize: 12, textAlign: 'center' }}>{msg}</div>;
 }
 
-function Card({ title, children, span }: { title: string; children: React.ReactNode; span?: boolean }) {
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{
-      background: 'var(--card-bg)', border: '1px solid var(--card-border)',
-      borderRadius: 16, padding: '1.25rem',
-      gridColumn: span ? '1 / -1' : undefined,
-    }}>
-      <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text3)', marginBottom: 12 }}>{title}</div>
-      {children}
+    <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, background: '#fff', overflow: 'hidden' }}>
+      <div style={{ padding: '10px 16px', borderBottom: '1px solid #e5e7eb', background: '#f9fafb', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.8px', color: '#374151' }}>{title}</div>
+      <div style={{ padding: '14px 16px' }}>{children}</div>
     </div>
   );
 }
 
-function StatCard({ title, value, sub }: { title: string; value: string; sub?: string }) {
-  return (
-    <Card title={title}>
-      <div style={{ fontSize: 36, fontWeight: 900, color: 'var(--text)', letterSpacing: -1, lineHeight: 1 }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>{sub}</div>}
-    </Card>
-  );
-}
-
+// ── main page ──────────────────────────────────────────────────────────────
 export default function AdminPage() {
   const router = useRouter();
   const { address, isConnected } = useAccount();
-  const [data, setData] = useState<Analytics | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [lastFetched, setLastFetched] = useState<Date | null>(null);
+  const [data, setData]         = useState<Analytics | null>(null);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState('');
+  const [lastFetched, setLast]  = useState<Date | null>(null);
 
-  // Guard — redirect if not admin wallet
+  // Wallet guard
   useEffect(() => {
     if (!isConnected) return;
-    if (!ADMIN_ADDRESS) { setError('NEXT_PUBLIC_ADMIN_ADDRESS not set'); return; }
+    if (!ADMIN_ADDRESS) { setError('NEXT_PUBLIC_ADMIN_ADDRESS not configured'); return; }
     if (address?.toLowerCase() !== ADMIN_ADDRESS) router.replace('/dashboard');
   }, [address, isConnected, router]);
 
+  // Fast redirect from localStorage before wagmi resolves
+  useEffect(() => {
+    if (!ADMIN_ADDRESS) return;
+    const local = typeof window !== 'undefined' ? (localStorage.getItem('proov_address') || '') : '';
+    if (local && local.toLowerCase() !== ADMIN_ADDRESS) router.replace('/dashboard');
+  }, [router]);
+
   const fetchData = useCallback(async () => {
-    setLoading(true);
-    setError('');
+    setLoading(true); setError('');
     try {
       const res = await fetch('/api/admin/analytics');
-      if (!res.ok) throw new Error(`${res.status}`);
+      if (!res.ok) throw new Error(`API ${res.status}`);
       setData(await res.json());
-      setLastFetched(new Date());
-    } catch (e: any) {
-      setError(e.message || 'Failed to load analytics');
-    } finally {
-      setLoading(false);
-    }
+      setLast(new Date());
+    } catch (e: any) { setError(e.message); }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { const id = setInterval(fetchData, REFRESH_MS); return () => clearInterval(id); }, [fetchData]);
 
-  // Auto-refresh every 5 minutes
-  useEffect(() => {
-    const id = setInterval(fetchData, REFRESH_MS);
-    return () => clearInterval(id);
-  }, [fetchData]);
-
-  // Redirect non-admin before address resolves
-  const localAddr = typeof window !== 'undefined' ? localStorage.getItem('proov_address') || '' : '';
-  if (ADMIN_ADDRESS && localAddr && localAddr.toLowerCase() !== ADMIN_ADDRESS) {
-    router.replace('/dashboard');
-    return null;
-  }
+  const s = data?.supabaseStats;
+  const txs = data?.recentTxs ?? [];
+  const dune = data?.dune;
 
   return (
-    <>
-      <div className="blobs"><div className="blob b1"/><div className="blob b2"/></div>
-      <div className="top-bar"/>
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: '1.25rem 1.25rem 6rem', position: 'relative', zIndex: 1 }}>
+    <div style={{ fontFamily: 'ui-monospace, monospace', background: '#f3f4f6', minHeight: '100vh', padding: '24px 16px 80px' }}>
+      <div style={{ maxWidth: 960, margin: '0 auto' }}>
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-.3px' }}>Analytics</div>
-            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>
-              {lastFetched ? `Updated ${lastFetched.toLocaleTimeString()}` : 'Loading…'} · refreshes every 5 min
+            <div style={{ fontSize: 18, fontWeight: 800, color: '#111' }}>Proov Admin</div>
+            <div style={{ fontSize: 11, color: '#6b7280' }}>
+              {loading ? 'Loading…' : lastFetched ? `Updated ${lastFetched.toLocaleTimeString()} · auto-refreshes every 5 min` : ''}
             </div>
           </div>
-          <button
-            onClick={fetchData}
-            disabled={loading}
-            style={{ padding: '7px 14px', borderRadius: 10, border: '1px solid var(--border2)', background: 'transparent', color: 'var(--text2)', fontSize: 12, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: loading ? 0.5 : 1 }}>
-            {loading ? 'Refreshing…' : 'Refresh'}
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <a href="https://dune.com/marvyy/proov" target="_blank" rel="noreferrer"
+              style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #d1d5db', background: '#fff', color: '#374151', fontSize: 11, fontWeight: 600, textDecoration: 'none' }}>
+              Dune Dashboard ↗
+            </a>
+            <button onClick={fetchData} disabled={loading}
+              style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #d1d5db', background: '#fff', color: '#374151', fontSize: 11, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? .5 : 1, fontFamily: 'inherit' }}>
+              {loading ? 'Refreshing…' : 'Refresh'}
+            </button>
+          </div>
         </div>
 
-        {error && (
-          <div style={{ background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.3)', borderRadius: 12, padding: '10px 14px', fontSize: 12, color: '#ef4444', marginBottom: 16 }}>
-            {error}
-          </div>
+        {error && <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 6, padding: '8px 12px', fontSize: 12, color: '#dc2626', marginBottom: 12 }}>{error}</div>}
+
+        {/* ── Supabase stats ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 16 }}>
+          <Stat label="Registered Users"     value={s?.totalUsers ?? '…'} />
+          <Stat label="Active Habits"        value={s?.totalHabits ?? '…'} />
+          <Stat label="Timer Sessions"       value={s?.totalSessions ?? '…'} />
+          <Stat label="Completions Today"    value={s?.completionsToday ?? '…'} />
+          <Stat label="Completions All-Time" value={s?.completionsAllTime ?? '…'} />
+          <Stat label="Dune Dashboard"       value="→" sub="dune.com/marvyy/proov" />
+        </div>
+
+        {/* ── DAU chart ── */}
+        <div style={{ marginBottom: 16 }}>
+          <Section title="Daily Active Users — last 7 days">
+            <DAUChart data={s?.dau ?? []} />
+          </Section>
+        </div>
+
+        {/* ── Recent Transactions (Celoscan) ── */}
+        <div style={{ marginBottom: 16 }}>
+          <Section title={`Recent Transactions (${txs.length})`}>
+            {txs.length === 0
+              ? <Empty msg="No transactions or CELOSCAN_API_KEY not set" />
+              : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                    <thead>
+                      <tr style={{ background: '#f9fafb' }}>
+                        {['Time', 'Contract', 'Action', 'Wallet', 'Tx Hash'].map(h => (
+                          <th key={h} style={{ padding: '6px 10px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.6px', color: '#6b7280', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {txs.map((tx, i) => (
+                        <tr key={tx.hash} style={{ borderBottom: '1px solid #f3f4f6', background: i % 2 === 0 ? '#fff' : '#f9fafb' }}>
+                          <td style={{ padding: '6px 10px', color: '#6b7280', whiteSpace: 'nowrap' }}>{fmtTime(tx.timestamp)}</td>
+                          <td style={{ padding: '6px 10px', color: '#374151', fontWeight: 600 }}>{tx.contract}</td>
+                          <td style={{ padding: '6px 10px', color: '#111', fontWeight: 500 }}>{tx.functionName || '—'}</td>
+                          <td style={{ padding: '6px 10px', color: '#374151', fontFamily: 'monospace', fontSize: 11 }}>{shortAddr(tx.from)}</td>
+                          <td style={{ padding: '6px 10px' }}>
+                            <a href={`${CELOSCAN_BASE}${tx.hash}`} target="_blank" rel="noreferrer"
+                              style={{ color: '#2563eb', fontFamily: 'monospace', fontSize: 11, textDecoration: 'none' }}>
+                              {tx.hash.slice(0, 10)}… ↗
+                            </a>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
+            }
+          </Section>
+        </div>
+
+        {/* ── Dune sections (if API key configured) ── */}
+        {dune && (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+              <Section title="Dune — Total Transactions">
+                <div style={{ fontSize: 36, fontWeight: 800, color: '#111' }}>
+                  {dune.totalTxs?.rows.length ? firstNum(dune.totalTxs.rows[0]) : '—'}
+                </div>
+              </Section>
+              <Section title="Dune — Unique Users">
+                <div style={{ fontSize: 36, fontWeight: 800, color: '#111' }}>
+                  {dune.uniqueUsers?.rows.length ? firstNum(dune.uniqueUsers.rows[0]) : '—'}
+                </div>
+              </Section>
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <Section title="Dune — Contract Activity">
+                <DuneTable result={dune.contractActivity} label="DUNE_QUERY_CONTRACT_ACTIVITY" />
+              </Section>
+            </div>
+          </>
         )}
 
-        {loading && !data ? (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            {[1,2,3,4].map(i => (
-              <div key={i} style={{ height: 100, borderRadius: 16, background: 'var(--bg2)', border: '1px solid var(--border)', animation: 'pulse 1.5s ease-in-out infinite' }} />
-            ))}
-          </div>
-        ) : data ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
-
-            {/* Stat: Total Transactions */}
-            <StatCard
-              title="Total Transactions"
-              value={data.totalTxs.rows.length ? firstNumeric(data.totalTxs.rows[0]) : '—'}
-              sub={data.totalTxs.missing ? 'Set DUNE_QUERY_TOTAL_TXS' : data.totalTxs.error}
-            />
-
-            {/* Stat: Unique Users */}
-            <StatCard
-              title="Unique Users"
-              value={data.uniqueUsers.rows.length ? firstNumeric(data.uniqueUsers.rows[0]) : '—'}
-              sub={data.uniqueUsers.missing ? 'Set DUNE_QUERY_UNIQUE_USERS' : data.uniqueUsers.error}
-            />
-
-            {/* Bar Chart: Daily Transactions */}
-            <Card title="Daily Transactions" span>
-              {data.dailyTxs.missing
-                ? <Empty />
-                : <BarChart rows={data.dailyTxs.rows} columns={data.dailyTxs.columns} />
-              }
-            </Card>
-
-            {/* Table: Contract Activity */}
-            <Card title="Contract Activity Breakdown" span>
-              {data.contractActivity.missing
-                ? <Empty />
-                : <GenericTable rows={data.contractActivity.rows} columns={data.contractActivity.columns} />
-              }
-            </Card>
-
-            {/* Table: Recent Transactions */}
-            <Card title="Recent Transactions" span>
-              {data.recentTxs.missing
-                ? <Empty />
-                : <GenericTable rows={data.recentTxs.rows} columns={data.recentTxs.columns} />
-              }
-            </Card>
-
-          </div>
-        ) : null}
-
+        <div style={{ fontSize: 10, color: '#9ca3af', textAlign: 'center' }}>
+          Proov Admin · sources: Supabase (live) + Celoscan + Dune ·{' '}
+          <a href="https://dune.com/marvyy/proov" target="_blank" rel="noreferrer" style={{ color: '#2563eb' }}>dune.com/marvyy/proov</a>
+        </div>
       </div>
-    </>
+    </div>
   );
 }
