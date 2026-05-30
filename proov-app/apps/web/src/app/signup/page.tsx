@@ -8,8 +8,6 @@ import { getPostLoginRoute, resolveIdentity } from '@/lib/auth';
 import { isMiniPay, connectMiniPay } from '@/lib/minipay';
 import { clearWeb3AuthSession } from '@/lib/clearSession';
 
-type AltMethod = 'email' | 'sms';
-
 const GoogleIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -19,19 +17,19 @@ const GoogleIcon = () => (
   </svg>
 );
 
+type AltMethod = 'magic' | 'code' | 'sms';
+
 export default function SignUpPage() {
   const router = useRouter();
   const { isConnected, address: connectedAddress } = useAccount();
   const { connect, connectors, isPending } = useConnect();
 
   const [connecting, setConnecting] = useState(false);
-  const [altMethod, setAltMethod] = useState<AltMethod>('email');
+  const [altMethod, setAltMethod] = useState<AltMethod>('magic');
   const [input, setInput] = useState('');
   const [sent, setSent] = useState(false);
 
-  useEffect(() => {
-    if (!isPending) setConnecting(false);
-  }, [isPending]);
+  useEffect(() => { if (!isPending) setConnecting(false); }, [isPending]);
 
   useEffect(() => {
     if (isMiniPay()) {
@@ -79,16 +77,40 @@ export default function SignUpPage() {
     else setConnecting(false);
   };
 
-  const handleAltSend = () => {
+  const handleSend = () => {
     if (!input.trim()) return;
-    triggerConnect(altMethod === 'email' ? 'email_passwordless' : 'sms_passwordless');
+    if (altMethod === 'sms') triggerConnect('sms_passwordless');
+    else triggerConnect('email_passwordless');
     setSent(true);
   };
 
   const switchMethod = (m: AltMethod) => { setAltMethod(m); setInput(''); setSent(false); };
 
-  const btnActive = { background: 'var(--card-bg)', color: 'var(--text)', fontWeight: 700, boxShadow: '0 1px 4px rgba(0,0,0,0.07)' } as const;
-  const btnInactive = { background: 'transparent', color: 'var(--text3)', fontWeight: 500, boxShadow: 'none' } as const;
+  const tabs: { id: AltMethod; label: string }[] = [
+    { id: 'magic', label: '✉️ Magic link' },
+    { id: 'code',  label: '🔢 Email code' },
+    { id: 'sms',   label: '📱 SMS' },
+  ];
+
+  const tabStyle = (active: boolean): React.CSSProperties => ({
+    flex: 1, padding: '7px 4px', borderRadius: 8, border: 'none',
+    cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, transition: 'all .15s',
+    background: active ? 'var(--card-bg)' : 'transparent',
+    color: active ? 'var(--text)' : 'var(--text3)',
+    fontWeight: active ? 700 : 500,
+    boxShadow: active ? '0 1px 4px rgba(0,0,0,0.07)' : 'none',
+  });
+
+  const placeholder = altMethod === 'sms' ? '+1 (555) 000-0000' : 'your@email.com';
+  const inputType  = altMethod === 'sms' ? 'tel' : 'email';
+  const sendLabel  = altMethod === 'magic' ? 'Send magic link' : altMethod === 'code' ? 'Send code' : 'Send SMS code';
+  const sentEmoji  = altMethod === 'sms' ? '💬' : '📬';
+  const sentTitle  = altMethod === 'sms' ? 'Check your messages' : altMethod === 'magic' ? 'Check your inbox' : 'Check your inbox';
+  const sentDesc   = altMethod === 'sms'
+    ? `We sent a code to ${input}`
+    : altMethod === 'magic'
+    ? `We sent a sign-in link to ${input} — click it to continue`
+    : `We sent a 6-digit code to ${input}`;
 
   return (
     <>
@@ -110,6 +132,7 @@ export default function SignUpPage() {
       <div className="top-bar" />
 
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 1.25rem 3rem', position: 'relative', zIndex: 1, background: 'var(--bg)' }}>
+
         <div style={{ marginTop: '1.5rem', marginBottom: '1.25rem', textAlign: 'center' }}>
           <div style={{ width: 48, height: 48, borderRadius: 14, background: 'var(--btn-primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', boxShadow: '0 4px 16px rgba(0,0,0,.12)' }}>
             <span style={{ fontSize: 24, fontWeight: 800, color: '#fff' }}>P</span>
@@ -120,23 +143,23 @@ export default function SignUpPage() {
 
         <div style={{ width: '100%', maxWidth: 400 }}>
 
-          {/* Tab switcher */}
+          {/* Sign in / Join free tabs */}
           <div style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 12, padding: 4, gap: 4, marginBottom: 18 }}>
             <button onClick={() => router.push('/signin')} style={{ flex: 1, textAlign: 'center', padding: '9px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, background: 'transparent', color: 'var(--text3)', fontWeight: 500 }}>
               Sign in
             </button>
-            <button style={{ flex: 1, textAlign: 'center', padding: '9px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, background: 'var(--card-bg)', color: 'var(--text)', fontWeight: 700, boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}>
+            <button style={{ flex: 1, textAlign: 'center', padding: '9px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, background: 'var(--card-bg)', color: 'var(--text)', fontWeight: 700, boxShadow: '0 1px 4px rgba(0,0,0,.07)' }}>
               Join free
             </button>
           </div>
 
-          {/* Google — primary */}
+          {/* Google */}
           <button
             onClick={() => triggerConnect('google')}
             disabled={isPending}
             style={{ width: '100%', padding: '13px 16px', borderRadius: 13, border: '1.5px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,.06)', transition: 'all .15s' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg3)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border2)'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--card-bg)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; }}>
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg3)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'var(--card-bg)')}>
             <GoogleIcon />
             Continue with Google
           </button>
@@ -148,49 +171,44 @@ export default function SignUpPage() {
             <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
           </div>
 
-          {/* Email / SMS toggle */}
-          <div style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 10, padding: 3, gap: 3, marginBottom: 10 }}>
-            {(['email', 'sms'] as AltMethod[]).map(m => (
-              <button key={m} onClick={() => switchMethod(m)} style={{ flex: 1, padding: '7px 0', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, transition: 'all .15s', ...(altMethod === m ? btnActive : btnInactive) }}>
-                {m === 'email' ? '✉️ Email' : '📱 SMS'}
+          {/* Magic link / Code / SMS tabs */}
+          <div style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 10, padding: 3, gap: 3, marginBottom: 12 }}>
+            {tabs.map(t => (
+              <button key={t.id} onClick={() => switchMethod(t.id)} style={tabStyle(altMethod === t.id)}>
+                {t.label}
               </button>
             ))}
           </div>
 
-          {/* Input + send */}
+          {/* Input + action */}
           {!sent ? (
             <>
               <input
-                type={altMethod === 'email' ? 'email' : 'tel'}
+                type={inputType}
                 value={input}
                 onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleAltSend()}
-                placeholder={altMethod === 'email' ? 'your@email.com' : '+1 (555) 000-0000'}
+                onKeyDown={e => e.key === 'Enter' && handleSend()}
+                placeholder={placeholder}
                 style={{ width: '100%', padding: '11px 14px', borderRadius: 12, border: '1.5px solid var(--border2)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 13, marginBottom: 8, boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }}
               />
               <button
-                onClick={handleAltSend}
+                onClick={handleSend}
                 disabled={!input.trim() || isPending}
                 style={{ width: '100%', padding: 12, borderRadius: 12, border: 'none', background: input.trim() ? 'var(--btn-primary-bg)' : 'var(--bg3)', color: input.trim() ? 'var(--btn-primary-text)' : 'var(--text3)', fontSize: 14, fontWeight: 600, cursor: input.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit', marginBottom: 16 }}>
-                {altMethod === 'email' ? 'Send magic link' : 'Send code'}
+                {sendLabel}
               </button>
             </>
           ) : (
             <div style={{ textAlign: 'center', padding: '8px 0 20px' }}>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>{altMethod === 'email' ? '📬' : '💬'}</div>
-              <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>
-                {altMethod === 'email' ? 'Check your inbox' : 'Check your messages'}
-              </p>
-              <p style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 10 }}>
-                {altMethod === 'email' ? `We sent a link to ${input}` : `We sent a code to ${input}`}
-              </p>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>{sentEmoji}</div>
+              <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>{sentTitle}</p>
+              <p style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 10 }}>{sentDesc}</p>
               <button onClick={() => setSent(false)} style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--accent-text)', cursor: 'pointer', fontFamily: 'inherit' }}>
                 Try again
               </button>
             </div>
           )}
 
-          {/* Footer */}
           <div style={{ textAlign: 'center', marginTop: '0.25rem' }}>
             <p style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 8 }}>
               By joining you agree to our{' '}
