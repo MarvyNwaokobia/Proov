@@ -117,9 +117,10 @@ export function signOut(): void {
 const SCHEMA_VERSION = '2';
 const SCHEMA_KEY = 'proov_schema_v';
 
-export function runMigrations(): void {
-  if (typeof window === 'undefined') return;
-  if (localStorage.getItem(SCHEMA_KEY) === SCHEMA_VERSION) return;
+// Returns true if a migration ran (i.e. the browser had stale user data that was wiped)
+export async function runMigrations(): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+  if (localStorage.getItem(SCHEMA_KEY) === SCHEMA_VERSION) return false;
 
   // Preserve theme preferences across the wipe
   const theme = localStorage.getItem('proov_theme');
@@ -134,5 +135,12 @@ export function runMigrations(): void {
 
   if (theme) localStorage.setItem('proov_theme', theme);
   if (mode) localStorage.setItem('proov_mode', mode);
+
+  // Also wipe the Web3Auth / wagmi session so the wallet cannot silently reconnect.
+  // Without this, wagmi auto-reconnects from IndexedDB and bypasses the sign-in page.
+  const { clearWeb3AuthSession } = await import('./clearSession');
+  await clearWeb3AuthSession().catch(() => {});
+
   localStorage.setItem(SCHEMA_KEY, SCHEMA_VERSION);
+  return true;
 }

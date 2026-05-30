@@ -44,7 +44,12 @@ export function AuthSessionGuard() {
   const reconnectAttemptedRef = useRef(false);
   const clearingRef = useRef(false);
 
-  useEffect(() => { runMigrations(); }, []);
+  useEffect(() => {
+    runMigrations().then(wiped => {
+      if (wiped) router.replace('/signin');
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const hasRealWalletConnection = Boolean(
     isConnected &&
