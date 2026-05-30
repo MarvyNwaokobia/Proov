@@ -36,24 +36,6 @@ export class CheerSent__Params {
   }
 }
 
-export class Initialized extends ethereum.Event {
-  get params(): Initialized__Params {
-    return new Initialized__Params(this);
-  }
-}
-
-export class Initialized__Params {
-  _event: Initialized;
-
-  constructor(event: Initialized) {
-    this._event = event;
-  }
-
-  get version(): BigInt {
-    return this._event.parameters[0].value.toBigInt();
-  }
-}
-
 export class MemberAdded extends ethereum.Event {
   get params(): MemberAdded__Params {
     return new MemberAdded__Params(this);
@@ -80,28 +62,6 @@ export class MemberAdded__Params {
   }
 }
 
-export class OwnershipTransferred extends ethereum.Event {
-  get params(): OwnershipTransferred__Params {
-    return new OwnershipTransferred__Params(this);
-  }
-}
-
-export class OwnershipTransferred__Params {
-  _event: OwnershipTransferred;
-
-  constructor(event: OwnershipTransferred) {
-    this._event = event;
-  }
-
-  get previousOwner(): Address {
-    return this._event.parameters[0].value.toAddress();
-  }
-
-  get newOwner(): Address {
-    return this._event.parameters[1].value.toAddress();
-  }
-}
-
 export class RemovedFromCircle extends ethereum.Event {
   get params(): RemovedFromCircle__Params {
     return new RemovedFromCircle__Params(this);
@@ -122,431 +82,15 @@ export class RemovedFromCircle__Params {
   get removed(): Address {
     return this._event.parameters[1].value.toAddress();
   }
-}
-
-export class RequestAccepted extends ethereum.Event {
-  get params(): RequestAccepted__Params {
-    return new RequestAccepted__Params(this);
-  }
-}
-
-export class RequestAccepted__Params {
-  _event: RequestAccepted;
-
-  constructor(event: RequestAccepted) {
-    this._event = event;
-  }
-
-  get from(): Address {
-    return this._event.parameters[0].value.toAddress();
-  }
-
-  get to(): Address {
-    return this._event.parameters[1].value.toAddress();
-  }
-}
-
-export class RequestRejected extends ethereum.Event {
-  get params(): RequestRejected__Params {
-    return new RequestRejected__Params(this);
-  }
-}
-
-export class RequestRejected__Params {
-  _event: RequestRejected;
-
-  constructor(event: RequestRejected) {
-    this._event = event;
-  }
-
-  get from(): Address {
-    return this._event.parameters[0].value.toAddress();
-  }
-
-  get to(): Address {
-    return this._event.parameters[1].value.toAddress();
-  }
-}
-
-export class RequestSent extends ethereum.Event {
-  get params(): RequestSent__Params {
-    return new RequestSent__Params(this);
-  }
-}
-
-export class RequestSent__Params {
-  _event: RequestSent;
-
-  constructor(event: RequestSent) {
-    this._event = event;
-  }
-
-  get from(): Address {
-    return this._event.parameters[0].value.toAddress();
-  }
-
-  get to(): Address {
-    return this._event.parameters[1].value.toAddress();
-  }
-}
-
-export class StreakBrokenNotified extends ethereum.Event {
-  get params(): StreakBrokenNotified__Params {
-    return new StreakBrokenNotified__Params(this);
-  }
-}
-
-export class StreakBrokenNotified__Params {
-  _event: StreakBrokenNotified;
-
-  constructor(event: StreakBrokenNotified) {
-    this._event = event;
-  }
-
-  get user(): Address {
-    return this._event.parameters[0].value.toAddress();
-  }
-
-  get circleMembers(): Array<Address> {
-    return this._event.parameters[1].value.toAddressArray();
-  }
-}
-
-export class Upgraded extends ethereum.Event {
-  get params(): Upgraded__Params {
-    return new Upgraded__Params(this);
-  }
-}
-
-export class Upgraded__Params {
-  _event: Upgraded;
-
-  constructor(event: Upgraded) {
-    this._event = event;
-  }
-
-  get implementation(): Address {
-    return this._event.parameters[0].value.toAddress();
-  }
-}
-
-export class WitnessAdded extends ethereum.Event {
-  get params(): WitnessAdded__Params {
-    return new WitnessAdded__Params(this);
-  }
-}
-
-export class WitnessAdded__Params {
-  _event: WitnessAdded;
-
-  constructor(event: WitnessAdded) {
-    this._event = event;
-  }
-
-  get user(): Address {
-    return this._event.parameters[0].value.toAddress();
-  }
-
-  get habitId(): BigInt {
-    return this._event.parameters[1].value.toBigInt();
-  }
-
-  get witness(): Address {
-    return this._event.parameters[2].value.toAddress();
-  }
-}
-
-export class CircleManager__getWitnessesResultValue0Struct extends ethereum.Tuple {
-  get witness(): Address {
-    return this[0].toAddress();
-  }
-
-  get habitId(): BigInt {
-    return this[1].toBigInt();
-  }
 
   get timestamp(): BigInt {
-    return this[2].toBigInt();
-  }
-}
-
-export class CircleManager__witnessesResult {
-  value0: Address;
-  value1: BigInt;
-  value2: BigInt;
-
-  constructor(value0: Address, value1: BigInt, value2: BigInt) {
-    this.value0 = value0;
-    this.value1 = value1;
-    this.value2 = value2;
-  }
-
-  toMap(): TypedMap<string, ethereum.Value> {
-    let map = new TypedMap<string, ethereum.Value>();
-    map.set("value0", ethereum.Value.fromAddress(this.value0));
-    map.set("value1", ethereum.Value.fromUnsignedBigInt(this.value1));
-    map.set("value2", ethereum.Value.fromUnsignedBigInt(this.value2));
-    return map;
-  }
-
-  getWitness(): Address {
-    return this.value0;
-  }
-
-  getHabitId(): BigInt {
-    return this.value1;
-  }
-
-  getTimestamp(): BigInt {
-    return this.value2;
+    return this._event.parameters[2].value.toBigInt();
   }
 }
 
 export class CircleManager extends ethereum.SmartContract {
   static bind(address: Address): CircleManager {
     return new CircleManager("CircleManager", address);
-  }
-
-  MAX_CIRCLE_SIZE(): BigInt {
-    let result = super.call(
-      "MAX_CIRCLE_SIZE",
-      "MAX_CIRCLE_SIZE():(uint256)",
-      [],
-    );
-
-    return result[0].toBigInt();
-  }
-
-  try_MAX_CIRCLE_SIZE(): ethereum.CallResult<BigInt> {
-    let result = super.tryCall(
-      "MAX_CIRCLE_SIZE",
-      "MAX_CIRCLE_SIZE():(uint256)",
-      [],
-    );
-    if (result.reverted) {
-      return new ethereum.CallResult();
-    }
-    let value = result.value;
-    return ethereum.CallResult.fromValue(value[0].toBigInt());
-  }
-
-  UPGRADE_INTERFACE_VERSION(): string {
-    let result = super.call(
-      "UPGRADE_INTERFACE_VERSION",
-      "UPGRADE_INTERFACE_VERSION():(string)",
-      [],
-    );
-
-    return result[0].toString();
-  }
-
-  try_UPGRADE_INTERFACE_VERSION(): ethereum.CallResult<string> {
-    let result = super.tryCall(
-      "UPGRADE_INTERFACE_VERSION",
-      "UPGRADE_INTERFACE_VERSION():(string)",
-      [],
-    );
-    if (result.reverted) {
-      return new ethereum.CallResult();
-    }
-    let value = result.value;
-    return ethereum.CallResult.fromValue(value[0].toString());
-  }
-
-  connected(param0: Address, param1: Address): boolean {
-    let result = super.call("connected", "connected(address,address):(bool)", [
-      ethereum.Value.fromAddress(param0),
-      ethereum.Value.fromAddress(param1),
-    ]);
-
-    return result[0].toBoolean();
-  }
-
-  try_connected(
-    param0: Address,
-    param1: Address,
-  ): ethereum.CallResult<boolean> {
-    let result = super.tryCall(
-      "connected",
-      "connected(address,address):(bool)",
-      [ethereum.Value.fromAddress(param0), ethereum.Value.fromAddress(param1)],
-    );
-    if (result.reverted) {
-      return new ethereum.CallResult();
-    }
-    let value = result.value;
-    return ethereum.CallResult.fromValue(value[0].toBoolean());
-  }
-
-  getCircle(user: Address): Array<Address> {
-    let result = super.call("getCircle", "getCircle(address):(address[])", [
-      ethereum.Value.fromAddress(user),
-    ]);
-
-    return result[0].toAddressArray();
-  }
-
-  try_getCircle(user: Address): ethereum.CallResult<Array<Address>> {
-    let result = super.tryCall("getCircle", "getCircle(address):(address[])", [
-      ethereum.Value.fromAddress(user),
-    ]);
-    if (result.reverted) {
-      return new ethereum.CallResult();
-    }
-    let value = result.value;
-    return ethereum.CallResult.fromValue(value[0].toAddressArray());
-  }
-
-  getPending(user: Address): Array<Address> {
-    let result = super.call("getPending", "getPending(address):(address[])", [
-      ethereum.Value.fromAddress(user),
-    ]);
-
-    return result[0].toAddressArray();
-  }
-
-  try_getPending(user: Address): ethereum.CallResult<Array<Address>> {
-    let result = super.tryCall(
-      "getPending",
-      "getPending(address):(address[])",
-      [ethereum.Value.fromAddress(user)],
-    );
-    if (result.reverted) {
-      return new ethereum.CallResult();
-    }
-    let value = result.value;
-    return ethereum.CallResult.fromValue(value[0].toAddressArray());
-  }
-
-  getWitnesses(
-    user: Address,
-  ): Array<CircleManager__getWitnessesResultValue0Struct> {
-    let result = super.call(
-      "getWitnesses",
-      "getWitnesses(address):((address,uint256,uint256)[])",
-      [ethereum.Value.fromAddress(user)],
-    );
-
-    return result[0].toTupleArray<CircleManager__getWitnessesResultValue0Struct>();
-  }
-
-  try_getWitnesses(
-    user: Address,
-  ): ethereum.CallResult<Array<CircleManager__getWitnessesResultValue0Struct>> {
-    let result = super.tryCall(
-      "getWitnesses",
-      "getWitnesses(address):((address,uint256,uint256)[])",
-      [ethereum.Value.fromAddress(user)],
-    );
-    if (result.reverted) {
-      return new ethereum.CallResult();
-    }
-    let value = result.value;
-    return ethereum.CallResult.fromValue(
-      value[0].toTupleArray<CircleManager__getWitnessesResultValue0Struct>(),
-    );
-  }
-
-  owner(): Address {
-    let result = super.call("owner", "owner():(address)", []);
-
-    return result[0].toAddress();
-  }
-
-  try_owner(): ethereum.CallResult<Address> {
-    let result = super.tryCall("owner", "owner():(address)", []);
-    if (result.reverted) {
-      return new ethereum.CallResult();
-    }
-    let value = result.value;
-    return ethereum.CallResult.fromValue(value[0].toAddress());
-  }
-
-  proxiableUUID(): Bytes {
-    let result = super.call("proxiableUUID", "proxiableUUID():(bytes32)", []);
-
-    return result[0].toBytes();
-  }
-
-  try_proxiableUUID(): ethereum.CallResult<Bytes> {
-    let result = super.tryCall(
-      "proxiableUUID",
-      "proxiableUUID():(bytes32)",
-      [],
-    );
-    if (result.reverted) {
-      return new ethereum.CallResult();
-    }
-    let value = result.value;
-    return ethereum.CallResult.fromValue(value[0].toBytes());
-  }
-
-  witnesses(param0: Address, param1: BigInt): CircleManager__witnessesResult {
-    let result = super.call(
-      "witnesses",
-      "witnesses(address,uint256):(address,uint256,uint256)",
-      [
-        ethereum.Value.fromAddress(param0),
-        ethereum.Value.fromUnsignedBigInt(param1),
-      ],
-    );
-
-    return new CircleManager__witnessesResult(
-      result[0].toAddress(),
-      result[1].toBigInt(),
-      result[2].toBigInt(),
-    );
-  }
-
-  try_witnesses(
-    param0: Address,
-    param1: BigInt,
-  ): ethereum.CallResult<CircleManager__witnessesResult> {
-    let result = super.tryCall(
-      "witnesses",
-      "witnesses(address,uint256):(address,uint256,uint256)",
-      [
-        ethereum.Value.fromAddress(param0),
-        ethereum.Value.fromUnsignedBigInt(param1),
-      ],
-    );
-    if (result.reverted) {
-      return new ethereum.CallResult();
-    }
-    let value = result.value;
-    return ethereum.CallResult.fromValue(
-      new CircleManager__witnessesResult(
-        value[0].toAddress(),
-        value[1].toBigInt(),
-        value[2].toBigInt(),
-      ),
-    );
-  }
-}
-
-export class ConstructorCall extends ethereum.Call {
-  get inputs(): ConstructorCall__Inputs {
-    return new ConstructorCall__Inputs(this);
-  }
-
-  get outputs(): ConstructorCall__Outputs {
-    return new ConstructorCall__Outputs(this);
-  }
-}
-
-export class ConstructorCall__Inputs {
-  _call: ConstructorCall;
-
-  constructor(call: ConstructorCall) {
-    this._call = call;
-  }
-}
-
-export class ConstructorCall__Outputs {
-  _call: ConstructorCall;
-
-  constructor(call: ConstructorCall) {
-    this._call = call;
   }
 }
 
@@ -610,96 +154,6 @@ export class CheerCall__Outputs {
   }
 }
 
-export class InitializeCall extends ethereum.Call {
-  get inputs(): InitializeCall__Inputs {
-    return new InitializeCall__Inputs(this);
-  }
-
-  get outputs(): InitializeCall__Outputs {
-    return new InitializeCall__Outputs(this);
-  }
-}
-
-export class InitializeCall__Inputs {
-  _call: InitializeCall;
-
-  constructor(call: InitializeCall) {
-    this._call = call;
-  }
-
-  get initialOwner(): Address {
-    return this._call.inputValues[0].value.toAddress();
-  }
-}
-
-export class InitializeCall__Outputs {
-  _call: InitializeCall;
-
-  constructor(call: InitializeCall) {
-    this._call = call;
-  }
-}
-
-export class NotifyStreakBrokenCall extends ethereum.Call {
-  get inputs(): NotifyStreakBrokenCall__Inputs {
-    return new NotifyStreakBrokenCall__Inputs(this);
-  }
-
-  get outputs(): NotifyStreakBrokenCall__Outputs {
-    return new NotifyStreakBrokenCall__Outputs(this);
-  }
-}
-
-export class NotifyStreakBrokenCall__Inputs {
-  _call: NotifyStreakBrokenCall;
-
-  constructor(call: NotifyStreakBrokenCall) {
-    this._call = call;
-  }
-
-  get user(): Address {
-    return this._call.inputValues[0].value.toAddress();
-  }
-}
-
-export class NotifyStreakBrokenCall__Outputs {
-  _call: NotifyStreakBrokenCall;
-
-  constructor(call: NotifyStreakBrokenCall) {
-    this._call = call;
-  }
-}
-
-export class RejectRequestCall extends ethereum.Call {
-  get inputs(): RejectRequestCall__Inputs {
-    return new RejectRequestCall__Inputs(this);
-  }
-
-  get outputs(): RejectRequestCall__Outputs {
-    return new RejectRequestCall__Outputs(this);
-  }
-}
-
-export class RejectRequestCall__Inputs {
-  _call: RejectRequestCall;
-
-  constructor(call: RejectRequestCall) {
-    this._call = call;
-  }
-
-  get from(): Address {
-    return this._call.inputValues[0].value.toAddress();
-  }
-}
-
-export class RejectRequestCall__Outputs {
-  _call: RejectRequestCall;
-
-  constructor(call: RejectRequestCall) {
-    this._call = call;
-  }
-}
-
 export class RemoveFromCircleCall extends ethereum.Call {
   get inputs(): RemoveFromCircleCall__Inputs {
     return new RemoveFromCircleCall__Inputs(this);
@@ -730,28 +184,32 @@ export class RemoveFromCircleCall__Outputs {
   }
 }
 
-export class RenounceOwnershipCall extends ethereum.Call {
-  get inputs(): RenounceOwnershipCall__Inputs {
-    return new RenounceOwnershipCall__Inputs(this);
+export class SendCheerCall extends ethereum.Call {
+  get inputs(): SendCheerCall__Inputs {
+    return new SendCheerCall__Inputs(this);
   }
 
-  get outputs(): RenounceOwnershipCall__Outputs {
-    return new RenounceOwnershipCall__Outputs(this);
+  get outputs(): SendCheerCall__Outputs {
+    return new SendCheerCall__Outputs(this);
   }
 }
 
-export class RenounceOwnershipCall__Inputs {
-  _call: RenounceOwnershipCall;
+export class SendCheerCall__Inputs {
+  _call: SendCheerCall;
 
-  constructor(call: RenounceOwnershipCall) {
+  constructor(call: SendCheerCall) {
     this._call = call;
   }
+
+  get to(): Address {
+    return this._call.inputValues[0].value.toAddress();
+  }
 }
 
-export class RenounceOwnershipCall__Outputs {
-  _call: RenounceOwnershipCall;
+export class SendCheerCall__Outputs {
+  _call: SendCheerCall;
 
-  constructor(call: RenounceOwnershipCall) {
+  constructor(call: SendCheerCall) {
     this._call = call;
   }
 }
@@ -773,7 +231,7 @@ export class SendRequestCall__Inputs {
     this._call = call;
   }
 
-  get to(): Address {
+  get value0(): Address {
     return this._call.inputValues[0].value.toAddress();
   }
 }
@@ -782,104 +240,6 @@ export class SendRequestCall__Outputs {
   _call: SendRequestCall;
 
   constructor(call: SendRequestCall) {
-    this._call = call;
-  }
-}
-
-export class TransferOwnershipCall extends ethereum.Call {
-  get inputs(): TransferOwnershipCall__Inputs {
-    return new TransferOwnershipCall__Inputs(this);
-  }
-
-  get outputs(): TransferOwnershipCall__Outputs {
-    return new TransferOwnershipCall__Outputs(this);
-  }
-}
-
-export class TransferOwnershipCall__Inputs {
-  _call: TransferOwnershipCall;
-
-  constructor(call: TransferOwnershipCall) {
-    this._call = call;
-  }
-
-  get newOwner(): Address {
-    return this._call.inputValues[0].value.toAddress();
-  }
-}
-
-export class TransferOwnershipCall__Outputs {
-  _call: TransferOwnershipCall;
-
-  constructor(call: TransferOwnershipCall) {
-    this._call = call;
-  }
-}
-
-export class UpgradeToAndCallCall extends ethereum.Call {
-  get inputs(): UpgradeToAndCallCall__Inputs {
-    return new UpgradeToAndCallCall__Inputs(this);
-  }
-
-  get outputs(): UpgradeToAndCallCall__Outputs {
-    return new UpgradeToAndCallCall__Outputs(this);
-  }
-}
-
-export class UpgradeToAndCallCall__Inputs {
-  _call: UpgradeToAndCallCall;
-
-  constructor(call: UpgradeToAndCallCall) {
-    this._call = call;
-  }
-
-  get newImplementation(): Address {
-    return this._call.inputValues[0].value.toAddress();
-  }
-
-  get data(): Bytes {
-    return this._call.inputValues[1].value.toBytes();
-  }
-}
-
-export class UpgradeToAndCallCall__Outputs {
-  _call: UpgradeToAndCallCall;
-
-  constructor(call: UpgradeToAndCallCall) {
-    this._call = call;
-  }
-}
-
-export class WitnessHabitCall extends ethereum.Call {
-  get inputs(): WitnessHabitCall__Inputs {
-    return new WitnessHabitCall__Inputs(this);
-  }
-
-  get outputs(): WitnessHabitCall__Outputs {
-    return new WitnessHabitCall__Outputs(this);
-  }
-}
-
-export class WitnessHabitCall__Inputs {
-  _call: WitnessHabitCall;
-
-  constructor(call: WitnessHabitCall) {
-    this._call = call;
-  }
-
-  get user(): Address {
-    return this._call.inputValues[0].value.toAddress();
-  }
-
-  get habitId(): BigInt {
-    return this._call.inputValues[1].value.toBigInt();
-  }
-}
-
-export class WitnessHabitCall__Outputs {
-  _call: WitnessHabitCall;
-
-  constructor(call: WitnessHabitCall) {
     this._call = call;
   }
 }
