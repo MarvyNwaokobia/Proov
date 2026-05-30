@@ -114,7 +114,7 @@ export function signOut(): void {
   // Keep identity data so returning users are recognised on next sign-in
 }
 
-const SCHEMA_VERSION = '2';
+const SCHEMA_VERSION = '3';
 const SCHEMA_KEY = 'proov_schema_v';
 
 // Returns true if a migration ran (i.e. the browser had stale user data that was wiped)
