@@ -1,7 +1,6 @@
 import { CONTRACT_ADDRESSES } from "./constants";
 
 export const PROOV_CORE_ABI = [
-  // createHabit
   {
     name: "createHabit",
     type: "function",
@@ -14,7 +13,6 @@ export const PROOV_CORE_ABI = [
     ],
     outputs: [{ name: "", type: "uint256" }],
   },
-  // selfCompleteHabit
   {
     name: "selfCompleteHabit",
     type: "function",
@@ -25,7 +23,6 @@ export const PROOV_CORE_ABI = [
     ],
     outputs: [],
   },
-  // deactivateHabit
   {
     name: "deactivateHabit",
     type: "function",
@@ -33,7 +30,41 @@ export const PROOV_CORE_ABI = [
     inputs: [{ name: "habitId", type: "uint256" }],
     outputs: [],
   },
-  // logJournalEntry
+  {
+    name: "reactivateHabit",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "habitId", type: "uint256" }],
+    outputs: [],
+  },
+  {
+    name: "recordStreakIncrement",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "newStreak", type: "uint256" }],
+    outputs: [],
+  },
+  {
+    name: "setUsername",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "username", type: "string" }],
+    outputs: [],
+  },
+  {
+    name: "editUsername",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "newUsername", type: "string" }],
+    outputs: [],
+  },
+  {
+    name: "updateVisibility",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "visibilitySetting", type: "string" }],
+    outputs: [],
+  },
   {
     name: "logJournalEntry",
     type: "function",
@@ -41,79 +72,17 @@ export const PROOV_CORE_ABI = [
     inputs: [{ name: "contentHash", type: "bytes32" }],
     outputs: [],
   },
-  // getHabits
-  {
-    name: "getHabits",
-    type: "function",
-    stateMutability: "view",
-    inputs: [{ name: "user", type: "address" }],
-    outputs: [
-      {
-        name: "",
-        type: "tuple[]",
-        components: [
-          { name: "id", type: "uint256" },
-          { name: "name", type: "string" },
-          { name: "habitType", type: "uint8" },
-          { name: "targetDuration", type: "uint256" },
-          { name: "frequency", type: "uint8" },
-          { name: "createdAt", type: "uint256" },
-          { name: "active", type: "bool" },
-        ],
-      },
-    ],
-  },
-  // getStats
-  {
-    name: "getStats",
-    type: "function",
-    stateMutability: "view",
-    inputs: [{ name: "user", type: "address" }],
-    outputs: [
-      {
-        name: "",
-        type: "tuple",
-        components: [
-          { name: "currentStreak", type: "uint256" },
-          { name: "longestStreak", type: "uint256" },
-          { name: "totalCompletions", type: "uint256" },
-          { name: "lastCompletionDay", type: "uint256" },
-          { name: "journalCount", type: "uint256" },
-        ],
-      },
-    ],
-  },
-  // getLeaderboard
-  {
-    name: "getLeaderboard",
-    type: "function",
-    stateMutability: "view",
-    inputs: [{ name: "limit", type: "uint256" }],
-    outputs: [
-      { name: "", type: "address[]" },
-      { name: "", type: "uint256[]" },
-    ],
-  },
-  // dailyCompletions
-  {
-    name: "dailyCompletions",
-    type: "function",
-    stateMutability: "view",
-    inputs: [
-      { name: "user", type: "address" },
-      { name: "day", type: "uint256" },
-    ],
-    outputs: [{ name: "", type: "uint256" }],
-  },
-  // Events
   {
     name: "HabitCreated",
     type: "event",
     inputs: [
       { name: "user", type: "address", indexed: true },
-      { name: "habitId", type: "uint256", indexed: false },
+      { name: "habitId", type: "uint256", indexed: true },
       { name: "name", type: "string", indexed: false },
       { name: "habitType", type: "uint8", indexed: false },
+      { name: "targetDuration", type: "uint256", indexed: false },
+      { name: "frequency", type: "uint8", indexed: false },
+      { name: "timestamp", type: "uint256", indexed: false },
     ],
   },
   {
@@ -121,8 +90,27 @@ export const PROOV_CORE_ABI = [
     type: "event",
     inputs: [
       { name: "user", type: "address", indexed: true },
-      { name: "habitId", type: "uint256", indexed: false },
-      { name: "day", type: "uint256", indexed: false },
+      { name: "habitId", type: "uint256", indexed: true },
+      { name: "streak", type: "uint256", indexed: false },
+      { name: "timestamp", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    name: "HabitDeactivated",
+    type: "event",
+    inputs: [
+      { name: "user", type: "address", indexed: true },
+      { name: "habitId", type: "uint256", indexed: true },
+      { name: "timestamp", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    name: "HabitReactivated",
+    type: "event",
+    inputs: [
+      { name: "user", type: "address", indexed: true },
+      { name: "habitId", type: "uint256", indexed: true },
+      { name: "timestamp", type: "uint256", indexed: false },
     ],
   },
   {
@@ -131,6 +119,8 @@ export const PROOV_CORE_ABI = [
     inputs: [
       { name: "user", type: "address", indexed: true },
       { name: "newStreak", type: "uint256", indexed: false },
+      { name: "longestStreak", type: "uint256", indexed: false },
+      { name: "timestamp", type: "uint256", indexed: false },
     ],
   },
   {
@@ -139,6 +129,7 @@ export const PROOV_CORE_ABI = [
     inputs: [
       { name: "user", type: "address", indexed: true },
       { name: "oldStreak", type: "uint256", indexed: false },
+      { name: "timestamp", type: "uint256", indexed: false },
     ],
   },
   {
@@ -147,12 +138,39 @@ export const PROOV_CORE_ABI = [
     inputs: [
       { name: "user", type: "address", indexed: true },
       { name: "milestone", type: "uint256", indexed: false },
+      { name: "timestamp", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    name: "UsernameSet",
+    type: "event",
+    inputs: [
+      { name: "user", type: "address", indexed: true },
+      { name: "username", type: "string", indexed: false },
+      { name: "timestamp", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    name: "VisibilityUpdated",
+    type: "event",
+    inputs: [
+      { name: "user", type: "address", indexed: true },
+      { name: "visibilitySetting", type: "string", indexed: false },
+      { name: "timestamp", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    name: "JournalLogged",
+    type: "event",
+    inputs: [
+      { name: "user", type: "address", indexed: true },
+      { name: "contentHash", type: "bytes32", indexed: true },
+      { name: "timestamp", type: "uint256", indexed: false },
     ],
   },
 ] as const;
 
 export const SESSION_MANAGER_ABI = [
-  // startSession
   {
     name: "startSession",
     type: "function",
@@ -160,79 +178,32 @@ export const SESSION_MANAGER_ABI = [
     inputs: [{ name: "habitId", type: "uint256" }],
     outputs: [],
   },
-  // endSession
   {
     name: "endSession",
     type: "function",
     stateMutability: "nonpayable",
-    inputs: [],
+    inputs: [
+      { name: "habitId", type: "uint256" },
+      { name: "durationSeconds", type: "uint256" },
+    ],
     outputs: [],
   },
-  // abandonSession
   {
     name: "abandonSession",
     type: "function",
     stateMutability: "nonpayable",
-    inputs: [],
+    inputs: [
+      { name: "habitId", type: "uint256" },
+      { name: "durationSeconds", type: "uint256" },
+    ],
     outputs: [],
   },
-  // getActiveSession
-  {
-    name: "getActiveSession",
-    type: "function",
-    stateMutability: "view",
-    inputs: [{ name: "user", type: "address" }],
-    outputs: [
-      {
-        name: "",
-        type: "tuple",
-        components: [
-          { name: "habitId", type: "uint256" },
-          { name: "startTimestamp", type: "uint256" },
-          { name: "endTimestamp", type: "uint256" },
-          { name: "duration", type: "uint256" },
-          { name: "completed", type: "bool" },
-          { name: "active", type: "bool" },
-        ],
-      },
-    ],
-  },
-  // getHistory
-  {
-    name: "getHistory",
-    type: "function",
-    stateMutability: "view",
-    inputs: [{ name: "user", type: "address" }],
-    outputs: [
-      {
-        name: "",
-        type: "tuple[]",
-        components: [
-          { name: "habitId", type: "uint256" },
-          { name: "startTimestamp", type: "uint256" },
-          { name: "endTimestamp", type: "uint256" },
-          { name: "duration", type: "uint256" },
-          { name: "completed", type: "bool" },
-          { name: "active", type: "bool" },
-        ],
-      },
-    ],
-  },
-  // MIN_SESSION_SECONDS
-  {
-    name: "MIN_SESSION_SECONDS",
-    type: "function",
-    stateMutability: "view",
-    inputs: [],
-    outputs: [{ name: "", type: "uint256" }],
-  },
-  // Events
   {
     name: "SessionStarted",
     type: "event",
     inputs: [
       { name: "user", type: "address", indexed: true },
-      { name: "habitId", type: "uint256", indexed: false },
+      { name: "habitId", type: "uint256", indexed: true },
       { name: "startTimestamp", type: "uint256", indexed: false },
     ],
   },
@@ -241,7 +212,7 @@ export const SESSION_MANAGER_ABI = [
     type: "event",
     inputs: [
       { name: "user", type: "address", indexed: true },
-      { name: "habitId", type: "uint256", indexed: false },
+      { name: "habitId", type: "uint256", indexed: true },
       { name: "duration", type: "uint256", indexed: false },
     ],
   },
@@ -250,14 +221,13 @@ export const SESSION_MANAGER_ABI = [
     type: "event",
     inputs: [
       { name: "user", type: "address", indexed: true },
-      { name: "habitId", type: "uint256", indexed: false },
+      { name: "habitId", type: "uint256", indexed: true },
       { name: "duration", type: "uint256", indexed: false },
     ],
   },
 ] as const;
 
 export const CIRCLE_MANAGER_ABI = [
-  // sendRequest
   {
     name: "sendRequest",
     type: "function",
@@ -265,7 +235,6 @@ export const CIRCLE_MANAGER_ABI = [
     inputs: [{ name: "to", type: "address" }],
     outputs: [],
   },
-  // acceptRequest
   {
     name: "acceptRequest",
     type: "function",
@@ -273,15 +242,20 @@ export const CIRCLE_MANAGER_ABI = [
     inputs: [{ name: "from", type: "address" }],
     outputs: [],
   },
-  // rejectRequest
   {
-    name: "rejectRequest",
+    name: "sendCheer",
     type: "function",
     stateMutability: "nonpayable",
-    inputs: [{ name: "from", type: "address" }],
+    inputs: [{ name: "to", type: "address" }],
     outputs: [],
   },
-  // removeFromCircle
+  {
+    name: "cheer",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "to", type: "address" }],
+    outputs: [],
+  },
   {
     name: "removeFromCircle",
     type: "function",
@@ -289,75 +263,40 @@ export const CIRCLE_MANAGER_ABI = [
     inputs: [{ name: "member", type: "address" }],
     outputs: [],
   },
-  // witnessHabit
   {
-    name: "witnessHabit",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "user", type: "address" },
-      { name: "habitId", type: "uint256" },
-    ],
-    outputs: [],
-  },
-  // notifyStreakBroken
-  {
-    name: "notifyStreakBroken",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [{ name: "user", type: "address" }],
-    outputs: [],
-  },
-  // getCircle
-  {
-    name: "getCircle",
-    type: "function",
-    stateMutability: "view",
-    inputs: [{ name: "user", type: "address" }],
-    outputs: [{ name: "", type: "address[]" }],
-  },
-  // getPending
-  {
-    name: "getPending",
-    type: "function",
-    stateMutability: "view",
-    inputs: [{ name: "user", type: "address" }],
-    outputs: [{ name: "", type: "address[]" }],
-  },
-  // connected
-  {
-    name: "connected",
-    type: "function",
-    stateMutability: "view",
-    inputs: [
-      { name: "a", type: "address" },
-      { name: "b", type: "address" },
-    ],
-    outputs: [{ name: "", type: "bool" }],
-  },
-  // Events
-  {
-    name: "RequestSent",
+    name: "CircleRequestSent",
     type: "event",
     inputs: [
       { name: "from", type: "address", indexed: true },
       { name: "to", type: "address", indexed: true },
+      { name: "timestamp", type: "uint256", indexed: false },
     ],
   },
   {
-    name: "RequestAccepted",
+    name: "MemberAdded",
+    type: "event",
+    inputs: [
+      { name: "circleOwner", type: "address", indexed: true },
+      { name: "member", type: "address", indexed: true },
+      { name: "timestamp", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    name: "CheerSent",
     type: "event",
     inputs: [
       { name: "from", type: "address", indexed: true },
       { name: "to", type: "address", indexed: true },
+      { name: "timestamp", type: "uint256", indexed: false },
     ],
   },
   {
-    name: "StreakBrokenNotified",
+    name: "RemovedFromCircle",
     type: "event",
     inputs: [
       { name: "user", type: "address", indexed: true },
-      { name: "circleMembers", type: "address[]", indexed: false },
+      { name: "removed", type: "address", indexed: true },
+      { name: "timestamp", type: "uint256", indexed: false },
     ],
   },
 ] as const;

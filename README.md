@@ -16,7 +16,7 @@ Proov is a habit-tracking and personal accountability dApp built on [Celo](https
 | Dashboard | Link |
 |-----------|------|
 | Dune (onchain) | [dune.com/marvyy/proov](https://dune.com/marvyy/proov) |
-| Goldsky subgraph | [API v3.0.0](https://api.goldsky.com/api/public/project_cmpdqb2n5s8s801x0h45a2npf/subgraphs/proov/3.0.0/gn) |
+| Goldsky subgraph | [API v4.0.0](https://api.goldsky.com/api/public/project_cmpdqb2n5s8s801x0h45a2npf/subgraphs/proov/4.0.0/gn) |
 | Admin panel (owner only) | `/admin` |
 
 ---
@@ -87,7 +87,7 @@ Deployed at block **68,295,054** · May 31 2026
 | Wallet auth | [Web3Auth](https://web3auth.io) (social login — Google, Email OTP) |
 | Onchain reads/writes | [wagmi](https://wagmi.sh) v2 + [viem](https://viem.sh) v2 |
 | Database | [Supabase](https://supabase.com) (Postgres — app state) |
-| Indexing | [Goldsky](https://goldsky.com) subgraph v3.0.0 |
+| Indexing | [Goldsky](https://goldsky.com) subgraph v4.0.0 |
 | Analytics | [Dune](https://dune.com) |
 | AI verification | [Claude Sonnet 4.6](https://anthropic.com) via Anthropic API |
 | AI reports | Google Gemini 2.5 Flash via `@google/generative-ai` |
@@ -105,7 +105,7 @@ proov-app/
 │   │   ├── SessionManager.sol   ← focus timer sessions (UUPS upgradeable)
 │   │   ├── CircleManager.sol    ← accountability circles (UUPS upgradeable)
 │   │   └── FuelFaucet.sol       ← daily CELO drip for users (UUPS upgradeable)
-│   ├── goldsky/                 ← Goldsky subgraph (v3.0.0)
+│   ├── goldsky/                 ← Goldsky subgraph (v4.0.0)
 │   └── scripts/
 │       ├── deploy-upgradeable.ts ← mainnet deploy (UUPS proxies)
 │       ├── upgrade.ts            ← push new implementation to existing proxies
@@ -193,7 +193,7 @@ NEXT_PUBLIC_PROOV_CORE_ADDRESS=0x6f379efDb10aFD85b233aE35Ad01164c7bc54eE2
 NEXT_PUBLIC_SESSION_MANAGER_ADDRESS=0xea7d4608e9e2798D826d0DD698A7637EC83EA8d2
 NEXT_PUBLIC_CIRCLE_MANAGER_ADDRESS=0x5366DB5a7aB63ceDE7229d15179633CA69ad076D
 NEXT_PUBLIC_FUEL_FAUCET_ADDRESS=0x500e1c72aB3c5C5be17255fe6f66bA8f3c37E988
-NEXT_PUBLIC_GOLDSKY_URL=https://api.goldsky.com/api/public/project_cmpdqb2n5s8s801x0h45a2npf/subgraphs/proov/3.0.0/gn
+NEXT_PUBLIC_GOLDSKY_URL=https://api.goldsky.com/api/public/project_cmpdqb2n5s8s801x0h45a2npf/subgraphs/proov/4.0.0/gn
 ANTHROPIC_API_KEY=your_key
 GEMINI_API_KEY=your_key
 FAUCET_PRIVATE_KEY=0x_your_faucet_wallet_key
