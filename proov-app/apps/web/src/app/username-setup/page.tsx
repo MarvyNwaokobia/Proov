@@ -77,10 +77,13 @@ export default function UsernameSetupPage() {
         return;
       }
     } catch {
-      console.warn('Supabase unavailable, saving username locally');
+      setHint('Connection error — try again');
+      setHintColor('#f43f5e');
+      setLoading(false);
+      return;
     }
 
-    // Always save locally too (offline fallback)
+    // Only save locally once Supabase confirms
     registerUsername(clean, address);
     localStorage.setItem('proov_username', clean);
     setIdentityUsername(address, clean);
