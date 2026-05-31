@@ -139,7 +139,6 @@ export default function SettingsPage() {
     if (!clean) { setUsernameHint(''); return; }
     const { valid, message } = validateUsername(clean);
     if (!valid) { setUsernameHint(message); setUsernameHintColor('#f43f5e'); return; }
-    if (isUsernameTaken(clean, address)) { setUsernameHint('Already taken'); setUsernameHintColor('#f43f5e'); return; }
     setUsernameHint('Checking…');
     setUsernameHintColor('var(--text3)');
     const available = await isUsernameAvailable(clean);
