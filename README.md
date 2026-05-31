@@ -16,7 +16,7 @@ Proov is a habit-tracking and personal accountability dApp built on [Celo](https
 | Dashboard | Link |
 |-----------|------|
 | Dune (onchain) | [dune.com/marvyy/proov](https://dune.com/marvyy/proov) |
-| Goldsky subgraph | [API v2.0.0](https://api.goldsky.com/api/public/project_cmpdqb2n5s8s801x0h45a2npf/subgraphs/proov/2.0.0/gn) |
+| Goldsky subgraph | [API v3.0.0](https://api.goldsky.com/api/public/project_cmpdqb2n5s8s801x0h45a2npf/subgraphs/proov/3.0.0/gn) |
 | Admin panel (owner only) | `/admin` |
 
 ---
@@ -25,13 +25,16 @@ Proov is a habit-tracking and personal accountability dApp built on [Celo](https
 
 Lightweight event-log contracts — every user action emits an onchain event at ~0.005–0.009 CELO per transaction. Data is stored in Supabase; the chain is the immutable proof layer indexed by Dune and Goldsky.
 
-| Contract | Address | Celoscan |
-|----------|---------|---------|
-| ProovCore | `0xef6Bf51246A4B6972383632e66C87250Fc759922` | [view](https://celoscan.io/address/0xef6Bf51246A4B6972383632e66C87250Fc759922) |
-| SessionManager | `0x0bA82bb8de521d2D0BD63e0fa4ec2beF6ad9C1fb` | [view](https://celoscan.io/address/0x0bA82bb8de521d2D0BD63e0fa4ec2beF6ad9C1fb) |
-| CircleManager | `0xD5E46dE0fF1Cfd88ABe4bE5641650376516A7a5E` | [view](https://celoscan.io/address/0xD5E46dE0fF1Cfd88ABe4bE5641650376516A7a5E) |
+All contracts follow the **UUPS upgradeable proxy pattern** (OpenZeppelin v5) — logic can be upgraded without changing the proxy address users interact with.
 
-Deployed at block **68,262,187** · May 30 2026
+| Contract | Proxy Address | Celoscan |
+|----------|--------------|---------|
+| ProovCore | `0x6f379efDb10aFD85b233aE35Ad01164c7bc54eE2` | [view](https://celoscan.io/address/0x6f379efDb10aFD85b233aE35Ad01164c7bc54eE2) |
+| SessionManager | `0xea7d4608e9e2798D826d0DD698A7637EC83EA8d2` | [view](https://celoscan.io/address/0xea7d4608e9e2798D826d0DD698A7637EC83EA8d2) |
+| CircleManager | `0x5366DB5a7aB63ceDE7229d15179633CA69ad076D` | [view](https://celoscan.io/address/0x5366DB5a7aB63ceDE7229d15179633CA69ad076D) |
+| FuelFaucet | `0x500e1c72aB3c5C5be17255fe6f66bA8f3c37E988` | [view](https://celoscan.io/address/0x500e1c72aB3c5C5be17255fe6f66bA8f3c37E988) |
+
+Deployed at block **68,295,054** · May 31 2026
 
 ---
 
@@ -41,7 +44,7 @@ Deployed at block **68,262,187** · May 30 2026
 - Create habits across 6 categories: Focus, Fitness, Reading, Hydration, Sleep, Custom
 - Every creation, completion, and archive fires an onchain transaction
 - AI verification (Claude Sonnet 4.6) for fitness habits — proof hash stored in the tx
-- Deactivate habits you no longer track
+- Deactivate and reactivate habits at any time
 
 ### Streak System
 - Consecutive daily completions build your streak — miss a day and it resets
@@ -59,7 +62,7 @@ Deployed at block **68,262,187** · May 30 2026
 - Verification hash stored in the transaction
 
 ### Accountability Circle
-- Add up to 10 friends by wallet address or username
+- Add friends by wallet address or username
 - Accepting a circle request emits `MemberAdded` onchain (proof of the bond)
 - Cheers and nudges sent onchain
 
@@ -79,12 +82,12 @@ Deployed at block **68,262,187** · May 30 2026
 | Layer | Technology |
 |-------|-----------|
 | Blockchain | [Celo](https://celo.org) (L2, post-March 2025 migration) |
-| Smart contracts | Solidity 0.8.28, Hardhat |
+| Smart contracts | Solidity 0.8.28, Hardhat, OpenZeppelin UUPS v5 |
 | Frontend | Next.js 14, TypeScript |
 | Wallet auth | [Web3Auth](https://web3auth.io) (social login — Google, Email OTP) |
 | Onchain reads/writes | [wagmi](https://wagmi.sh) v2 + [viem](https://viem.sh) v2 |
 | Database | [Supabase](https://supabase.com) (Postgres — app state) |
-| Indexing | [Goldsky](https://goldsky.com) subgraph v2.0.0 |
+| Indexing | [Goldsky](https://goldsky.com) subgraph v3.0.0 |
 | Analytics | [Dune](https://dune.com) |
 | AI verification | [Claude Sonnet 4.6](https://anthropic.com) via Anthropic API |
 | AI reports | Google Gemini 2.5 Flash via `@google/generative-ai` |
@@ -98,13 +101,15 @@ Deployed at block **68,262,187** · May 30 2026
 proov-app/
 ├── apps/contracts/              ← Hardhat workspace
 │   ├── contracts/
-│   │   ├── ProovCore.sol        ← habits + streaks + journal (event-log v2)
-│   │   ├── SessionManager.sol   ← focus timer sessions (event-log v2)
-│   │   └── CircleManager.sol    ← accountability circles (event-log v2)
-│   ├── goldsky/                 ← Goldsky subgraph (v2.0.0)
+│   │   ├── ProovCore.sol        ← habits + streaks + journal (UUPS upgradeable)
+│   │   ├── SessionManager.sol   ← focus timer sessions (UUPS upgradeable)
+│   │   ├── CircleManager.sol    ← accountability circles (UUPS upgradeable)
+│   │   └── FuelFaucet.sol       ← daily CELO drip for users (UUPS upgradeable)
+│   ├── goldsky/                 ← Goldsky subgraph (v3.0.0)
 │   └── scripts/
-│       ├── deploy.ts            ← mainnet deploy
-│       └── register-agent.ts   ← ERC-8004 AI agent registration
+│       ├── deploy-upgradeable.ts ← mainnet deploy (UUPS proxies)
+│       ├── upgrade.ts            ← push new implementation to existing proxies
+│       └── register-agent.ts    ← ERC-8004 AI agent registration
 │
 └── apps/web/                   ← Next.js 14 frontend
     ├── app/
@@ -126,12 +131,15 @@ proov-app/
 
 ## Smart Contract Design
 
-All three contracts are **event-log only** — no complex storage, just events. This keeps gas at ~0.005–0.009 CELO per transaction (~17–20 txs per 0.1 CELO at current Celo mainnet gas prices).
+All four contracts are **event-log only** — no complex storage, just events. This keeps gas at ~0.005–0.009 CELO per transaction (~17–20 txs per 0.1 CELO at current Celo mainnet gas prices).
+
+All contracts use the **UUPS proxy pattern**: the proxy address is permanent; only the implementation behind it can be swapped by the owner via `upgrade.ts`.
 
 ### ProovCore.sol
 - `createHabit(name, type, duration, frequency)` → emits `HabitCreated`
 - `selfCompleteHabit(habitId, hash)` → emits `HabitCompleted`
 - `deactivateHabit(habitId)` → emits `HabitDeactivated`
+- `reactivateHabit(habitId)` → emits `HabitReactivated`
 - `recordStreakIncrement(count)` → emits `StreakUpdated` + `MilestoneReached` on milestone days
 - `setUsername / editUsername` → emits `UsernameSet`
 - `logJournalEntry(hash)` → emits `JournalLogged`
@@ -145,6 +153,11 @@ All three contracts are **event-log only** — no complex storage, just events. 
 - `acceptRequest(from)` → emits `MemberAdded` (proof of circle bond)
 - `sendCheer(to)` → emits `CheerSent`
 - `removeFromCircle(member)` → emits `RemovedFromCircle`
+
+### FuelFaucet.sol
+- `claimFuel()` → sends 0.2 CELO to caller (once per 24h, owner-funded)
+- `canClaim(user)` → view: returns true if user can claim now
+- `secondsUntilClaim(user)` → view: seconds until next eligible claim
 
 ---
 
@@ -176,10 +189,11 @@ Fill in `apps/web/.env.local`:
 ```bash
 NEXT_PUBLIC_WEB3AUTH_CLIENT_ID=your_client_id
 NEXT_PUBLIC_CELO_RPC_URL=https://forno.celo.org
-NEXT_PUBLIC_PROOV_CORE_ADDRESS=0xef6Bf51246A4B6972383632e66C87250Fc759922
-NEXT_PUBLIC_SESSION_MANAGER_ADDRESS=0x0bA82bb8de521d2D0BD63e0fa4ec2beF6ad9C1fb
-NEXT_PUBLIC_CIRCLE_MANAGER_ADDRESS=0xD5E46dE0fF1Cfd88ABe4bE5641650376516A7a5E
-NEXT_PUBLIC_GOLDSKY_URL=https://api.goldsky.com/api/public/project_cmpdqb2n5s8s801x0h45a2npf/subgraphs/proov/2.0.0/gn
+NEXT_PUBLIC_PROOV_CORE_ADDRESS=0x6f379efDb10aFD85b233aE35Ad01164c7bc54eE2
+NEXT_PUBLIC_SESSION_MANAGER_ADDRESS=0xea7d4608e9e2798D826d0DD698A7637EC83EA8d2
+NEXT_PUBLIC_CIRCLE_MANAGER_ADDRESS=0x5366DB5a7aB63ceDE7229d15179633CA69ad076D
+NEXT_PUBLIC_FUEL_FAUCET_ADDRESS=0x500e1c72aB3c5C5be17255fe6f66bA8f3c37E988
+NEXT_PUBLIC_GOLDSKY_URL=https://api.goldsky.com/api/public/project_cmpdqb2n5s8s801x0h45a2npf/subgraphs/proov/3.0.0/gn
 ANTHROPIC_API_KEY=your_key
 GEMINI_API_KEY=your_key
 FAUCET_PRIVATE_KEY=0x_your_faucet_wallet_key
@@ -198,10 +212,15 @@ cd apps/web && pnpm dev
 
 ```bash
 cd apps/contracts
-npx hardhat run scripts/deploy.ts --network celo
+
+# Deploy fresh UUPS proxies (first time or after a breaking change)
+pnpm deploy:celo
+
+# Upgrade existing proxies to new implementation (no address change)
+pnpm upgrade:celo
 ```
 
-The script prints the 3 new addresses. Update them in Vercel and `apps/web/.env.local`.
+The deploy script prints all proxy addresses and saves them to `deployed-mainnet.json`. Update them in Vercel and `apps/web/.env.local`.
 
 ---
 
