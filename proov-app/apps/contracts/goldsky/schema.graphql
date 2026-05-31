@@ -67,3 +67,10 @@ type Cheer @entity(immutable: true) {
   to: Bytes!
   timestamp: BigInt!
 }
+
+type CircleRequest @entity(immutable: true) {
+  id: ID!
+  from: Bytes!
+  to: Bytes!
+  timestamp: BigInt!
+}

@@ -84,6 +84,8 @@ dataSources:
         - name: CircleManager
           file: ./abis/CircleManager.json
       eventHandlers:
+        - event: CircleRequestSent(indexed address,indexed address,uint256)
+          handler: handleCircleRequestSent
         - event: MemberAdded(indexed address,indexed address,uint256)
           handler: handleMemberAdded
         - event: CheerSent(indexed address,indexed address,uint256)

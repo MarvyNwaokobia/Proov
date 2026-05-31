@@ -10,7 +10,7 @@ All contracts use the OpenZeppelin UUPS proxy pattern. The addresses below are t
 |----------|--------------|----------------|---------|
 | ProovCore | `0x6f379efDb10aFD85b233aE35Ad01164c7bc54eE2` | `0x54eefdba7db6d06e7da88f2cc6a0f3fc2464a34f` | [proxy](https://celoscan.io/address/0x6f379efDb10aFD85b233aE35Ad01164c7bc54eE2) · [impl](https://celoscan.io/address/0x54eefdba7db6d06e7da88f2cc6a0f3fc2464a34f#code) |
 | SessionManager | `0xea7d4608e9e2798D826d0DD698A7637EC83EA8d2` | `0x99c3f40cef8e373878609de8cb3808ec503f4d6a` | [proxy](https://celoscan.io/address/0xea7d4608e9e2798D826d0DD698A7637EC83EA8d2) · [impl](https://celoscan.io/address/0x99c3f40cef8e373878609de8cb3808ec503f4d6a#code) |
-| CircleManager | `0x5366DB5a7aB63ceDE7229d15179633CA69ad076D` | `0x254ac2028a90ccab957b14a2e4a705440902ac70` | [proxy](https://celoscan.io/address/0x5366DB5a7aB63ceDE7229d15179633CA69ad076D) · [impl](https://celoscan.io/address/0x254ac2028a90ccab957b14a2e4a705440902ac70#code) |
+| CircleManager | `0x5366DB5a7aB63ceDE7229d15179633CA69ad076D` | `0x46fD0b3971C718E08464E1cc6beeB40edf548C7D` | [proxy](https://celoscan.io/address/0x5366DB5a7aB63ceDE7229d15179633CA69ad076D) · [impl](https://celoscan.io/address/0x46fD0b3971C718E08464E1cc6beeB40edf548C7D#code) |
 | FuelFaucet | `0x500e1c72aB3c5C5be17255fe6f66bA8f3c37E988` | `0x2ba699ac29241b6f32f43b85585bb546ecb94ec6` | [proxy](https://celoscan.io/address/0x500e1c72aB3c5C5be17255fe6f66bA8f3c37E988) · [impl](https://celoscan.io/address/0x2ba699ac29241b6f32f43b85585bb546ecb94ec6#code) |
 
 Deployer: `0xc6A4b73030d8a9eb8166C2FAB2400B421026FD19`
@@ -91,7 +91,7 @@ cast send 0x500e1c72aB3c5C5be17255fe6f66bA8f3c37E988 --value 10ether \
 | Source | Link |
 |--------|------|
 | Dune dashboard | https://dune.com/marvyy/proov |
-| Goldsky subgraph v3.0.0 | https://api.goldsky.com/api/public/project_cmpdqb2n5s8s801x0h45a2npf/subgraphs/proov/3.0.0/gn |
+| Goldsky subgraph v4.0.0 | https://api.goldsky.com/api/public/project_cmpdqb2n5s8s801x0h45a2npf/subgraphs/proov/4.0.0/gn |
 | Admin panel | https://proov-one.vercel.app/admin |
 
 ---
@@ -105,7 +105,7 @@ NEXT_PUBLIC_PROOV_CORE_ADDRESS=0x6f379efDb10aFD85b233aE35Ad01164c7bc54eE2
 NEXT_PUBLIC_SESSION_MANAGER_ADDRESS=0xea7d4608e9e2798D826d0DD698A7637EC83EA8d2
 NEXT_PUBLIC_CIRCLE_MANAGER_ADDRESS=0x5366DB5a7aB63ceDE7229d15179633CA69ad076D
 NEXT_PUBLIC_FUEL_FAUCET_ADDRESS=0x500e1c72aB3c5C5be17255fe6f66bA8f3c37E988
-NEXT_PUBLIC_GOLDSKY_URL=https://api.goldsky.com/api/public/project_cmpdqb2n5s8s801x0h45a2npf/subgraphs/proov/3.0.0/gn
+NEXT_PUBLIC_GOLDSKY_URL=https://api.goldsky.com/api/public/project_cmpdqb2n5s8s801x0h45a2npf/subgraphs/proov/4.0.0/gn
 NEXT_PUBLIC_CHAIN_ID=42220
 NEXT_PUBLIC_EXPLORER_URL=https://celoscan.io
 NEXT_PUBLIC_SUPABASE_URL=
