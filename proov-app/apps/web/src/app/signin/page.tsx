@@ -41,6 +41,16 @@ export default function SignInPage() {
     if (msg) { setNotice(msg); localStorage.removeItem('proov_auth_notice'); }
   }, []);
 
+  // Pre-clear stale Web3Auth session on mount so connectTo fires immediately
+  // on button click — popup blockers kill popups opened after async delays.
+  useEffect(() => {
+    clearWeb3AuthSession().then(() => {
+      import('@/lib/wagmi-config').then(({ getWeb3Auth }) => {
+        try { getWeb3Auth().logout({ cleanup: true }).catch(() => {}); } catch {}
+      });
+    });
+  }, []);
+
   useEffect(() => {
     if (isMiniPay()) {
       connectMiniPay().then(addr => {
@@ -74,16 +84,14 @@ export default function SignInPage() {
 
   const triggerConnect = async (loginProvider = 'google') => {
     setConnecting(true);
-    await clearWeb3AuthSession();
+    // Cleanup already ran on mount — call connectTo immediately to avoid popup blocker.
     const { getWeb3Auth } = await import('@/lib/wagmi-config');
     const web3auth = getWeb3Auth();
-    try { await web3auth.logout({ cleanup: true }); } catch {}
     try {
       if ((web3auth as any).status === 'not_ready') await (web3auth as any).initModal();
       const { WALLET_ADAPTERS } = await import('@web3auth/base');
       await (web3auth as any).connectTo(WALLET_ADAPTERS.AUTH, { loginProvider });
     } catch {
-      // connectTo failed — stop here so the Web3Auth modal never opens as a fallback
       setConnecting(false);
       return;
     }
