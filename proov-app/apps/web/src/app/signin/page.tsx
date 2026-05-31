@@ -82,7 +82,14 @@ export default function SignInPage() {
       if ((web3auth as any).status === 'not_ready') await (web3auth as any).initModal();
       const { WALLET_ADAPTERS } = await import('@web3auth/base');
       await (web3auth as any).connectTo(WALLET_ADAPTERS.AUTH, { loginProvider });
-    } catch {}
+    } catch {
+      // connectTo failed (popup closed, blocked, or already connecting) — stop here.
+      // Do NOT fall through to connect() or the Web3Auth modal will open.
+      setConnecting(false);
+      return;
+    }
+    // connectTo succeeded — sync wagmi state. At this point the wallet is already
+    // authenticated so connect() will not open a modal.
     const c = connectors[0];
     if (c) connect({ connector: c });
     else setConnecting(false);
