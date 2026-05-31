@@ -1,23 +1,14 @@
 "use client";
 
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { keccak256, toBytes } from "viem";
 import { CONTRACT_ADDRESSES, PROOV_CORE_ABI } from "@/lib/contracts";
 import { withCeloFee } from "@/lib/constants";
 
-export function useHabits(address?: `0x${string}`) {
-  const { address: connectedAddress } = useAccount();
-  const target = address ?? connectedAddress;
-
-  const { data: habits, refetch } = useReadContract({
-    address: CONTRACT_ADDRESSES.ProovCore,
-    abi: PROOV_CORE_ABI,
-    functionName: "getHabits",
-    args: target ? [target] : undefined,
-    query: { enabled: !!target && !!CONTRACT_ADDRESSES.ProovCore },
-  });
-
-  return { habits: habits ?? [], refetch };
+// v2 contracts are event-log only — habit data lives in Supabase.
+// useHabits returns an empty stub; use Supabase hooks for habit reads.
+export function useHabits(_address?: `0x${string}`) {
+  return { habits: [] as never[], refetch: () => {} };
 }
 
 export function useCreateHabit() {
