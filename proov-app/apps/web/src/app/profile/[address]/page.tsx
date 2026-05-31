@@ -10,11 +10,20 @@ import {
 import { IconArrowLeft, IconFlame, IconSettings2 } from '@tabler/icons-react';
 
 function glowStyle(count: number, total: number): React.CSSProperties {
-  if (total === 0 || count === 0) {
+  // Future day — visible box, very dim, not yet reached
+  if (count === -1) {
     return {
       background: 'var(--bg2)',
       border: '1px solid var(--border)',
-      opacity: 0.45,
+      opacity: 0.3,
+    };
+  }
+  // Past day, nothing done — faintest accent glow (the journey started, just quiet)
+  if (total === 0 || count === 0) {
+    return {
+      background: 'var(--accent)',
+      border: '1px solid var(--accent-border)',
+      opacity: 0.12,
     };
   }
   const ratio = Math.min(count / total, 1);
@@ -136,15 +145,19 @@ export default function ProfilePage() {
   const displayName = username ? `@${username}` : address.slice(0, 8) + '…';
   const initial = (username || address).slice(0, 1).toUpperCase();
 
-  // Rolling 30-day window ending today. Oldest day top-left, today bottom-right.
+  // 30-day journey from join date. Box 1 = day they joined, box 30 = day 29.
+  // Past days glow based on completions. Future days show as dim visible outlines.
   const heatmapDays = (() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const start = joinedDate ? new Date(joinedDate) : new Date(today);
+    start.setHours(0, 0, 0, 0);
     return Array.from({ length: 30 }, (_, i) => {
-      const d = new Date(today);
-      d.setDate(today.getDate() - (29 - i));
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
       const dateStr = d.toISOString().split('T')[0];
-      return { date: dateStr, count: dailyCounts[dateStr] || 0 };
+      const isFuture = d > today;
+      return { date: dateStr, count: isFuture ? -1 : (dailyCounts[dateStr] || 0) };
     });
   })();
 
@@ -298,7 +311,7 @@ export default function ProfilePage() {
             {heatmapDays.map(({ date, count }) => (
               <div
                 key={date}
-                title={`${date}${count > 0 ? ` · ${count} completed` : ''}`}
+                title={count === -1 ? date : `${date}${count > 0 ? ` · ${count} completed` : ''}`}
                 style={{
                   aspectRatio: '1',
                   borderRadius: 5,
