@@ -87,6 +87,14 @@ export const SESSION_MANAGER_ABI = [
 
 export const CIRCLE_MANAGER_ABI = [
   {
+    name: 'CircleRequestSent', type: 'event',
+    inputs: [
+      { name: 'from', type: 'address', indexed: true },
+      { name: 'to',   type: 'address', indexed: true },
+      { name: 'timestamp', type: 'uint256', indexed: false },
+    ],
+  },
+  {
     name: 'sendRequest', type: 'function', stateMutability: 'nonpayable',
     inputs: [{ name: 'to', type: 'address' }],
     outputs: [],

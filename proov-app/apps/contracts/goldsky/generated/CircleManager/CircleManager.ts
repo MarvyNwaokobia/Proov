@@ -10,6 +10,32 @@ import {
   BigInt,
 } from "@graphprotocol/graph-ts";
 
+export class CircleRequestSent extends ethereum.Event {
+  get params(): CircleRequestSent__Params {
+    return new CircleRequestSent__Params(this);
+  }
+}
+
+export class CircleRequestSent__Params {
+  _event: CircleRequestSent;
+
+  constructor(event: CircleRequestSent) {
+    this._event = event;
+  }
+
+  get from(): Address {
+    return this._event.parameters[0].value.toAddress();
+  }
+
+  get to(): Address {
+    return this._event.parameters[1].value.toAddress();
+  }
+
+  get timestamp(): BigInt {
+    return this._event.parameters[2].value.toBigInt();
+  }
+}
+
 export class CheerSent extends ethereum.Event {
   get params(): CheerSent__Params {
     return new CheerSent__Params(this);
@@ -231,7 +257,7 @@ export class SendRequestCall__Inputs {
     this._call = call;
   }
 
-  get value0(): Address {
+  get to(): Address {
     return this._call.inputValues[0].value.toAddress();
   }
 }

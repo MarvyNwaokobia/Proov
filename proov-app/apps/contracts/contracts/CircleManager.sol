@@ -12,6 +12,11 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
  * Accepting a request and sending cheers/nudges emit on-chain proof.
  */
 contract CircleManager is Initializable, OwnableUpgradeable, UUPSUpgradeable {
+    event CircleRequestSent(
+        address indexed from,
+        address indexed to,
+        uint256 timestamp
+    );
     event MemberAdded(
         address indexed circleOwner,
         address indexed member,
@@ -39,8 +44,9 @@ contract CircleManager is Initializable, OwnableUpgradeable, UUPSUpgradeable {
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
-    // Sending a request is a Supabase-only operation (no on-chain proof needed).
-    function sendRequest(address) external {}
+    function sendRequest(address to) external {
+        emit CircleRequestSent(msg.sender, to, block.timestamp);
+    }
 
     // Accepting proves the bond on-chain.
     function acceptRequest(address from) external {

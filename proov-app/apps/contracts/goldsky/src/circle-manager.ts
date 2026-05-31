@@ -1,10 +1,11 @@
 import { BigInt, Bytes } from '@graphprotocol/graph-ts'
 import {
+  CircleRequestSent,
   MemberAdded,
   CheerSent,
   RemovedFromCircle,
 } from '../generated/CircleManager/CircleManager'
-import { CircleConnection, Cheer, User } from '../generated/schema'
+import { CircleConnection, CircleRequest, Cheer, User } from '../generated/schema'
 
 function getOrCreateUser(address: Bytes, timestamp: BigInt): User {
   const id = address.toHexString()
@@ -23,6 +24,15 @@ function getOrCreateUser(address: Bytes, timestamp: BigInt): User {
     user.save()
   }
   return user
+}
+
+export function handleCircleRequestSent(event: CircleRequestSent): void {
+  const id = event.transaction.hash.toHexString() + '-' + event.logIndex.toString()
+  const req = new CircleRequest(id)
+  req.from = event.params.from
+  req.to = event.params.to
+  req.timestamp = event.params.timestamp
+  req.save()
 }
 
 export function handleMemberAdded(event: MemberAdded): void {
