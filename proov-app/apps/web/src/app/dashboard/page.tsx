@@ -7,7 +7,7 @@ import {
   getStreakData, updateDailyStreak, getAllHabitStreaks,
   getCircleRequests, getUsernamesForAddresses, getLatestActivityForAddress,
   sendNudge, getTodayNudgesSent, getGlobalLeaderboard,
-  getVerifiedHabitsToday, getAvatarUrl,
+  getVerifiedHabitsToday, getAvatarUrl, getNotifications,
   type Habit,
 } from '@/lib/supabase';
 import { useProovTx } from '@/hooks/useProovTx';
@@ -204,6 +204,18 @@ export default function DashboardPage() {
     const onVisible = () => { if (!document.hidden) getTodayCompletions(addr).then(setCompletedToday).catch(() => {}); };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+
+  useEffect(() => {
+    const addr = (localStorage.getItem('proov_address') || '').toLowerCase();
+    if (!addr) return;
+    const lastRead = localStorage.getItem('proov_notif_last_read');
+    getNotifications(addr, 20).then(notifs => {
+      const unread = lastRead
+        ? notifs.filter(n => new Date(n.created_at) > new Date(lastRead)).length
+        : notifs.length;
+      window.dispatchEvent(new CustomEvent('proov-notif-update', { detail: { count: unread } }));
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {

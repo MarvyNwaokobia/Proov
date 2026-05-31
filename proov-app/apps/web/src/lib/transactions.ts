@@ -36,7 +36,7 @@ export const PROOV_CORE_ABI = [
   },
   {
     name: 'recordStreakIncrement', type: 'function', stateMutability: 'nonpayable',
-    inputs: [{ name: 'newStreakCount', type: 'uint256' }],
+    inputs: [{ name: 'newStreak', type: 'uint256' }],
     outputs: [],
   },
   {
@@ -86,14 +86,6 @@ export const SESSION_MANAGER_ABI = [
 ] as const;
 
 export const CIRCLE_MANAGER_ABI = [
-  {
-    name: 'CircleRequestSent', type: 'event',
-    inputs: [
-      { name: 'from', type: 'address', indexed: true },
-      { name: 'to',   type: 'address', indexed: true },
-      { name: 'timestamp', type: 'uint256', indexed: false },
-    ],
-  },
   {
     name: 'sendRequest', type: 'function', stateMutability: 'nonpayable',
     inputs: [{ name: 'to', type: 'address' }],

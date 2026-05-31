@@ -545,6 +545,36 @@ export async function syncProfileToSupabase(address: string): Promise<void> {
   } catch {}
 }
 
+export async function sendCheerNotification(fromAddress: string, toAddress: string): Promise<void> {
+  if (!supabase) return;
+  try {
+    await supabase.from('notifications').insert({
+      user_address: toAddress.toLowerCase(),
+      type: 'cheer',
+      from_address: fromAddress.toLowerCase(),
+      message: 'cheered you on',
+    });
+  } catch {}
+}
+
+export interface AppNotification {
+  id: string;
+  type: string;
+  from_address: string;
+  message: string;
+  created_at: string;
+}
+
+export async function getNotifications(userAddress: string, limit = 20): Promise<AppNotification[]> {
+  if (!supabase || !userAddress) return [];
+  const { data } = await supabase
+    .from('notifications')
+    .select('id, type, from_address, message, created_at')
+    .eq('user_address', userAddress.toLowerCase())
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  return (data || []) as AppNotification[];
+}
 export async function getTodayNudgesSent(fromAddress: string): Promise<string[]> {
   if (!supabase) return [];
   const today = new Date().toISOString().split('T')[0];

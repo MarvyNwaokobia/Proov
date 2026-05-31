@@ -16,7 +16,10 @@ import {
   getLatestActivityForAddress,
   sendNudge,
   getTodayNudgesSent,
+  sendCheerNotification,
+  getNotifications,
   type CircleRequest,
+  type AppNotification,
 } from "@/lib/supabase";
 import { useProovTx } from "@/hooks/useProovTx";
 
@@ -93,6 +96,9 @@ export default function CirclePage() {
   const [removeTargetUsername, setRemoveTargetUsername] = useState('');
   const [removeTargetRequestId, setRemoveTargetRequestId] = useState('');
   const [removeLoading, setRemoveLoading] = useState(false);
+
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [notifUsernames, setNotifUsernames] = useState<Record<string, string>>({});
 
   const [insight, setInsight] = useState<string | null>(null);
   const [insightLoading, setInsightLoading] = useState(false);
@@ -175,6 +181,22 @@ export default function CirclePage() {
   }, [loadCircleData]);
 
   useEffect(() => {
+    const addr = (localStorage.getItem('proov_address') || '').toLowerCase();
+    if (!addr) return;
+    getNotifications(addr).then(async (notifs) => {
+      setNotifications(notifs);
+      const senders = [...new Set(notifs.map(n => n.from_address))];
+      if (senders.length > 0) {
+        const names = await getUsernamesForAddresses(senders).catch(() => ({} as Record<string, string>));
+        setNotifUsernames(names);
+      }
+      // Mark as read — store timestamp so dashboard badge clears
+      localStorage.setItem('proov_notif_last_read', new Date().toISOString());
+      window.dispatchEvent(new CustomEvent('proov-notif-update', { detail: { count: 0 } }));
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
     setInviteError(''); setResolvedAddress(''); setResolvedUsername('');
   }, [inviteInput]);
 
@@ -249,6 +271,7 @@ export default function CirclePage() {
     showToast('Sending cheer...');
     const hash = await proovTx.sendCheer(addr as `0x${string}`);
     if (hash) {
+      sendCheerNotification(myAddress, addr).catch(() => {});
       showToast('Cheer sent!');
     } else {
       localStorage.removeItem(`proov_cheered_${addr}_${today}`);
@@ -387,6 +410,32 @@ export default function CirclePage() {
       </div>
 
       <div style={{ maxWidth: 512, margin: '0 auto', padding: '1rem 1.25rem 0', position: 'relative', zIndex: 1 }}>
+
+        {/* Notification panel */}
+        {notifications.length > 0 && (
+          <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14, padding: '12px 14px', marginBottom: 16 }}>
+            <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text3)', margin: '0 0 10px' }}>Recent activity</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {notifications.slice(0, 5).map(n => {
+                const senderUsername = notifUsernames[n.from_address];
+                const sender = senderUsername ? `@${senderUsername}` : `${n.from_address.slice(0, 6)}…${n.from_address.slice(-4)}`;
+                const emoji = n.type === 'cheer' ? '🎉' : '👊';
+                const action = n.type === 'cheer' ? 'cheered you on' : 'nudged you';
+                const mins = Math.floor((Date.now() - new Date(n.created_at).getTime()) / 60000);
+                const age = mins < 60 ? `${mins}m ago` : mins < 1440 ? `${Math.floor(mins / 60)}h ago` : `${Math.floor(mins / 1440)}d ago`;
+                return (
+                  <div key={n.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 16, flexShrink: 0 }}>{emoji}</span>
+                    <span style={{ fontSize: 13, color: 'var(--text2)', flex: 1 }}>
+                      <strong style={{ color: 'var(--text)' }}>{sender}</strong> {action}
+                    </span>
+                    <span style={{ fontSize: 11, color: 'var(--text3)', flexShrink: 0 }}>{age}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Tab toggle */}
         <div style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 12, padding: 4, gap: 3, marginBottom: 18 }}>
