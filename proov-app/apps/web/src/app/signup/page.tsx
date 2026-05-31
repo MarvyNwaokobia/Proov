@@ -31,6 +31,16 @@ export default function SignUpPage() {
 
   useEffect(() => { if (!isPending) setConnecting(false); }, [isPending]);
 
+  // Pre-clear any stale session on mount so connectTo fires immediately on click.
+  // New users have no existing session — browser blocks popups opened after async delays.
+  useEffect(() => {
+    clearWeb3AuthSession().then(() => {
+      import('@/lib/wagmi-config').then(({ getWeb3Auth }) => {
+        try { getWeb3Auth().logout({ cleanup: true }).catch(() => {}); } catch {}
+      });
+    });
+  }, []);
+
   useEffect(() => {
     if (isMiniPay()) {
       connectMiniPay().then(addr => {
@@ -63,10 +73,9 @@ export default function SignUpPage() {
 
   const triggerConnect = async (loginProvider = 'google') => {
     setConnecting(true);
-    await clearWeb3AuthSession();
+    // Cleanup already ran on mount — call connectTo immediately to avoid popup blocker.
     const { getWeb3Auth } = await import('@/lib/wagmi-config');
     const web3auth = getWeb3Auth();
-    try { await web3auth.logout({ cleanup: true }); } catch {}
     try {
       if ((web3auth as any).status === 'not_ready') await (web3auth as any).initModal();
       const { WALLET_ADAPTERS } = await import('@web3auth/base');
