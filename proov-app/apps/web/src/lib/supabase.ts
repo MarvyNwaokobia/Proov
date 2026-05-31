@@ -516,6 +516,35 @@ export async function sendNudge(fromAddress: string, toAddress: string): Promise
 /**
  * Returns the list of to_address values that fromAddress has nudged today.
  */
+/**
+ * Called on every login. If Supabase has no profile for this address but
+ * localStorage does, upserts it — repairs users whose onboarding write failed.
+ */
+export async function syncProfileToSupabase(address: string): Promise<void> {
+  if (!supabase || !address) return;
+  const addrLower = address.toLowerCase();
+
+  const { data: existing } = await supabase
+    .from('profiles')
+    .select('username')
+    .eq('address', addrLower)
+    .maybeSingle();
+
+  if (existing?.username && !existing.username.startsWith('0x')) return;
+
+  // No valid profile in Supabase — try to recover from localStorage
+  try {
+    const raw = localStorage.getItem(`proov_username_${addrLower}`);
+    const localUsername = raw ? JSON.parse(raw).username : localStorage.getItem('proov_username');
+    if (!localUsername || localUsername.startsWith('0x') || localUsername.length < 3) return;
+
+    await supabase.from('profiles').upsert(
+      { address: addrLower, username: localUsername },
+      { onConflict: 'address' }
+    );
+  } catch {}
+}
+
 export async function getTodayNudgesSent(fromAddress: string): Promise<string[]> {
   if (!supabase) return [];
   const today = new Date().toISOString().split('T')[0];

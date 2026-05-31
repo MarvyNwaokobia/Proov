@@ -43,7 +43,12 @@ export function UsernameSetup({ address, onComplete }: Props) {
     if (status !== 'available') return;
     setLoading(true);
     try {
-      await registerSupabaseUsername(address, clean);
+      const result = await registerSupabaseUsername(address, clean);
+      if (!result.success) {
+        setStatus('taken');
+        setHint(result.error === 'Already taken' ? '✗ Already taken — try another' : 'Could not save — try again');
+        return;
+      }
       onComplete(clean);
     } catch {
       setStatus('taken');
