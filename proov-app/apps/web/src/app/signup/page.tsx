@@ -31,8 +31,8 @@ export default function SignUpPage() {
 
   useEffect(() => { if (!isPending) setConnecting(false); }, [isPending]);
 
-  // Pre-clear stale Web3Auth session on mount so connectTo fires immediately
-  // on button click — popup blockers kill popups opened after async delays.
+  // Pre-clear any stale session on mount so connectTo fires immediately on click.
+  // New users have no existing session — browser blocks popups opened after async delays.
   useEffect(() => {
     clearWeb3AuthSession().then(() => {
       import('@/lib/wagmi-config').then(({ getWeb3Auth }) => {
