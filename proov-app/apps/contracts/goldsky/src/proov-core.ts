@@ -3,6 +3,7 @@ import {
   HabitCreated,
   HabitCompleted,
   HabitDeactivated,
+  HabitReactivated,
   StreakUpdated,
   StreakBroken,
   MilestoneReached,
@@ -74,6 +75,16 @@ export function handleHabitDeactivated(event: HabitDeactivated): void {
   const habit = Habit.load(habitId)
   if (habit) {
     habit.active = false
+    habit.save()
+  }
+}
+
+export function handleHabitReactivated(event: HabitReactivated): void {
+  const userId = event.params.user.toHexString()
+  const habitId = userId + '-' + event.params.habitId.toString()
+  const habit = Habit.load(habitId)
+  if (habit) {
+    habit.active = true
     habit.save()
   }
 }
