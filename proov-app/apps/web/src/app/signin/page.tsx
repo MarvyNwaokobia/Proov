@@ -200,64 +200,8 @@ export default function SignInPage() {
             </div>
           )}
 
-          {/* Google */}
-          <button
-            onClick={() => triggerConnect('google')}
-            disabled={isPending}
-            style={{ width: '100%', padding: '13px 16px', borderRadius: 13, border: '1.5px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,.06)', transition: 'all .15s' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg3)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'var(--card-bg)')}>
-            <GoogleIcon />
-            Continue with Google
-          </button>
-
-          {/* Divider */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-            <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 500 }}>or continue with</span>
-            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-          </div>
-
-          {/* Magic link / Code / SMS tabs */}
-          <div style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 10, padding: 3, gap: 3, marginBottom: 12 }}>
-            {tabs.map(t => (
-              <button key={t.id} onClick={() => switchMethod(t.id)} style={tabStyle(altMethod === t.id)}>
-                {t.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Input + action */}
-          {!sent ? (
-            <>
-              <input
-                type={inputType}
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSend()}
-                placeholder={placeholder}
-                style={{ width: '100%', padding: '11px 14px', borderRadius: 12, border: '1.5px solid var(--border2)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 13, marginBottom: 8, boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }}
-              />
-              <button
-                onClick={handleSend}
-                disabled={!input.trim() || isPending}
-                style={{ width: '100%', padding: 12, borderRadius: 12, border: 'none', background: input.trim() ? 'var(--btn-primary-bg)' : 'var(--bg3)', color: input.trim() ? 'var(--btn-primary-text)' : 'var(--text3)', fontSize: 14, fontWeight: 600, cursor: input.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit', marginBottom: 16 }}>
-                {sendLabel}
-              </button>
-            </>
-          ) : (
-            <div style={{ textAlign: 'center', padding: '8px 0 20px' }}>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>{sentEmoji}</div>
-              <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>{sentTitle}</p>
-              <p style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 10 }}>{sentDesc}</p>
-              <button onClick={() => setSent(false)} style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--accent-text)', cursor: 'pointer', fontFamily: 'inherit' }}>
-                Try again
-              </button>
-            </div>
-          )}
-
-          {/* Username login */}
-          <div style={{ marginBottom: 16 }}>
+          {/* Username login — above Google */}
+          <div style={{ marginBottom: 12 }}>
             <button
               onClick={() => { setShowUsername(v => !v); setUsernameError(''); setUsernameInput(''); }}
               style={{ width: '100%', padding: '10px 14px', borderRadius: 11, border: `1px solid ${showUsername ? 'var(--accent-border)' : 'var(--border)'}`, background: showUsername ? 'var(--accent-bg)' : 'var(--bg2)', color: showUsername ? 'var(--accent-text)' : 'var(--text2)', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'space-between', transition: 'all .15s' }}>
@@ -288,6 +232,62 @@ export default function SignInPage() {
               {usernameError && <p style={{ fontSize: 12, color: '#f43f5e', marginTop: 6, padding: '0 4px' }}>{usernameError}</p>}
             </div>
           </div>
+
+          {/* Google */}
+          <button
+            onClick={() => triggerConnect('google')}
+            disabled={isPending}
+            style={{ width: '100%', padding: '13px 16px', borderRadius: 13, border: '1.5px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,.06)', transition: 'all .15s' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg3)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'var(--card-bg)')}>
+            <GoogleIcon />
+            Continue with Google
+          </button>
+
+          {/* Divider */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 500 }}>or continue with</span>
+            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+          </div>
+
+          {/* Magic link / Code / SMS tabs */}
+          <div style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 10, padding: 3, gap: 3, marginBottom: 12 }}>
+            {tabs.map(t => (
+              <button key={t.id} onClick={() => switchMethod(t.id)} style={tabStyle(altMethod === t.id)}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Input + send */}
+          {!sent ? (
+            <>
+              <input
+                type={inputType}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSend()}
+                placeholder={placeholder}
+                style={{ width: '100%', padding: '11px 14px', borderRadius: 12, border: '1.5px solid var(--border2)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 13, marginBottom: 8, boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }}
+              />
+              <button
+                onClick={handleSend}
+                disabled={!input.trim() || isPending}
+                style={{ width: '100%', padding: 12, borderRadius: 12, border: 'none', background: input.trim() ? 'var(--btn-primary-bg)' : 'var(--bg3)', color: input.trim() ? 'var(--btn-primary-text)' : 'var(--text3)', fontSize: 14, fontWeight: 600, cursor: input.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit', marginBottom: 16 }}>
+                {sendLabel}
+              </button>
+            </>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '8px 0 20px' }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>{sentEmoji}</div>
+              <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>{sentTitle}</p>
+              <p style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 10 }}>{sentDesc}</p>
+              <button onClick={() => setSent(false)} style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--accent-text)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                Try again
+              </button>
+            </div>
+          )}
 
           <div style={{ textAlign: 'center' }}>
             <span style={{ fontSize: 13, color: 'var(--text3)' }}>No account? </span>
