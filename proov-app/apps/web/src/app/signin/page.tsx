@@ -78,15 +78,11 @@ export default function SignInPage() {
     const { getWeb3Auth } = await import('@/lib/wagmi-config');
     const web3auth = getWeb3Auth();
     try { await web3auth.logout({ cleanup: true }); } catch {}
-    if (loginProvider !== 'google') {
-      // email/SMS: connectTo is fine — these don't open a popup
-      try {
-        if ((web3auth as any).status === 'not_ready') await (web3auth as any).initModal();
-        const { WALLET_ADAPTERS } = await import('@web3auth/base');
-        await (web3auth as any).connectTo(WALLET_ADAPTERS.AUTH, { loginProvider });
-      } catch {}
-    }
-    // Google uses connect() so the Web3Auth modal opens in-page — no popup to block
+    try {
+      if ((web3auth as any).status === 'not_ready') await (web3auth as any).initModal();
+      const { WALLET_ADAPTERS } = await import('@web3auth/base');
+      await (web3auth as any).connectTo(WALLET_ADAPTERS.AUTH, { loginProvider });
+    } catch {}
     const c = connectors[0];
     if (c) connect({ connector: c });
     else setConnecting(false);
