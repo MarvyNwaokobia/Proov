@@ -1,10 +1,35 @@
 'use client';
 
-import { ADAPTER_STATUS } from '@web3auth/base';
+import { ADAPTER_STATUS, WALLET_ADAPTERS } from '@web3auth/base';
 import type { Web3Auth } from '@web3auth/modal';
 import { createConnector } from 'wagmi';
 import { getAddress } from 'viem';
 import { celo } from 'viem/chains';
+
+// Hide everything except Google from the Web3Auth modal.
+// Users have our own UI for email/SMS; showing Facebook/Discord/Reddit
+// in the modal contradicts the "Google only" auth design.
+const MODAL_CONFIG = {
+  [WALLET_ADAPTERS.AUTH]: {
+    label: 'openlogin',
+    loginMethods: {
+      facebook:          { showOnModal: false },
+      discord:           { showOnModal: false },
+      reddit:            { showOnModal: false },
+      twitter:           { showOnModal: false },
+      twitch:            { showOnModal: false },
+      github:            { showOnModal: false },
+      wechat:            { showOnModal: false },
+      kakao:             { showOnModal: false },
+      linkedin:          { showOnModal: false },
+      weibo:             { showOnModal: false },
+      apple:             { showOnModal: false },
+      line:              { showOnModal: false },
+      email_passwordless:{ showOnModal: false },
+      sms_passwordless:  { showOnModal: false },
+    },
+  },
+};
 
 export function createAAConnector({ web3AuthInstance }: { web3AuthInstance: Web3Auth }) {
   return createConnector<any>(config => ({
@@ -16,7 +41,7 @@ export function createAAConnector({ web3AuthInstance }: { web3AuthInstance: Web3
       config.emitter.emit('message', { type: 'connecting' });
 
       if (web3AuthInstance.status === ADAPTER_STATUS.NOT_READY) {
-        await web3AuthInstance.initModal();
+        await web3AuthInstance.initModal({ modalConfig: MODAL_CONFIG as any });
       }
       if (!web3AuthInstance.connected) {
         await web3AuthInstance.connect();
