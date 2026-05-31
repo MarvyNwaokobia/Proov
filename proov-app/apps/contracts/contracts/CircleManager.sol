@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
 /**
- * CircleManager v2 — event-log only.
+ * CircleManager v2 — event-log only, UUPS upgradeable.
  *
  * Circle membership and social interactions live in Supabase.
  * Accepting a request and sending cheers/nudges emit on-chain proof.
  */
-contract CircleManager {
+contract CircleManager is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     event MemberAdded(
         address indexed circleOwner,
         address indexed member,
@@ -23,6 +27,17 @@ contract CircleManager {
         address indexed removed,
         uint256 timestamp
     );
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address initialOwner) public initializer {
+        __Ownable_init(initialOwner);
+    }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     // Sending a request is a Supabase-only operation (no on-chain proof needed).
     function sendRequest(address) external {}

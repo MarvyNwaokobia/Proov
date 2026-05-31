@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
 /**
- * ProovCore v2 — event-log only.
+ * ProovCore v2 — event-log only, UUPS upgradeable.
  *
  * All habit data lives in Supabase (fast, queryable). This contract is the
  * immutable proof layer: every user action emits an on-chain event that Dune
@@ -12,7 +16,7 @@ pragma solidity ^0.8.28;
  * Only _habitCount is stored — one uint256 per user — to generate
  * deterministic on-chain habit IDs without off-chain coordination.
  */
-contract ProovCore {
+contract ProovCore is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     mapping(address => uint256) private _habitCount;
 
     event HabitCreated(
@@ -31,6 +35,11 @@ contract ProovCore {
         uint256 timestamp
     );
     event HabitDeactivated(
+        address indexed user,
+        uint256 indexed habitId,
+        uint256 timestamp
+    );
+    event HabitReactivated(
         address indexed user,
         uint256 indexed habitId,
         uint256 timestamp
@@ -67,6 +76,17 @@ contract ProovCore {
         uint256 timestamp
     );
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address initialOwner) public initializer {
+        __Ownable_init(initialOwner);
+    }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
     // ── Habit ──────────────────────────────────────────────────────────────────
 
     function createHabit(
@@ -86,6 +106,10 @@ contract ProovCore {
 
     function deactivateHabit(uint256 habitId) external {
         emit HabitDeactivated(msg.sender, habitId, block.timestamp);
+    }
+
+    function reactivateHabit(uint256 habitId) external {
+        emit HabitReactivated(msg.sender, habitId, block.timestamp);
     }
 
     // ── Streak / Milestones ────────────────────────────────────────────────────
@@ -118,6 +142,6 @@ contract ProovCore {
     }
 
     // ── Compat stubs (no-ops — v1 deploy script called these) ─────────────────
-    function setSessionManager(address) external {}
-    function setCircleManager(address) external {}
+    function setSessionManager(address) external onlyOwner {}
+    function setCircleManager(address) external onlyOwner {}
 }

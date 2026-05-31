@@ -2,6 +2,7 @@ export const CONTRACTS = {
   PROOV_CORE: process.env.NEXT_PUBLIC_PROOV_CORE_ADDRESS as `0x${string}`,
   SESSION_MANAGER: process.env.NEXT_PUBLIC_SESSION_MANAGER_ADDRESS as `0x${string}`,
   CIRCLE_MANAGER: process.env.NEXT_PUBLIC_CIRCLE_MANAGER_ADDRESS as `0x${string}`,
+  FUEL_FAUCET: process.env.NEXT_PUBLIC_FUEL_FAUCET_ADDRESS as `0x${string}`,
 };
 
 export const PROOV_CORE_ABI = [
@@ -25,6 +26,11 @@ export const PROOV_CORE_ABI = [
   },
   {
     name: 'deactivateHabit', type: 'function', stateMutability: 'nonpayable',
+    inputs: [{ name: 'habitId', type: 'uint256' }],
+    outputs: [],
+  },
+  {
+    name: 'reactivateHabit', type: 'function', stateMutability: 'nonpayable',
     inputs: [{ name: 'habitId', type: 'uint256' }],
     outputs: [],
   },
