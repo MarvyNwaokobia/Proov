@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import {
   IconHome2,
   IconCheckbox,
@@ -21,6 +22,15 @@ const PUBLIC_PATHS = ['/', '/signin', '/signup', '/onboarding', '/username-setup
 
 export function BottomNav() {
   const path = usePathname();
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      setUnread((e as CustomEvent<{ count: number }>).detail.count);
+    };
+    window.addEventListener('proov-notif-update', handler);
+    return () => window.removeEventListener('proov-notif-update', handler);
+  }, []);
 
   if (PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '?'))) return null;
 
@@ -36,13 +46,24 @@ export function BottomNav() {
     }}>
       {NAV_ITEMS.map(({ href, icon: Icon, label, wtId }) => {
         const active = path === href || (href !== '/dashboard' && path.startsWith(href));
+        const showBadge = href === '/circle' && unread > 0 && !active;
         return (
           <Link key={href} href={href} id={wtId || undefined} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, minWidth: 48, paddingBottom: 2 }}>
-            <Icon
-              size={22}
-              stroke={1.8}
-              color={active ? 'var(--accent)' : 'var(--text3)'}
-            />
+            <div style={{ position: 'relative' }}>
+              <Icon
+                size={22}
+                stroke={1.8}
+                color={active ? 'var(--accent)' : 'var(--text3)'}
+              />
+              {showBadge && (
+                <span style={{
+                  position: 'absolute', top: -3, right: -4,
+                  width: 8, height: 8, borderRadius: '50%',
+                  background: '#f43f5e',
+                  border: '1.5px solid var(--nav-bg)',
+                }} />
+              )}
+            </div>
             <span style={{
               fontSize: 9, fontWeight: active ? 700 : 500,
               color: active ? 'var(--accent-text)' : 'var(--text3)',
