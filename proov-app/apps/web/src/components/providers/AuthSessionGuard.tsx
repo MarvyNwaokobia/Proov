@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAccount, useReconnect } from 'wagmi';
 import { clearWeb3AuthSession } from '@/lib/clearSession';
 import { runMigrations } from '@/lib/auth';
+import { syncProfileToSupabase } from '@/lib/supabase';
 
 const PROTECTED_PREFIXES = [
   '/dashboard',
@@ -80,6 +81,8 @@ export function AuthSessionGuard() {
       localStorage.setItem('proov_address', address.toLowerCase());
       reconnectAttemptedRef.current = false;
       seenPendingRef.current = false;
+      // Background sync: repair any user whose Supabase profile was never written
+      syncProfileToSupabase(address).catch(() => {});
       return;
     }
 

@@ -167,10 +167,12 @@ export default function SettingsPage() {
         return;
       }
     } catch {
-      console.warn('Supabase unavailable — saving locally only');
+      setUsernameHint('Connection error — try again');
+      setUsernameHintColor('#f43f5e');
+      return;
     }
 
-    // Always update localStorage
+    // Only write locally once Supabase confirms
     registerUsername(clean, address);
     localStorage.setItem('proov_username', clean);
     setIdentityUsername(address, clean);
