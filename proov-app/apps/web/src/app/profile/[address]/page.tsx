@@ -73,6 +73,7 @@ export default function ProfilePage() {
   const [habitStreaks, setHabitStreaks] = useState<Record<string, number>>({});
   const [dailyCounts, setDailyCounts] = useState<Record<string, number>>({});
   const [memberSince, setMemberSince] = useState('');
+  const [joinedDate, setJoinedDate] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
 
   const address = (rawAddress || '').toLowerCase();
@@ -107,6 +108,7 @@ export default function ProfilePage() {
       if (createdAt) {
         const d = new Date(createdAt as string);
         setMemberSince(d.toLocaleString('default', { month: 'short', year: 'numeric' }));
+        setJoinedDate(d);
       }
 
       setLoading(false);
@@ -134,15 +136,24 @@ export default function ProfilePage() {
   const displayName = username ? `@${username}` : address.slice(0, 8) + '…';
   const initial = (username || address).slice(0, 1).toUpperCase();
 
-  // Build 30-day grid (10 cols × 3 rows), oldest top-left, today bottom-right
+  // Build heatmap from join date → today, growing in steps of 10 after 30.
+  // First box = day they joined, last box = today. No empty "pre-join" days.
   const heatmapDays = (() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return Array.from({ length: 30 }, (_, i) => {
-      const d = new Date(today);
-      d.setDate(today.getDate() - (29 - i));
+    const start = joinedDate ? new Date(joinedDate) : new Date(today);
+    start.setHours(0, 0, 0, 0);
+    const daysSinceJoin = Math.floor((today.getTime() - start.getTime()) / 86400000) + 1;
+    // Snap total boxes up to nearest 10, minimum 30
+    const totalBoxes = daysSinceJoin <= 30
+      ? 30
+      : Math.ceil(daysSinceJoin / 10) * 10;
+    return Array.from({ length: totalBoxes }, (_, i) => {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
       const dateStr = d.toISOString().split('T')[0];
-      return { date: dateStr, count: dailyCounts[dateStr] || 0 };
+      const isFuture = d > today;
+      return { date: dateStr, count: isFuture ? -1 : (dailyCounts[dateStr] || 0) };
     });
   })();
 
@@ -272,7 +283,7 @@ export default function ProfilePage() {
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.2px', color: 'var(--text3)' }}>
-              Last 30 days
+              Since day 1
             </div>
             <div style={{ fontSize: 9, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 6 }}>
               <span>less</span>
@@ -296,12 +307,15 @@ export default function ProfilePage() {
             {heatmapDays.map(({ date, count }) => (
               <div
                 key={date}
-                title={`${date}${count > 0 ? ` · ${count} completed` : ''}`}
+                title={count === -1 ? date : `${date}${count > 0 ? ` · ${count} completed` : ''}`}
                 style={{
                   aspectRatio: '1',
                   borderRadius: 5,
                   transition: 'box-shadow 0.2s',
-                  ...glowStyle(count, habits.length),
+                  // future days shown as faint outline only
+                  ...(count === -1
+                    ? { background: 'transparent', border: '1px dashed var(--border)', opacity: 0.3 }
+                    : glowStyle(count, habits.length)),
                 }}
               />
             ))}
