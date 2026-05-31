@@ -262,7 +262,7 @@ export default function DashboardPage() {
     d.setDate(d.getDate() - (6 - i));
     const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
     const isToday = i === 6;
-    const filled = isToday ? completedToday.length > 0 : i < 6 && currentStreak > (6 - i);
+    const filled = isToday ? completedToday.length > 0 : i < 6 && currentStreak >= (6 - i);
     return { label: dayNames[d.getDay()], isToday, filled };
   });
 

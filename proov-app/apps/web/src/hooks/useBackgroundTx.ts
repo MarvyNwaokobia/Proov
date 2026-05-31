@@ -119,7 +119,7 @@ export function useBackgroundTx() {
 
   const sendTx = useCallback(
     async (
-      config: Parameters<typeof writeContract>[0] & { _fromQueue?: boolean }
+      config: Parameters<typeof writeContract>[0] & { _fromQueue?: boolean; _successMessage?: string | null }
     ): Promise<`0x${string}` | null> => {
       // Wait for wagmi to be in a stable connected state before making any
       // decision about the session. connectedAddress can be undefined for a
@@ -175,7 +175,9 @@ export function useBackgroundTx() {
             } as Parameters<typeof writeContract>[0],
             {
               onSuccess: (hash) => {
-                showSuccess('Proof recorded ✓');
+                if (config._successMessage !== null) {
+                  showSuccess(config._successMessage ?? 'Proof recorded ✓');
+                }
                 resolve(hash);
               },
               onError: (err) => {
