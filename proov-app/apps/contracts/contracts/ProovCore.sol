@@ -35,6 +35,11 @@ contract ProovCore {
         uint256 indexed habitId,
         uint256 timestamp
     );
+    event HabitReactivated(
+        address indexed user,
+        uint256 indexed habitId,
+        uint256 timestamp
+    );
     event StreakUpdated(
         address indexed user,
         uint256 newStreak,
@@ -86,6 +91,10 @@ contract ProovCore {
 
     function deactivateHabit(uint256 habitId) external {
         emit HabitDeactivated(msg.sender, habitId, block.timestamp);
+    }
+
+    function reactivateHabit(uint256 habitId) external {
+        emit HabitReactivated(msg.sender, habitId, block.timestamp);
     }
 
     // ── Streak / Milestones ────────────────────────────────────────────────────

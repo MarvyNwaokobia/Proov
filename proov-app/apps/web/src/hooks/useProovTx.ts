@@ -57,6 +57,17 @@ export function useProovTx() {
       });
     },
 
+    restoreHabit: (onChainId: number | undefined) => {
+      const id = safeId(onChainId);
+      if (id === null) return Promise.resolve('0x' as `0x${string}`);
+      return sendTx({
+        address: CONTRACTS.PROOV_CORE, abi: PROOV_CORE_ABI,
+        functionName: 'reactivateHabit',
+        args: [id],
+        _successMessage: null, // page shows "Habit restored ✓"
+      });
+    },
+
     editHabit: () => Promise.resolve('0x' as `0x${string}`),
 
     // ── STREAK ACTIONS ─────────────────────────────────────────────────────

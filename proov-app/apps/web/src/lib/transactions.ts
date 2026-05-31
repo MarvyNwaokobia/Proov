@@ -29,6 +29,11 @@ export const PROOV_CORE_ABI = [
     outputs: [],
   },
   {
+    name: 'reactivateHabit', type: 'function', stateMutability: 'nonpayable',
+    inputs: [{ name: 'habitId', type: 'uint256' }],
+    outputs: [],
+  },
+  {
     name: 'recordStreakIncrement', type: 'function', stateMutability: 'nonpayable',
     inputs: [{ name: 'newStreakCount', type: 'uint256' }],
     outputs: [],

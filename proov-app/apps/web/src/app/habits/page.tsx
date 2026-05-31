@@ -1037,7 +1037,9 @@ export default function HabitsPage() {
                 </div>
                 <button
                   onClick={async () => {
-                    const addr = localStorage.getItem('proov_address') || '';
+                    // Tx first — prove the restoration on-chain
+                    const txOk = await proovTx.restoreHabit((h as any)?.on_chain_id ?? undefined);
+                    if (!txOk) return;
                     const { supabase } = await import('@/lib/supabase');
                     if (!supabase) return;
                     await supabase.from('habits').update({ active: true }).eq('id', h.id);
