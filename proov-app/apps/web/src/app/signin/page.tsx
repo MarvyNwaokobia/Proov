@@ -82,7 +82,11 @@ export default function SignInPage() {
       if ((web3auth as any).status === 'not_ready') await (web3auth as any).initModal();
       const { WALLET_ADAPTERS } = await import('@web3auth/base');
       await (web3auth as any).connectTo(WALLET_ADAPTERS.AUTH, { loginProvider });
-    } catch {}
+    } catch {
+      // connectTo failed — stop here so the Web3Auth modal never opens as a fallback
+      setConnecting(false);
+      return;
+    }
     const c = connectors[0];
     if (c) connect({ connector: c });
     else setConnecting(false);
