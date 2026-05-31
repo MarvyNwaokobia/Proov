@@ -22,11 +22,23 @@ export function isUsernameTaken(username: string, excludeAddress?: string): bool
 export function registerUsername(username: string, address: string): boolean {
   const registry = getRegistry();
   const lower = username.toLowerCase().replace(/^@/, '');
+  const addrLower = address.toLowerCase();
 
   // Taken by someone else?
-  if (registry[lower] && registry[lower] !== address.toLowerCase()) return false;
+  if (registry[lower] && registry[lower] !== addrLower) return false;
 
-  registry[lower] = address.toLowerCase();
+  // Free the old username for this address so it can be claimed by others
+  try {
+    const oldRaw = localStorage.getItem(USER_KEY(address));
+    if (oldRaw) {
+      const { username: oldUsername } = JSON.parse(oldRaw);
+      if (oldUsername && oldUsername !== lower && registry[oldUsername] === addrLower) {
+        delete registry[oldUsername];
+      }
+    }
+  } catch {}
+
+  registry[lower] = addrLower;
   localStorage.setItem(REGISTRY_KEY, JSON.stringify(registry));
   localStorage.setItem(USER_KEY(address), JSON.stringify({ username: lower, updatedAt: new Date().toISOString() }));
   localStorage.setItem('proov_username', lower);

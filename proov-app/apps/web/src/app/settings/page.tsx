@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
 import { validateUsername, isUsernameTaken, registerUsername } from '@/lib/username';
 import { setIdentityUsername } from '@/lib/auth';
-import { updateUsername as updateSupabaseUsername, getAiVerificationUsage, updateAvatarUrl, getAvatarUrl } from '@/lib/supabase';
+import { updateUsername as updateSupabaseUsername, isUsernameAvailable, getAiVerificationUsage, updateAvatarUrl, getAvatarUrl } from '@/lib/supabase';
 import { useProovTx } from '@/hooks/useProovTx';
 import {
   IconTrophy,
@@ -133,15 +133,18 @@ export default function SettingsPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const checkNewUsername = (val: string) => {
+  const checkNewUsername = async (val: string) => {
     setNewUsername(val);
     const clean = val.replace(/^@/, '');
     if (!clean) { setUsernameHint(''); return; }
     const { valid, message } = validateUsername(clean);
     if (!valid) { setUsernameHint(message); setUsernameHintColor('#f43f5e'); return; }
     if (isUsernameTaken(clean, address)) { setUsernameHint('Already taken'); setUsernameHintColor('#f43f5e'); return; }
-    setUsernameHint('✓ Available');
-    setUsernameHintColor('var(--accent)');
+    setUsernameHint('Checking…');
+    setUsernameHintColor('var(--text3)');
+    const available = await isUsernameAvailable(clean);
+    setUsernameHint(available ? '✓ Available' : 'Already taken');
+    setUsernameHintColor(available ? 'var(--accent)' : '#f43f5e');
   };
 
   const saveUsername = () => {
