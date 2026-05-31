@@ -7,9 +7,10 @@
     "build": "hardhat compile",
     "compile": "hardhat compile",
     "test": "hardhat test",
-    "deploy": "hardhat ignition deploy ignition/modules/Lock.ts",
-    "deploy:celo-sepolia": "hardhat ignition deploy ignition/modules/Lock.ts --network celo-sepolia",
-    "deploy:celo": "hardhat ignition deploy ignition/modules/Lock.ts --network celo",
+    "deploy:sepolia": "hardhat run scripts/deploy-upgradeable.ts --network celoSepolia",
+    "deploy:celo": "hardhat run scripts/deploy-upgradeable.ts --network celo",
+    "upgrade:sepolia": "hardhat run scripts/upgrade.ts --network celoSepolia",
+    "upgrade:celo": "hardhat run scripts/upgrade.ts --network celo",
     "verify": "hardhat verify",
     "clean": "hardhat clean",
     "typechain": "hardhat typechain"

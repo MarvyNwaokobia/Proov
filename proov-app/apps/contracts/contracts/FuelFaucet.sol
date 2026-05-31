@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 /**
  * @title FuelFaucet
- * @notice Dispenses CELO to Proov users once per 24 hours.
+ * @notice Dispenses CELO to Proov users once per 24 hours. UUPS upgradeable.
  *         Owner funds the contract and sets the drip amount.
  */
-contract FuelFaucet is Ownable {
-    uint256 public dripAmount = 0.2 ether; // 0.2 CELO
+contract FuelFaucet is Initializable, OwnableUpgradeable, UUPSUpgradeable {
+    uint256 public dripAmount;
     uint256 public constant CLAIM_INTERVAL = 24 hours;
-    uint256 public minContractBalance = 1 ether; // pause if below 1 CELO
+    uint256 public minContractBalance;
 
     mapping(address => uint256) public lastClaimTime;
 
@@ -19,7 +21,18 @@ contract FuelFaucet is Ownable {
     event FuelDeposited(address indexed from, uint256 amount);
     event DripAmountUpdated(uint256 newAmount);
 
-    constructor() Ownable(msg.sender) {}
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address initialOwner) public initializer {
+        __Ownable_init(initialOwner);
+        dripAmount = 0.2 ether;       // 0.2 CELO
+        minContractBalance = 1 ether; // pause if below 1 CELO
+    }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     // ── USER FUNCTIONS ────────────────────────────────────────────────────────
 

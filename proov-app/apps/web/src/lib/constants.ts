@@ -10,6 +10,7 @@ export const CONTRACT_ADDRESSES = {
   ProovCore: (process.env.NEXT_PUBLIC_PROOV_CORE_ADDRESS || "") as `0x${string}`,
   SessionManager: (process.env.NEXT_PUBLIC_SESSION_MANAGER_ADDRESS || "") as `0x${string}`,
   CircleManager: (process.env.NEXT_PUBLIC_CIRCLE_MANAGER_ADDRESS || "") as `0x${string}`,
+  FuelFaucet: (process.env.NEXT_PUBLIC_FUEL_FAUCET_ADDRESS || "") as `0x${string}`,
 } as const;
 
 export const CHAIN_ID = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || "11142220");
