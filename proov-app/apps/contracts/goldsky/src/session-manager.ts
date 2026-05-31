@@ -25,13 +25,22 @@ function getOrCreateUser(address: Bytes, timestamp: BigInt): User {
   return user
 }
 
+// Session ID keyed by user+habitId so completed/abandoned events can find and
+// update the session that was opened by SessionStarted (different tx hash).
+function sessionId(userAddress: string, habitId: BigInt): string {
+  return userAddress + '-' + habitId.toString()
+}
+
 export function handleSessionStarted(event: SessionStarted): void {
   const user = getOrCreateUser(event.params.user, event.block.timestamp)
 
-  const sessionId = event.transaction.hash.toHexString() + '-' + event.logIndex.toString()
-  const session = new Session(sessionId)
-  session.user = user.id
-  session.habitId = event.params.habitId
+  const id = sessionId(user.id, event.params.habitId)
+  let session = Session.load(id)
+  if (!session) {
+    session = new Session(id)
+    session.user = user.id
+    session.habitId = event.params.habitId
+  }
   session.startTime = event.params.startTimestamp
   session.status = 'active'
   session.save()
@@ -42,22 +51,30 @@ export function handleSessionStarted(event: SessionStarted): void {
 }
 
 export function handleSessionCompleted(event: SessionCompleted): void {
-  const sessionId = event.transaction.hash.toHexString() + '-' + event.logIndex.toString()
-  const session = new Session(sessionId)
-  session.user = event.params.user.toHexString()
-  session.habitId = event.params.habitId
-  session.startTime = event.block.timestamp
+  const userId = event.params.user.toHexString()
+  const id = sessionId(userId, event.params.habitId)
+  let session = Session.load(id)
+  if (!session) {
+    session = new Session(id)
+    session.user = userId
+    session.habitId = event.params.habitId
+    session.startTime = event.block.timestamp
+  }
   session.duration = event.params.duration
   session.status = 'completed'
   session.save()
 }
 
 export function handleSessionAbandoned(event: SessionAbandoned): void {
-  const sessionId = event.transaction.hash.toHexString() + '-' + event.logIndex.toString()
-  const session = new Session(sessionId)
-  session.user = event.params.user.toHexString()
-  session.habitId = event.params.habitId
-  session.startTime = event.block.timestamp
+  const userId = event.params.user.toHexString()
+  const id = sessionId(userId, event.params.habitId)
+  let session = Session.load(id)
+  if (!session) {
+    session = new Session(id)
+    session.user = userId
+    session.habitId = event.params.habitId
+    session.startTime = event.block.timestamp
+  }
   session.duration = event.params.duration
   session.status = 'abandoned'
   session.save()
