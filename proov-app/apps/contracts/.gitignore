@@ -16,3 +16,6 @@ node_modules
 
 # Hardhat Ignition default folder for deployments against a local node
 ignition/deployments/chain-31337
+
+# Timelock proposal state (runtime-generated, contains salts and calldata)
+proposals.json
