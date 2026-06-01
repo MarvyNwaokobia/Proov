@@ -1,6 +1,5 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { CircleManager } from "../typechain-types";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
@@ -27,23 +26,25 @@ describe("CircleManager", function () {
     });
   });
 
-  describe("sendRequest (compat stub)", function () {
-    it("accepts call without reverting", async function () {
-      await expect(circleManager.connect(alice).sendRequest(bob.address)).to.not.be.reverted;
+  describe("sendRequest", function () {
+    it("emits CircleRequestSent", async function () {
+      await expect(circleManager.connect(alice).sendRequest(bob.address))
+        .to.emit(circleManager, "CircleRequestSent")
+        .withArgs(alice.address, bob.address);
     });
   });
 
   describe("acceptRequest", function () {
-    it("emits MemberAdded with from/to and timestamp", async function () {
+    it("emits MemberAdded", async function () {
       await expect(circleManager.connect(bob).acceptRequest(alice.address))
         .to.emit(circleManager, "MemberAdded")
-        .withArgs(alice.address, bob.address, anyValue);
+        .withArgs(alice.address, bob.address);
     });
 
     it("different users can accept independently", async function () {
       await expect(circleManager.connect(alice).acceptRequest(carol.address))
         .to.emit(circleManager, "MemberAdded")
-        .withArgs(carol.address, alice.address, anyValue);
+        .withArgs(carol.address, alice.address);
     });
   });
 
@@ -51,15 +52,13 @@ describe("CircleManager", function () {
     it("emits CheerSent", async function () {
       await expect(circleManager.connect(alice).sendCheer(bob.address))
         .to.emit(circleManager, "CheerSent")
-        .withArgs(alice.address, bob.address, anyValue);
+        .withArgs(alice.address, bob.address);
     });
-  });
 
-  describe("cheer (alias)", function () {
-    it("emits CheerSent identically to sendCheer", async function () {
-      await expect(circleManager.connect(alice).cheer(bob.address))
+    it("works for nudge use case (same function, different UI label)", async function () {
+      await expect(circleManager.connect(bob).sendCheer(alice.address))
         .to.emit(circleManager, "CheerSent")
-        .withArgs(alice.address, bob.address, anyValue);
+        .withArgs(bob.address, alice.address);
     });
   });
 
@@ -67,7 +66,7 @@ describe("CircleManager", function () {
     it("emits RemovedFromCircle", async function () {
       await expect(circleManager.connect(alice).removeFromCircle(bob.address))
         .to.emit(circleManager, "RemovedFromCircle")
-        .withArgs(alice.address, bob.address, anyValue);
+        .withArgs(alice.address, bob.address);
     });
   });
 

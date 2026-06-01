@@ -6,31 +6,27 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 /**
- * CircleManager v2 — event-log only, UUPS upgradeable.
+ * CircleManager v3 — event-log only, UUPS upgradeable.
  *
- * Circle membership and social interactions live in Supabase.
- * Accepting a request and sending cheers/nudges emit on-chain proof.
+ * Timestamps removed from all events (~500 gas saved per call).
+ * cheer() alias removed — callers use sendCheer() for both cheers and nudges.
  */
 contract CircleManager is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     event CircleRequestSent(
         address indexed from,
-        address indexed to,
-        uint256 timestamp
+        address indexed to
     );
     event MemberAdded(
         address indexed circleOwner,
-        address indexed member,
-        uint256 timestamp
+        address indexed member
     );
     event CheerSent(
         address indexed from,
-        address indexed to,
-        uint256 timestamp
+        address indexed to
     );
     event RemovedFromCircle(
         address indexed user,
-        address indexed removed,
-        uint256 timestamp
+        address indexed removed
     );
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -45,24 +41,18 @@ contract CircleManager is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     function sendRequest(address to) external {
-        emit CircleRequestSent(msg.sender, to, block.timestamp);
+        emit CircleRequestSent(msg.sender, to);
     }
 
-    // Accepting proves the bond on-chain.
     function acceptRequest(address from) external {
-        emit MemberAdded(from, msg.sender, block.timestamp);
+        emit MemberAdded(from, msg.sender);
     }
 
     function sendCheer(address to) external {
-        emit CheerSent(msg.sender, to, block.timestamp);
-    }
-
-    // Alias used in useProovTx
-    function cheer(address to) external {
-        emit CheerSent(msg.sender, to, block.timestamp);
+        emit CheerSent(msg.sender, to);
     }
 
     function removeFromCircle(address member) external {
-        emit RemovedFromCircle(msg.sender, member, block.timestamp);
+        emit RemovedFromCircle(msg.sender, member);
     }
 }
