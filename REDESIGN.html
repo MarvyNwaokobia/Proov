@@ -100,6 +100,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <button class="sbtn" onclick="go('proofsheet')">AI Verify — empty</button>
     <button class="sbtn" onclick="go('proofsheet_ready')">AI Verify — ready</button>
     <button class="sbtn" onclick="go('proofsheet_approved')">AI Verify — approved</button>
+    <div class="snav-s">Brand</div>
+    <button class="sbtn" onclick="go('logo')">Logo</button>
   </nav>
   <div id="pw">
     <div id="phone">
@@ -134,6 +136,19 @@ golden_light:{'--bg':'#fffbeb','--bg2':'rgba(0,0,0,.03)','--bg3':'rgba(0,0,0,.06
 golden_dark:{'--bg':'#1c1008','--bg2':'rgba(217,119,6,.06)','--bg3':'rgba(217,119,6,.1)','--border':'rgba(217,119,6,.15)','--border2':'rgba(217,119,6,.28)','--text':'#fef3c7','--text2':'rgba(254,243,199,.55)','--text3':'rgba(254,243,199,.28)','--accent':'#f59e0b','--accent-bg':'rgba(245,158,11,.12)','--accent-border':'rgba(245,158,11,.3)','--accent-text':'#fcd34d','--card-bg':'rgba(217,119,6,.07)','--card-border':'rgba(217,119,6,.15)','--nav-bg':'rgba(28,16,8,.95)','--btn-primary-bg':'#f59e0b','--btn-primary-text':'#1c1008','--streak':'#f59e0b','--pink-bg':'rgba(244,114,182,.08)','--pink-text':'#f9a8d4','--success-text':'#6ee7b7','--success-bg':'rgba(16,185,129,.12)','--hero-bg':'linear-gradient(135deg,#f59e0b,#d97706,#92400e)'},
 };
 
+function genLogoCircles(){
+  let s='';
+  for(let r=72;r<=430;r+=5){
+    const sw=r<290?4.5:Math.max(2,4.5-(r-290)*0.015);
+    const c=2*Math.PI*r;
+    const g=c*0.06;
+    const d=c-g;
+    const o=(r*2.4)%c;
+    s+=`<circle cx="255" cy="150" r="${r}" fill="none" stroke="url(#fpg)" stroke-width="${sw.toFixed(1)}" stroke-dasharray="${d.toFixed(1)} ${g.toFixed(1)}" stroke-dashoffset="${o.toFixed(1)}"/>`;
+  }
+  return s;
+}
+
 const S={
 
 landing:{title:'Landing',nav:false,notes:[
@@ -147,7 +162,7 @@ landing:{title:'Landing',nav:false,notes:[
 <div style="position:relative;padding:0 20px 32px">
 <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0 16px">
   <div style="display:flex;align-items:center;gap:7px">
-    <div style="width:30px;height:30px;border-radius:8px;background:var(--btn-primary-bg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:var(--btn-primary-text)">P</div>
+    <img src="proov-logo.png" alt="Proov" style="width:30px;height:30px;object-fit:contain;display:block"/>
     <span style="font-size:16px;font-weight:800;color:var(--text);letter-spacing:-.4px">Proov</span>
   </div>
   <div style="display:flex;gap:6px">
@@ -202,9 +217,7 @@ signin:{title:'Sign In / Join Free — Google only',nav:false,notes:[
 
     <!-- Logo -->
     <div style="display:flex;flex-direction:column;align-items:center;padding:32px 0 22px">
-      <div style="width:48px;height:48px;border-radius:14px;background:var(--btn-primary-bg);display:flex;align-items:center;justify-content:center;margin-bottom:12px;box-shadow:0 4px 16px rgba(0,0,0,.12)">
-        <span style="font-size:24px;font-weight:800;color:#fff">P</span>
-      </div>
+      <img src="proov-logo.png" alt="Proov" style="width:64px;height:64px;object-fit:contain;display:block;margin-bottom:12px"/>
       <div id="auth-heading" style="font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.5px;margin-bottom:3px">Welcome back</div>
       <div id="auth-sub" style="font-size:13px;color:var(--text2)">Take accountability for your habits</div>
     </div>
@@ -815,9 +828,19 @@ proofsheet_approved:{title:'AI Verify — Approved ✓',nav:false,notes:[
   </div>
 </div>`},
 
+logo:{title:'Logo — Proov Fingerprint P',nav:false,notes:[
+{t:'new',s:'Official Proov logo — fingerprint-style P mark'},
+{t:'new',s:'Green gradient: bright top-right, dark forest bottom-left'},
+{t:'new',s:'Wordmark and tagline below the mark'},
+],html:`<div style="background:#fff;min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px 20px">
+  <img src="proov-logo.png" alt="Proov Logo" style="width:220px;height:auto;display:block"/>
+  <div style="margin-top:18px;font-size:26px;font-weight:900;letter-spacing:-1.2px;color:#173517;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">Proov</div>
+  <div style="margin-top:5px;font-size:11px;color:rgba(23,53,23,.42);letter-spacing:.6px;font-weight:500;text-transform:uppercase">Do the work. Own the proof.</div>
+</div>`},
+
 };
 
-const navMap={dashboard:'home',habits:'habit',discover:'habit',habit_detail:'habit',create_habit:'habit',timer_pick:'timer',timer_running:'timer',timer_done:'timer',circle:'circle',settings:'settings',leaderboard:'settings',profile:'settings',landing:'',signin:'',onboarding:'',walkthrough:'',walkthrough_last:'',proofsheet:'',proofsheet_ready:'',proofsheet_approved:''};
+const navMap={dashboard:'home',habits:'habit',discover:'habit',habit_detail:'habit',create_habit:'habit',timer_pick:'timer',timer_running:'timer',timer_done:'timer',circle:'circle',settings:'settings',leaderboard:'settings',profile:'settings',landing:'',signin:'',onboarding:'',walkthrough:'',walkthrough_last:'',proofsheet:'',proofsheet_ready:'',proofsheet_approved:'',logo:''};
 
 function authTab(t){
   const isJoin=t==='join';
