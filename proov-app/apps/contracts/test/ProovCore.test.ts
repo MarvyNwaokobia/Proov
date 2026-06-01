@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
+import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { ProovCore } from "../typechain-types";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
@@ -30,29 +30,151 @@ describe("ProovCore", function () {
     it("emits HabitCreated with habitId 0 for first habit", async function () {
       await expect(proovCore.connect(user1).createHabit("Deep Work", 0, 5400, 0))
         .to.emit(proovCore, "HabitCreated")
-        .withArgs(user1.address, 0, "Deep Work", 0, 5400, 0, anyValue);
+        .withArgs(user1.address, 0, "Deep Work", 0, 5400, 0);
     });
 
     it("increments habitId per user across habits", async function () {
       await proovCore.connect(user1).createHabit("Habit A", 0, 0, 0);
       await expect(proovCore.connect(user1).createHabit("Habit B", 1, 0, 0))
         .to.emit(proovCore, "HabitCreated")
-        .withArgs(user1.address, 1, "Habit B", 1, 0, 0, anyValue);
+        .withArgs(user1.address, 1, "Habit B", 1, 0, 0);
     });
 
     it("habit IDs restart at 0 for each user", async function () {
       await proovCore.connect(user1).createHabit("H1", 0, 0, 0);
       await expect(proovCore.connect(user2).createHabit("H2", 0, 0, 0))
         .to.emit(proovCore, "HabitCreated")
-        .withArgs(user2.address, 0, "H2", 0, 0, 0, anyValue);
+        .withArgs(user2.address, 0, "H2", 0, 0, 0);
+    });
+
+    it("preserves packed streak fields across habit creations", async function () {
+      await proovCore.connect(user1).createHabit("H1", 0, 0, 0);
+      await proovCore.connect(user1).selfCompleteHabit(0, ethers.ZeroHash);
+      await proovCore.connect(user1).createHabit("H2", 0, 0, 0);
+      const stats = await proovCore.getUserStats(user1.address);
+      expect(stats.habitCount).to.equal(2);
+      expect(stats.currentStreak).to.equal(1);
     });
   });
 
-  describe("selfCompleteHabit", function () {
-    it("emits HabitCompleted", async function () {
+  describe("selfCompleteHabit — streak logic", function () {
+    beforeEach(async function () {
+      // Create two habits so habitId 0 and 1 pass the bounds check.
+      await proovCore.connect(user1).createHabit("Habit A", 0, 0, 0);
+      await proovCore.connect(user1).createHabit("Habit B", 0, 0, 0);
+    });
+
+    it("emits HabitCompleted with streak=1 on first completion", async function () {
       await expect(proovCore.connect(user1).selfCompleteHabit(0, ethers.ZeroHash))
         .to.emit(proovCore, "HabitCompleted")
-        .withArgs(user1.address, 0, 0, anyValue);
+        .withArgs(user1.address, 0, 1);
+    });
+
+    it("emits StreakUpdated on first completion", async function () {
+      await expect(proovCore.connect(user1).selfCompleteHabit(0, ethers.ZeroHash))
+        .to.emit(proovCore, "StreakUpdated")
+        .withArgs(user1.address, 1, 1);
+    });
+
+    it("does NOT emit StreakUpdated on second completion same day", async function () {
+      await proovCore.connect(user1).selfCompleteHabit(0, ethers.ZeroHash);
+      await expect(proovCore.connect(user1).selfCompleteHabit(1, ethers.ZeroHash))
+        .not.to.emit(proovCore, "StreakUpdated");
+    });
+
+    it("emits HabitCompleted with same streak on second completion same day", async function () {
+      await proovCore.connect(user1).selfCompleteHabit(0, ethers.ZeroHash);
+      await expect(proovCore.connect(user1).selfCompleteHabit(1, ethers.ZeroHash))
+        .to.emit(proovCore, "HabitCompleted")
+        .withArgs(user1.address, 1, 1);
+    });
+
+    it("increments streak on consecutive day", async function () {
+      await proovCore.connect(user1).selfCompleteHabit(0, ethers.ZeroHash);
+      await time.increase(86400);
+      await expect(proovCore.connect(user1).selfCompleteHabit(0, ethers.ZeroHash))
+        .to.emit(proovCore, "StreakUpdated")
+        .withArgs(user1.address, 2, 2);
+    });
+
+    it("resets streak and emits StreakBroken after a missed day", async function () {
+      await proovCore.connect(user1).selfCompleteHabit(0, ethers.ZeroHash);
+      await time.increase(86400 * 2); // skip a day
+      await expect(proovCore.connect(user1).selfCompleteHabit(0, ethers.ZeroHash))
+        .to.emit(proovCore, "StreakBroken")
+        .withArgs(user1.address, 1);
+    });
+
+    it("streak restarts at 1 after a broken streak", async function () {
+      await proovCore.connect(user1).selfCompleteHabit(0, ethers.ZeroHash);
+      await time.increase(86400 * 2);
+      await expect(proovCore.connect(user1).selfCompleteHabit(0, ethers.ZeroHash))
+        .to.emit(proovCore, "StreakUpdated")
+        .withArgs(user1.address, 1, 1);
+    });
+
+    it("does NOT emit StreakBroken on very first completion", async function () {
+      await expect(proovCore.connect(user1).selfCompleteHabit(0, ethers.ZeroHash))
+        .not.to.emit(proovCore, "StreakBroken");
+    });
+
+    it("reverts on habitId that was never created", async function () {
+      await expect(proovCore.connect(user1).selfCompleteHabit(99, ethers.ZeroHash))
+        .to.be.revertedWithCustomError(proovCore, "NotAuthorized");
+    });
+
+    it("preserves longestStreak across a reset", async function () {
+      await proovCore.connect(user1).selfCompleteHabit(0, ethers.ZeroHash);
+      await time.increase(86400);
+      await proovCore.connect(user1).selfCompleteHabit(0, ethers.ZeroHash); // streak=2
+      await time.increase(86400 * 5); // miss days
+      await proovCore.connect(user1).selfCompleteHabit(0, ethers.ZeroHash); // streak=1
+      const stats = await proovCore.getUserStats(user1.address);
+      expect(stats.currentStreak).to.equal(1);
+      expect(stats.longestStreak).to.equal(2);
+    });
+
+    it("emits MilestoneReached at streak 7", async function () {
+      // Build up to 6 days
+      for (let i = 0; i < 6; i++) {
+        await proovCore.connect(user1).selfCompleteHabit(0, ethers.ZeroHash);
+        await time.increase(86400);
+      }
+      await expect(proovCore.connect(user1).selfCompleteHabit(0, ethers.ZeroHash))
+        .to.emit(proovCore, "MilestoneReached")
+        .withArgs(user1.address, 7);
+    });
+  });
+
+  describe("getUserStats", function () {
+    it("returns zero values before any activity", async function () {
+      const stats = await proovCore.getUserStats(user1.address);
+      expect(stats.habitCount).to.equal(0);
+      expect(stats.currentStreak).to.equal(0);
+      expect(stats.longestStreak).to.equal(0);
+      expect(stats.lastCompletionDay).to.equal(0);
+    });
+
+    it("reflects habit count and streak after activity", async function () {
+      await proovCore.connect(user1).createHabit("H1", 0, 0, 0);
+      await proovCore.connect(user1).createHabit("H2", 0, 0, 0);
+      await proovCore.connect(user1).selfCompleteHabit(0, ethers.ZeroHash);
+      const stats = await proovCore.getUserStats(user1.address);
+      expect(stats.habitCount).to.equal(2);
+      expect(stats.currentStreak).to.equal(1);
+    });
+  });
+
+  describe("recordStreakIncrement (no-op compat stub)", function () {
+    it("accepts any value without reverting", async function () {
+      await expect(proovCore.connect(user1).recordStreakIncrement(5)).to.not.be.reverted;
+      await expect(proovCore.connect(user1).recordStreakIncrement(200)).to.not.be.reverted;
+    });
+
+    it("does not emit any events", async function () {
+      const tx = await proovCore.connect(user1).recordStreakIncrement(7);
+      const receipt = await tx.wait();
+      expect(receipt!.logs.length).to.equal(0);
     });
   });
 
@@ -60,7 +182,7 @@ describe("ProovCore", function () {
     it("emits HabitDeactivated", async function () {
       await expect(proovCore.connect(user1).deactivateHabit(0))
         .to.emit(proovCore, "HabitDeactivated")
-        .withArgs(user1.address, 0, anyValue);
+        .withArgs(user1.address, 0);
     });
   });
 
@@ -68,34 +190,7 @@ describe("ProovCore", function () {
     it("emits HabitReactivated", async function () {
       await expect(proovCore.connect(user1).reactivateHabit(0))
         .to.emit(proovCore, "HabitReactivated")
-        .withArgs(user1.address, 0, anyValue);
-    });
-  });
-
-  describe("recordStreakIncrement", function () {
-    it("emits StreakUpdated", async function () {
-      await expect(proovCore.connect(user1).recordStreakIncrement(5))
-        .to.emit(proovCore, "StreakUpdated")
-        .withArgs(user1.address, 5, 5, anyValue);
-    });
-
-    it("emits MilestoneReached at 7", async function () {
-      await expect(proovCore.connect(user1).recordStreakIncrement(7))
-        .to.emit(proovCore, "MilestoneReached")
-        .withArgs(user1.address, 7, anyValue);
-    });
-
-    it("emits MilestoneReached at all milestone values", async function () {
-      for (const milestone of [21, 30, 50, 100, 200]) {
-        await expect(proovCore.connect(user1).recordStreakIncrement(milestone))
-          .to.emit(proovCore, "MilestoneReached")
-          .withArgs(user1.address, milestone, anyValue);
-      }
-    });
-
-    it("does NOT emit MilestoneReached for non-milestone values", async function () {
-      await expect(proovCore.connect(user1).recordStreakIncrement(10))
-        .not.to.emit(proovCore, "MilestoneReached");
+        .withArgs(user1.address, 0);
     });
   });
 
@@ -103,19 +198,13 @@ describe("ProovCore", function () {
     it("setUsername emits UsernameSet", async function () {
       await expect(proovCore.connect(user1).setUsername("alice"))
         .to.emit(proovCore, "UsernameSet")
-        .withArgs(user1.address, "alice", anyValue);
-    });
-
-    it("editUsername emits UsernameSet", async function () {
-      await expect(proovCore.connect(user1).editUsername("alice_v2"))
-        .to.emit(proovCore, "UsernameSet")
-        .withArgs(user1.address, "alice_v2", anyValue);
+        .withArgs(user1.address, "alice");
     });
 
     it("updateVisibility emits VisibilityUpdated", async function () {
       await expect(proovCore.connect(user1).updateVisibility("public"))
         .to.emit(proovCore, "VisibilityUpdated")
-        .withArgs(user1.address, "public", anyValue);
+        .withArgs(user1.address, "public");
     });
   });
 
@@ -124,7 +213,7 @@ describe("ProovCore", function () {
       const hash = ethers.keccak256(ethers.toUtf8Bytes("journal entry"));
       await expect(proovCore.connect(user1).logJournalEntry(hash))
         .to.emit(proovCore, "JournalLogged")
-        .withArgs(user1.address, hash, anyValue);
+        .withArgs(user1.address, hash);
     });
   });
 
