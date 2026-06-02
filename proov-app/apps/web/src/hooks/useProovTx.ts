@@ -145,12 +145,7 @@ export function useProovTx() {
     endCustomSession: (_sessionId: bigint, _completed: boolean) =>
       Promise.resolve('0x' as `0x${string}`),
 
-    recordProgress: (sessionId: bigint) => sendTx({
-      address: CONTRACTS.SESSION_MANAGER, abi: SESSION_MANAGER_ABI,
-      functionName: 'recordProgress',
-      args: [sessionId],
-      _successMessage: null,
-    } as any),
+    recordProgress: (_sessionId: bigint) => Promise.resolve('0x' as `0x${string}`),
 
     // ── CIRCLE ACTIONS ─────────────────────────────────────────────────────
     sendCircleRequest: (toAddress: `0x${string}`) => sendTx({
