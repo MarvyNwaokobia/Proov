@@ -17,6 +17,7 @@ export async function clearWeb3AuthSession(): Promise<void> {
       k.startsWith('torus-') ||
       k.startsWith('auth_') ||
       k === 'sk' || k === 'epk' || k === 'pp' ||
+      k === 'wagmi.store' ||        // wagmi persisted connection — prevents auto-reconnect modal
       k.includes('openlogin') || k.includes('OpenLogin')
     ) lsRemove.push(k);
   }
