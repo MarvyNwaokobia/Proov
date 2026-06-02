@@ -2,49 +2,18 @@
   {
     "anonymous": false,
     "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "habitId",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "duration",
-        "type": "uint256"
-      }
+      { "indexed": true, "internalType": "address", "name": "user",     "type": "address" },
+      { "indexed": true, "internalType": "uint256", "name": "habitId",  "type": "uint256" }
     ],
-    "name": "SessionAbandoned",
+    "name": "SessionStarted",
     "type": "event"
   },
   {
     "anonymous": false,
     "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "habitId",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "duration",
-        "type": "uint256"
-      }
+      { "indexed": true,  "internalType": "address", "name": "user",     "type": "address" },
+      { "indexed": true,  "internalType": "uint256", "name": "habitId",  "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "duration", "type": "uint256" }
     ],
     "name": "SessionCompleted",
     "type": "event"
@@ -52,85 +21,36 @@
   {
     "anonymous": false,
     "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "habitId",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "startTimestamp",
-        "type": "uint256"
-      }
+      { "indexed": true,  "internalType": "address", "name": "user",     "type": "address" },
+      { "indexed": true,  "internalType": "uint256", "name": "habitId",  "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "duration", "type": "uint256" }
     ],
-    "name": "SessionStarted",
+    "name": "SessionAbandoned",
     "type": "event"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "habitId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "durationSeconds",
-        "type": "uint256"
-      }
-    ],
+    "inputs": [{ "internalType": "uint256", "name": "habitId",         "type": "uint256" }, { "internalType": "uint256", "name": "durationSeconds", "type": "uint256" }],
     "name": "abandonSession",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "habitId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "durationSeconds",
-        "type": "uint256"
-      }
-    ],
+    "inputs": [{ "internalType": "uint256", "name": "habitId",         "type": "uint256" }, { "internalType": "uint256", "name": "durationSeconds", "type": "uint256" }],
     "name": "endSession",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
+    "inputs": [{ "internalType": "uint256", "name": "",                "type": "uint256" }],
     "name": "recordProgress",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "habitId",
-        "type": "uint256"
-      }
-    ],
+    "inputs": [{ "internalType": "uint256", "name": "habitId",         "type": "uint256" }],
     "name": "startSession",
     "outputs": [],
     "stateMutability": "nonpayable",

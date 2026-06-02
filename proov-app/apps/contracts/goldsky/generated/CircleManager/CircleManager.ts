@@ -30,10 +30,6 @@ export class CircleRequestSent__Params {
   get to(): Address {
     return this._event.parameters[1].value.toAddress();
   }
-
-  get timestamp(): BigInt {
-    return this._event.parameters[2].value.toBigInt();
-  }
 }
 
 export class CheerSent extends ethereum.Event {
@@ -55,10 +51,6 @@ export class CheerSent__Params {
 
   get to(): Address {
     return this._event.parameters[1].value.toAddress();
-  }
-
-  get timestamp(): BigInt {
-    return this._event.parameters[2].value.toBigInt();
   }
 }
 
@@ -82,10 +74,6 @@ export class MemberAdded__Params {
   get member(): Address {
     return this._event.parameters[1].value.toAddress();
   }
-
-  get timestamp(): BigInt {
-    return this._event.parameters[2].value.toBigInt();
-  }
 }
 
 export class RemovedFromCircle extends ethereum.Event {
@@ -107,10 +95,6 @@ export class RemovedFromCircle__Params {
 
   get removed(): Address {
     return this._event.parameters[1].value.toAddress();
-  }
-
-  get timestamp(): BigInt {
-    return this._event.parameters[2].value.toBigInt();
   }
 }
 
@@ -146,36 +130,6 @@ export class AcceptRequestCall__Outputs {
   _call: AcceptRequestCall;
 
   constructor(call: AcceptRequestCall) {
-    this._call = call;
-  }
-}
-
-export class CheerCall extends ethereum.Call {
-  get inputs(): CheerCall__Inputs {
-    return new CheerCall__Inputs(this);
-  }
-
-  get outputs(): CheerCall__Outputs {
-    return new CheerCall__Outputs(this);
-  }
-}
-
-export class CheerCall__Inputs {
-  _call: CheerCall;
-
-  constructor(call: CheerCall) {
-    this._call = call;
-  }
-
-  get to(): Address {
-    return this._call.inputValues[0].value.toAddress();
-  }
-}
-
-export class CheerCall__Outputs {
-  _call: CheerCall;
-
-  constructor(call: CheerCall) {
     this._call = call;
   }
 }

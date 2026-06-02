@@ -2,79 +2,12 @@
   {
     "anonymous": false,
     "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "habitId",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "streak",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "timestamp",
-        "type": "uint256"
-      }
-    ],
-    "name": "HabitCompleted",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "habitId",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "name",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint8",
-        "name": "habitType",
-        "type": "uint8"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "targetDuration",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint8",
-        "name": "frequency",
-        "type": "uint8"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "timestamp",
-        "type": "uint256"
-      }
+      { "indexed": true,  "internalType": "address", "name": "user",           "type": "address" },
+      { "indexed": true,  "internalType": "uint256", "name": "habitId",        "type": "uint256" },
+      { "indexed": false, "internalType": "string",  "name": "name",           "type": "string"  },
+      { "indexed": false, "internalType": "uint8",   "name": "habitType",      "type": "uint8"   },
+      { "indexed": false, "internalType": "uint256", "name": "targetDuration", "type": "uint256" },
+      { "indexed": false, "internalType": "uint8",   "name": "frequency",      "type": "uint8"   }
     ],
     "name": "HabitCreated",
     "type": "event"
@@ -82,24 +15,18 @@
   {
     "anonymous": false,
     "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "habitId",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "timestamp",
-        "type": "uint256"
-      }
+      { "indexed": true,  "internalType": "address", "name": "user",    "type": "address" },
+      { "indexed": true,  "internalType": "uint256", "name": "habitId", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "streak",  "type": "uint256" }
+    ],
+    "name": "HabitCompleted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "address", "name": "user",    "type": "address" },
+      { "indexed": true, "internalType": "uint256", "name": "habitId", "type": "uint256" }
     ],
     "name": "HabitDeactivated",
     "type": "event"
@@ -107,24 +34,8 @@
   {
     "anonymous": false,
     "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "habitId",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "timestamp",
-        "type": "uint256"
-      }
+      { "indexed": true, "internalType": "address", "name": "user",    "type": "address" },
+      { "indexed": true, "internalType": "uint256", "name": "habitId", "type": "uint256" }
     ],
     "name": "HabitReactivated",
     "type": "event"
@@ -132,24 +43,8 @@
   {
     "anonymous": false,
     "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "contentHash",
-        "type": "bytes32"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "timestamp",
-        "type": "uint256"
-      }
+      { "indexed": true,  "internalType": "address", "name": "user",          "type": "address" },
+      { "indexed": true,  "internalType": "bytes32", "name": "contentHash",   "type": "bytes32" }
     ],
     "name": "JournalLogged",
     "type": "event"
@@ -157,24 +52,8 @@
   {
     "anonymous": false,
     "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "milestone",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "timestamp",
-        "type": "uint256"
-      }
+      { "indexed": true,  "internalType": "address", "name": "user",      "type": "address" },
+      { "indexed": false, "internalType": "uint256", "name": "milestone", "type": "uint256" }
     ],
     "name": "MilestoneReached",
     "type": "event"
@@ -182,24 +61,8 @@
   {
     "anonymous": false,
     "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "oldStreak",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "timestamp",
-        "type": "uint256"
-      }
+      { "indexed": true,  "internalType": "address", "name": "user",      "type": "address" },
+      { "indexed": false, "internalType": "uint256", "name": "oldStreak", "type": "uint256" }
     ],
     "name": "StreakBroken",
     "type": "event"
@@ -207,30 +70,9 @@
   {
     "anonymous": false,
     "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "newStreak",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "longestStreak",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "timestamp",
-        "type": "uint256"
-      }
+      { "indexed": true,  "internalType": "address", "name": "user",          "type": "address" },
+      { "indexed": false, "internalType": "uint256", "name": "newStreak",     "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "longestStreak", "type": "uint256" }
     ],
     "name": "StreakUpdated",
     "type": "event"
@@ -238,24 +80,8 @@
   {
     "anonymous": false,
     "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "username",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "timestamp",
-        "type": "uint256"
-      }
+      { "indexed": true,  "internalType": "address", "name": "user",     "type": "address" },
+      { "indexed": false, "internalType": "string",  "name": "username", "type": "string"  }
     ],
     "name": "UsernameSet",
     "type": "event"
@@ -263,166 +89,68 @@
   {
     "anonymous": false,
     "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "visibilitySetting",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "timestamp",
-        "type": "uint256"
-      }
+      { "indexed": true,  "internalType": "address", "name": "user",               "type": "address" },
+      { "indexed": false, "internalType": "string",  "name": "visibilitySetting",  "type": "string"  }
     ],
     "name": "VisibilityUpdated",
     "type": "event"
   },
   {
     "inputs": [
-      {
-        "internalType": "string",
-        "name": "name",
-        "type": "string"
-      },
-      {
-        "internalType": "uint8",
-        "name": "habitType",
-        "type": "uint8"
-      },
-      {
-        "internalType": "uint256",
-        "name": "targetDuration",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint8",
-        "name": "frequency",
-        "type": "uint8"
-      }
+      { "internalType": "string",  "name": "name",           "type": "string"  },
+      { "internalType": "uint8",   "name": "habitType",      "type": "uint8"   },
+      { "internalType": "uint256", "name": "targetDuration", "type": "uint256" },
+      { "internalType": "uint8",   "name": "frequency",      "type": "uint8"   }
     ],
     "name": "createHabit",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "habitId",
-        "type": "uint256"
-      }
-    ],
+    "inputs": [{ "internalType": "uint256", "name": "habitId", "type": "uint256" }],
     "name": "deactivateHabit",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "newUsername",
-        "type": "string"
-      }
-    ],
-    "name": "editUsername",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "contentHash",
-        "type": "bytes32"
-      }
-    ],
+    "inputs": [{ "internalType": "bytes32", "name": "contentHash", "type": "bytes32" }],
     "name": "logJournalEntry",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "newStreak",
-        "type": "uint256"
-      }
-    ],
+    "inputs": [{ "internalType": "uint256", "name": "newStreak", "type": "uint256" }],
     "name": "recordStreakIncrement",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "habitId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
+    "inputs": [{ "internalType": "uint256", "name": "habitId", "type": "uint256" }, { "internalType": "bytes32", "name": "", "type": "bytes32" }],
     "name": "selfCompleteHabit",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
+    "inputs": [{ "internalType": "address", "name": "", "type": "address" }],
     "name": "setCircleManager",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
+    "inputs": [{ "internalType": "address", "name": "", "type": "address" }],
     "name": "setSessionManager",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "username",
-        "type": "string"
-      }
-    ],
+    "inputs": [{ "internalType": "string", "name": "username", "type": "string" }],
     "name": "setUsername",
     "outputs": [],
     "stateMutability": "nonpayable",
@@ -430,13 +158,28 @@
   },
   {
     "inputs": [
-      {
-        "internalType": "string",
-        "name": "visibilitySetting",
-        "type": "string"
-      }
+      { "internalType": "address", "name": "user", "type": "address" }
     ],
+    "name": "getUserStats",
+    "outputs": [
+      { "internalType": "uint32", "name": "habitCount",        "type": "uint32" },
+      { "internalType": "uint32", "name": "lastCompletionDay", "type": "uint32" },
+      { "internalType": "uint32", "name": "currentStreak",     "type": "uint32" },
+      { "internalType": "uint32", "name": "longestStreak",     "type": "uint32" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "string", "name": "visibilitySetting", "type": "string" }],
     "name": "updateVisibility",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "uint256", "name": "habitId", "type": "uint256" }],
+    "name": "reactivateHabit",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

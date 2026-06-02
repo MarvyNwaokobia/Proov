@@ -10,36 +10,6 @@ import {
   BigInt,
 } from "@graphprotocol/graph-ts";
 
-export class HabitCompleted extends ethereum.Event {
-  get params(): HabitCompleted__Params {
-    return new HabitCompleted__Params(this);
-  }
-}
-
-export class HabitCompleted__Params {
-  _event: HabitCompleted;
-
-  constructor(event: HabitCompleted) {
-    this._event = event;
-  }
-
-  get user(): Address {
-    return this._event.parameters[0].value.toAddress();
-  }
-
-  get habitId(): BigInt {
-    return this._event.parameters[1].value.toBigInt();
-  }
-
-  get streak(): BigInt {
-    return this._event.parameters[2].value.toBigInt();
-  }
-
-  get timestamp(): BigInt {
-    return this._event.parameters[3].value.toBigInt();
-  }
-}
-
 export class HabitCreated extends ethereum.Event {
   get params(): HabitCreated__Params {
     return new HabitCreated__Params(this);
@@ -76,9 +46,31 @@ export class HabitCreated__Params {
   get frequency(): i32 {
     return this._event.parameters[5].value.toI32();
   }
+}
 
-  get timestamp(): BigInt {
-    return this._event.parameters[6].value.toBigInt();
+export class HabitCompleted extends ethereum.Event {
+  get params(): HabitCompleted__Params {
+    return new HabitCompleted__Params(this);
+  }
+}
+
+export class HabitCompleted__Params {
+  _event: HabitCompleted;
+
+  constructor(event: HabitCompleted) {
+    this._event = event;
+  }
+
+  get user(): Address {
+    return this._event.parameters[0].value.toAddress();
+  }
+
+  get habitId(): BigInt {
+    return this._event.parameters[1].value.toBigInt();
+  }
+
+  get streak(): BigInt {
+    return this._event.parameters[2].value.toBigInt();
   }
 }
 
@@ -102,9 +94,27 @@ export class HabitDeactivated__Params {
   get habitId(): BigInt {
     return this._event.parameters[1].value.toBigInt();
   }
+}
 
-  get timestamp(): BigInt {
-    return this._event.parameters[2].value.toBigInt();
+export class HabitReactivated extends ethereum.Event {
+  get params(): HabitReactivated__Params {
+    return new HabitReactivated__Params(this);
+  }
+}
+
+export class HabitReactivated__Params {
+  _event: HabitReactivated;
+
+  constructor(event: HabitReactivated) {
+    this._event = event;
+  }
+
+  get user(): Address {
+    return this._event.parameters[0].value.toAddress();
+  }
+
+  get habitId(): BigInt {
+    return this._event.parameters[1].value.toBigInt();
   }
 }
 
@@ -128,10 +138,6 @@ export class JournalLogged__Params {
   get contentHash(): Bytes {
     return this._event.parameters[1].value.toBytes();
   }
-
-  get timestamp(): BigInt {
-    return this._event.parameters[2].value.toBigInt();
-  }
 }
 
 export class MilestoneReached extends ethereum.Event {
@@ -154,10 +160,6 @@ export class MilestoneReached__Params {
   get milestone(): BigInt {
     return this._event.parameters[1].value.toBigInt();
   }
-
-  get timestamp(): BigInt {
-    return this._event.parameters[2].value.toBigInt();
-  }
 }
 
 export class StreakBroken extends ethereum.Event {
@@ -179,10 +181,6 @@ export class StreakBroken__Params {
 
   get oldStreak(): BigInt {
     return this._event.parameters[1].value.toBigInt();
-  }
-
-  get timestamp(): BigInt {
-    return this._event.parameters[2].value.toBigInt();
   }
 }
 
@@ -210,10 +208,6 @@ export class StreakUpdated__Params {
   get longestStreak(): BigInt {
     return this._event.parameters[2].value.toBigInt();
   }
-
-  get timestamp(): BigInt {
-    return this._event.parameters[3].value.toBigInt();
-  }
 }
 
 export class UsernameSet extends ethereum.Event {
@@ -235,10 +229,6 @@ export class UsernameSet__Params {
 
   get username(): string {
     return this._event.parameters[1].value.toString();
-  }
-
-  get timestamp(): BigInt {
-    return this._event.parameters[2].value.toBigInt();
   }
 }
 
@@ -262,9 +252,44 @@ export class VisibilityUpdated__Params {
   get visibilitySetting(): string {
     return this._event.parameters[1].value.toString();
   }
+}
 
-  get timestamp(): BigInt {
-    return this._event.parameters[2].value.toBigInt();
+export class ProovCore__getUserStatsResult {
+  value0: BigInt;
+  value1: BigInt;
+  value2: BigInt;
+  value3: BigInt;
+
+  constructor(value0: BigInt, value1: BigInt, value2: BigInt, value3: BigInt) {
+    this.value0 = value0;
+    this.value1 = value1;
+    this.value2 = value2;
+    this.value3 = value3;
+  }
+
+  toMap(): TypedMap<string, ethereum.Value> {
+    let map = new TypedMap<string, ethereum.Value>();
+    map.set("value0", ethereum.Value.fromUnsignedBigInt(this.value0));
+    map.set("value1", ethereum.Value.fromUnsignedBigInt(this.value1));
+    map.set("value2", ethereum.Value.fromUnsignedBigInt(this.value2));
+    map.set("value3", ethereum.Value.fromUnsignedBigInt(this.value3));
+    return map;
+  }
+
+  getHabitCount(): BigInt {
+    return this.value0;
+  }
+
+  getLastCompletionDay(): BigInt {
+    return this.value1;
+  }
+
+  getCurrentStreak(): BigInt {
+    return this.value2;
+  }
+
+  getLongestStreak(): BigInt {
+    return this.value3;
   }
 }
 
@@ -314,6 +339,43 @@ export class ProovCore extends ethereum.SmartContract {
     }
     let value = result.value;
     return ethereum.CallResult.fromValue(value[0].toBigInt());
+  }
+
+  getUserStats(user: Address): ProovCore__getUserStatsResult {
+    let result = super.call(
+      "getUserStats",
+      "getUserStats(address):(uint32,uint32,uint32,uint32)",
+      [ethereum.Value.fromAddress(user)],
+    );
+
+    return new ProovCore__getUserStatsResult(
+      result[0].toBigInt(),
+      result[1].toBigInt(),
+      result[2].toBigInt(),
+      result[3].toBigInt(),
+    );
+  }
+
+  try_getUserStats(
+    user: Address,
+  ): ethereum.CallResult<ProovCore__getUserStatsResult> {
+    let result = super.tryCall(
+      "getUserStats",
+      "getUserStats(address):(uint32,uint32,uint32,uint32)",
+      [ethereum.Value.fromAddress(user)],
+    );
+    if (result.reverted) {
+      return new ethereum.CallResult();
+    }
+    let value = result.value;
+    return ethereum.CallResult.fromValue(
+      new ProovCore__getUserStatsResult(
+        value[0].toBigInt(),
+        value[1].toBigInt(),
+        value[2].toBigInt(),
+        value[3].toBigInt(),
+      ),
+    );
   }
 }
 
@@ -389,36 +451,6 @@ export class DeactivateHabitCall__Outputs {
   _call: DeactivateHabitCall;
 
   constructor(call: DeactivateHabitCall) {
-    this._call = call;
-  }
-}
-
-export class EditUsernameCall extends ethereum.Call {
-  get inputs(): EditUsernameCall__Inputs {
-    return new EditUsernameCall__Inputs(this);
-  }
-
-  get outputs(): EditUsernameCall__Outputs {
-    return new EditUsernameCall__Outputs(this);
-  }
-}
-
-export class EditUsernameCall__Inputs {
-  _call: EditUsernameCall;
-
-  constructor(call: EditUsernameCall) {
-    this._call = call;
-  }
-
-  get newUsername(): string {
-    return this._call.inputValues[0].value.toString();
-  }
-}
-
-export class EditUsernameCall__Outputs {
-  _call: EditUsernameCall;
-
-  constructor(call: EditUsernameCall) {
     this._call = call;
   }
 }
@@ -633,6 +665,36 @@ export class UpdateVisibilityCall__Outputs {
   _call: UpdateVisibilityCall;
 
   constructor(call: UpdateVisibilityCall) {
+    this._call = call;
+  }
+}
+
+export class ReactivateHabitCall extends ethereum.Call {
+  get inputs(): ReactivateHabitCall__Inputs {
+    return new ReactivateHabitCall__Inputs(this);
+  }
+
+  get outputs(): ReactivateHabitCall__Outputs {
+    return new ReactivateHabitCall__Outputs(this);
+  }
+}
+
+export class ReactivateHabitCall__Inputs {
+  _call: ReactivateHabitCall;
+
+  constructor(call: ReactivateHabitCall) {
+    this._call = call;
+  }
+
+  get habitId(): BigInt {
+    return this._call.inputValues[0].value.toBigInt();
+  }
+}
+
+export class ReactivateHabitCall__Outputs {
+  _call: ReactivateHabitCall;
+
+  constructor(call: ReactivateHabitCall) {
     this._call = call;
   }
 }
