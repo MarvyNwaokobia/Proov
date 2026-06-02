@@ -61,6 +61,7 @@ export default function GrindTimerPage() {
   const [duration, setDuration] = useState(25);
 
   const [secondsLeft, setSecondsLeft] = useState(0);
+  const secondsLeftRef = useRef(0); // mirror for interval — avoids setState-inside-setState
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const justCompletedRef = useRef(false);
 
@@ -224,23 +225,27 @@ export default function GrindTimerPage() {
     }
   }, [view, selectedHabit, duration]);
 
-  // Countdown
+  // Keep ref in sync so the interval can read latest value without a closure.
+  useEffect(() => { secondsLeftRef.current = secondsLeft; }, [secondsLeft]);
+
+  // Countdown — never call setState inside a setState updater (illegal in React,
+  // crashes on Android when execution resumes after background suspension).
   useEffect(() => {
     if (view !== 'running') {
       if (intervalRef.current) clearInterval(intervalRef.current);
       return;
     }
     intervalRef.current = setInterval(() => {
-      setSecondsLeft(s => {
-        if (s <= 1) {
-          clearInterval(intervalRef.current!);
-          localStorage.removeItem('proov_active_timer');
-          justCompletedRef.current = true;
-          setView('done');
-          return 0;
-        }
-        return s - 1;
-      });
+      const remaining = secondsLeftRef.current;
+      if (remaining <= 1) {
+        clearInterval(intervalRef.current!);
+        localStorage.removeItem('proov_active_timer');
+        justCompletedRef.current = true;
+        setSecondsLeft(0);
+        setView('done');
+      } else {
+        setSecondsLeft(remaining - 1);
+      }
     }, 1000);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [view]);
@@ -323,7 +328,7 @@ export default function GrindTimerPage() {
     if (!isCustom && selectedHabit) {
       // One tx: endSession proves the session happened — no separate completeHabit needed.
       // Firing two txs back-to-back causes nonce conflicts before the first is mined.
-      const endOk = await proovTx.endSession(sessionOCId, true);
+      const endOk = await proovTx.endSession(sessionOCId, sessionDuration * 60);
       if (!endOk) { setTxPending(null); return; }
 
       await saveHabitCompletion(selectedHabit.id, address, streak).catch(() => {});
