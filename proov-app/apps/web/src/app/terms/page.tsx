@@ -17,7 +17,7 @@ export default function TermsPage() {
       <section style={{ marginBottom: '1.75rem' }}>
         <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>1. Acceptance</h2>
         <p style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--text2)' }}>
-          By accessing or using Proov ("the App"), you agree to be bound by these Terms of Service. If you do not agree, do not use the App.
+          By accessing or using Proov (&ldquo;the App&rdquo;), you agree to be bound by these Terms of Service. If you do not agree, do not use the App.
         </p>
       </section>
 
@@ -45,7 +45,7 @@ export default function TermsPage() {
       <section style={{ marginBottom: '1.75rem' }}>
         <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>5. Acceptable Use</h2>
         <p style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--text2)' }}>
-          You agree not to: (a) use the App for any unlawful purpose; (b) submit false habit completions or attempt to manipulate the verification system; (c) interfere with the App's infrastructure or other users' experience.
+          You agree not to: (a) use the App for any unlawful purpose; (b) submit false habit completions or attempt to manipulate the verification system; (c) interfere with the App&apos;s infrastructure or other users&apos; experience.
         </p>
       </section>
 
@@ -59,7 +59,7 @@ export default function TermsPage() {
       <section style={{ marginBottom: '1.75rem' }}>
         <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>7. Disclaimers</h2>
         <p style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--text2)' }}>
-          The App is provided "as is" without warranties of any kind. We do not guarantee uptime, data persistence, or fitness for a particular purpose. Use the App at your own risk.
+          The App is provided &ldquo;as is&rdquo; without warranties of any kind. We do not guarantee uptime, data persistence, or fitness for a particular purpose. Use the App at your own risk.
         </p>
       </section>
 
