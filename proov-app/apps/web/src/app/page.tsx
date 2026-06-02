@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { IconFlame, IconBrain, IconUsers, IconTrophy, type Icon as TablerIcon } from '@tabler/icons-react';
 
 const FEATURES: { Icon: TablerIcon; title: string; desc: string }[] = [
@@ -33,7 +34,7 @@ export default function LandingPage() {
         {/* Nav */}
         <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.1rem 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <img src="/logo.png" className="logo-float" style={{ width: 34, height: 34, objectFit: 'contain' }} alt="Proov" fetchPriority="high" />
+            <Image src="/logo.png" className="logo-float" width={34} height={34} alt="Proov" priority style={{ objectFit: 'contain' }} />
             <span style={{ fontWeight: 700, fontSize: 17, color: 'var(--text)', letterSpacing: '-.3px' }}>Proov</span>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
