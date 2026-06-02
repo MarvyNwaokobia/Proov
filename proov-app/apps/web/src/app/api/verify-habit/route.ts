@@ -65,7 +65,7 @@ async function recordProof(
 
 export async function POST(req: NextRequest) {
   try {
-    const { habitId, habitName, proofType, proofContent, userAddress } = await req.json();
+    const { habitId, habitName, habitCategory, proofType, proofContent, userAddress } = await req.json();
 
     if (!habitId || !habitName || !proofType || !proofContent || !userAddress) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -97,6 +97,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Verification service unavailable' }, { status: 500 });
     }
 
+    const categoryHint = habitCategory ? ` (category: ${habitCategory})` : '';
+
     // Build Anthropic message content
     let userContent: any[];
     if (proofType === 'photo') {
@@ -110,14 +112,14 @@ export async function POST(req: NextRequest) {
         },
         {
           type: 'text',
-          text: `The user claims to have completed their habit: "${habitName}". Does this photo provide reasonable evidence they completed it? Respond ONLY with valid JSON: {"verdict":"approved","reasoning":"..."} or {"verdict":"rejected","reasoning":"..."}`,
+          text: `The user claims to have completed their habit: "${habitName}"${categoryHint}. Does this photo provide reasonable evidence they completed it? Respond ONLY with valid JSON: {"verdict":"approved","reasoning":"..."} or {"verdict":"rejected","reasoning":"..."}`,
         },
       ];
     } else {
       userContent = [
         {
           type: 'text',
-          text: `The user claims to have completed their habit: "${habitName}". Their written proof: "${proofContent}". Does this text provide reasonable evidence they completed it? Respond ONLY with valid JSON: {"verdict":"approved","reasoning":"..."} or {"verdict":"rejected","reasoning":"..."}`,
+          text: `The user claims to have completed their habit: "${habitName}"${categoryHint}. Their written proof: "${proofContent}". Does this text provide reasonable evidence they completed it? Respond ONLY with valid JSON: {"verdict":"approved","reasoning":"..."} or {"verdict":"rejected","reasoning":"..."}`,
         },
       ];
     }
@@ -132,14 +134,30 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 200,
-        system: 'You are a habit verification assistant for Proov, a habit tracking app. Your job is to evaluate whether submitted proof (photo or text) reasonably demonstrates that a user completed their stated habit. Be encouraging but honest. Always respond with valid JSON only.',
+        system: `You are a habit verification assistant for Proov, a habit tracking app. Your job is to evaluate whether submitted proof (photo or text) reasonably demonstrates that a user completed their stated habit.
+
+Habits span many categories — judge each by what makes sense for that type:
+- Fitness: workout selfies, gym equipment, running routes, sweat, athletic gear
+- Wellness: meditation timer screenshots, water bottles, sleep logs, breath-work notes
+- Focus: desk/workspace setups, timer screenshots, written notes, journal entries, completed task lists
+- Learning: book pages, lecture screenshots, notes, practice work, language app progress
+- Nutrition: meal photos, healthy food, meal prep containers, logged food entries
+- Creative: artwork, written pieces, musical practice notes, photos of creative work
+- Custom/other: any plausible, specific evidence that matches the stated habit
+
+Accept proof that is specific and plausible for the habit type. Reject only vague claims with no concrete detail (e.g. "I did it" with no supporting context). Be encouraging but honest. Always respond with valid JSON only.`,
         messages: [{ role: 'user', content: userContent }],
       }),
     });
 
     if (!anthropicRes.ok) {
-      const errText = await anthropicRes.text().catch(() => '');
-      console.error('Anthropic API error:', anthropicRes.status, errText);
+      let errorData: any = {};
+      try { errorData = await anthropicRes.json(); } catch { errorData = await anthropicRes.text().catch(() => ''); }
+      console.error('Anthropic API error:', anthropicRes.status, JSON.stringify(errorData));
+      const msg = typeof errorData?.error?.message === 'string' ? errorData.error.message : '';
+      if (msg.toLowerCase().includes('credit') || msg.toLowerCase().includes('billing')) {
+        return NextResponse.json({ error: 'AI verification is temporarily unavailable — service credit issue' }, { status: 503 });
+      }
       return NextResponse.json({ error: 'Verification service error' }, { status: 500 });
     }
 

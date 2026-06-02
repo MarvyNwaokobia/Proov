@@ -82,7 +82,12 @@ export async function POST(req: NextRequest) {
       }),
     });
 
-    if (!anthropicRes.ok) return NextResponse.json({ suggestions: [] });
+    if (!anthropicRes.ok) {
+      let errorData: any = {};
+      try { errorData = await anthropicRes.json(); } catch {}
+      console.error('Anthropic API error (habit-suggestions):', anthropicRes.status, JSON.stringify(errorData));
+      return NextResponse.json({ suggestions: [], error: 'ai_unavailable' });
+    }
 
     const anthropicData = await anthropicRes.json();
     const rawText = anthropicData?.content?.[0]?.text?.trim() || '';

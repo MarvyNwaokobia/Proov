@@ -8,13 +8,14 @@ import { markHabitVerified, getAiVerificationUsage } from '@/lib/supabase';
 interface ProofSheetProps {
   habitId: string;
   habitName: string;
+  habitCategory?: string;
   userAddress: string;
   onVerified: () => void;
   onSelfReport: () => void;
   onClose: () => void;
 }
 
-export function ProofSheet({ habitId, habitName, userAddress, onVerified, onSelfReport, onClose }: ProofSheetProps) {
+export function ProofSheet({ habitId, habitName, habitCategory, userAddress, onVerified, onSelfReport, onClose }: ProofSheetProps) {
   const [tab, setTab] = useState<'text' | 'photo'>('text');
   const [text, setText] = useState('');
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
@@ -64,6 +65,7 @@ export function ProofSheet({ habitId, habitName, userAddress, onVerified, onSelf
         body: JSON.stringify({
           habitId,
           habitName,
+          habitCategory,
           proofType: tab,
           proofContent: tab === 'text' ? text.trim() : photoDataUrl,
           userAddress,
