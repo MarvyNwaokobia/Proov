@@ -10,60 +10,28 @@ import {
 import { IconArrowLeft, IconFlame, IconSettings2 } from '@tabler/icons-react';
 
 function glowStyle(count: number, total: number): React.CSSProperties {
-  // Future day — visible box, very dim, not yet reached
+  // Future day — dim outline, no colour
   if (count === -1) {
-    return {
-      background: 'var(--bg2)',
-      border: '1px solid var(--border)',
-      opacity: 0.3,
-    };
+    return { background: 'var(--bg2)', border: '1px solid var(--border)', opacity: 0.3 };
   }
-  // Past day, nothing done — faintest accent glow (the journey started, just quiet)
-  if (total === 0 || count === 0) {
-    return {
-      background: 'var(--accent)',
-      border: '1px solid var(--accent-border)',
-      opacity: 0.12,
-    };
+  // No completions — empty cell, no glow (GitHub-style: nothing done = nothing shown)
+  if (count === 0 || total === 0) {
+    return { background: 'var(--bg2)', border: '1px solid var(--border)', opacity: 0.6 };
   }
-  const ratio = Math.min(count / total, 1);
 
-  if (ratio <= 0.25) {
-    return {
-      background: 'var(--accent)',
-      border: '1px solid var(--accent-border)',
-      opacity: 0.3,
-    };
-  }
-  if (ratio <= 0.5) {
-    return {
-      background: 'var(--accent)',
-      border: '1px solid var(--accent-border)',
-      opacity: 0.55,
-      boxShadow: '0 0 4px var(--accent)',
-    };
-  }
-  if (ratio <= 0.75) {
-    return {
-      background: 'var(--accent)',
-      border: '1px solid var(--accent-border)',
-      opacity: 0.75,
-      boxShadow: '0 0 7px var(--accent)',
-    };
-  }
-  if (ratio < 1) {
-    return {
-      background: 'var(--accent)',
-      border: '1px solid var(--accent-border)',
-      opacity: 0.9,
-      boxShadow: '0 0 10px var(--accent)',
-    };
-  }
+  // Continuous brightness: each additional habit completed makes the cell measurably brighter.
+  // sqrt curve ensures 1 completion is clearly visible even for users with many habits.
+  const ratio = Math.min(count / total, 1);
+  const brightness = Math.sqrt(ratio);          // 0→0, 0.5→0.71, 1→1
+  const opacity = 0.18 + brightness * 0.82;     // 0.18 (1 habit) → 1.0 (all habits)
+  const glow = brightness * 14;                 // 0px → 14px blur
+  const spread = ratio >= 1 ? 2 : 0;
+
   return {
     background: 'var(--accent)',
     border: '1px solid var(--accent-border)',
-    opacity: 1,
-    boxShadow: '0 0 14px 2px var(--accent)',
+    opacity: parseFloat(opacity.toFixed(2)),
+    boxShadow: glow > 0.5 ? `0 0 ${glow.toFixed(1)}px ${spread}px var(--accent)` : undefined,
   };
 }
 
@@ -291,15 +259,18 @@ export default function ProfilePage() {
             </div>
             <div style={{ fontSize: 9, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 6 }}>
               <span>less</span>
-              {[0, 0.25, 0.5, 0.75, 1].map((r, i) => (
-                <div key={i} style={{
-                  width: 8, height: 8, borderRadius: 2,
-                  background: r === 0 ? 'var(--bg2)' : 'var(--accent)',
-                  border: `1px solid ${r === 0 ? 'var(--border)' : 'var(--accent-border)'}`,
-                  opacity: r === 0 ? 0.35 : r <= 0.25 ? 0.3 : r <= 0.5 ? 0.55 : r <= 0.75 ? 0.75 : 1,
-                  boxShadow: r >= 1 ? '0 0 6px var(--accent)' : r >= 0.75 ? '0 0 4px var(--accent)' : undefined,
-                }} />
-              ))}
+              {([0, 0.1, 0.3, 0.6, 1] as const).map((r, i) => {
+                const b = Math.sqrt(r);
+                return (
+                  <div key={i} style={{
+                    width: 8, height: 8, borderRadius: 2,
+                    background: r === 0 ? 'var(--bg2)' : 'var(--accent)',
+                    border: `1px solid ${r === 0 ? 'var(--border)' : 'var(--accent-border)'}`,
+                    opacity: r === 0 ? 0.6 : parseFloat((0.18 + b * 0.82).toFixed(2)),
+                    boxShadow: r >= 1 ? '0 0 6px 1px var(--accent)' : r >= 0.6 ? '0 0 4px var(--accent)' : undefined,
+                  }} />
+                );
+              })}
               <span>more</span>
             </div>
           </div>
@@ -311,7 +282,7 @@ export default function ProfilePage() {
             {heatmapDays.map(({ date, count }) => (
               <div
                 key={date}
-                title={count === -1 ? date : `${date}${count > 0 ? ` · ${count} completed` : ''}`}
+                title={count === -1 ? date : count === 0 ? `${date} · nothing done` : `${date} · ${count}/${habits.length} habits`}
                 style={{
                   aspectRatio: '1',
                   borderRadius: 5,
