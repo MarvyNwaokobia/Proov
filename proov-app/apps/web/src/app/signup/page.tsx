@@ -30,7 +30,8 @@ export default function SignUpPage() {
   const [input, setInput] = useState('');
   const [sent, setSent] = useState(false);
 
-  useEffect(() => { if (!isPending) setConnecting(false); }, [isPending]);
+  // Only clear the loading screen if wagmi finished AND we did NOT get a connection.
+  useEffect(() => { if (!isPending && !isConnected) setConnecting(false); }, [isPending, isConnected]);
 
   // Pre-clear any stale session on mount so connectTo fires immediately on click.
   // New users have no existing session — browser blocks popups opened after async delays.
@@ -52,19 +53,31 @@ export default function SignUpPage() {
 
   useEffect(() => {
     if (!isConnected || !connectedAddress) return;
-    import('@/lib/wagmi-config').then(({ getWeb3Auth }) =>
-      getWeb3Auth().getUserInfo().catch(() => null)
-    ).then(async info => {
-      if ((info as any)?.email) localStorage.setItem('proov_email', (info as any).email);
-      const emailVal = localStorage.getItem('proov_email') || '';
-      const identity = await resolveIdentity(connectedAddress, emailVal, 'google', 'web3auth');
-      if (identity.username) {
-        localStorage.setItem('proov_tutorial_done', '1');
-        router.push('/dashboard');
-      } else {
-        router.push('/onboarding');
+    let cancelled = false;
+    const resolve = async () => {
+      let route = '/onboarding';
+      try {
+        route = await Promise.race([
+          (async () => {
+            const { getWeb3Auth } = await import('@/lib/wagmi-config');
+            const info = await getWeb3Auth().getUserInfo().catch(() => null);
+            if ((info as any)?.email) localStorage.setItem('proov_email', (info as any).email);
+            const emailVal = localStorage.getItem('proov_email') || '';
+            const identity = await resolveIdentity(connectedAddress, emailVal, 'google', 'web3auth');
+            if (identity.username) { localStorage.setItem('proov_tutorial_done', '1'); return '/dashboard'; }
+            return '/onboarding';
+          })(),
+          new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
+        ]);
+      } catch {
+        const username = localStorage.getItem('proov_username');
+        const onboardingDone = localStorage.getItem('proov_onboarding_done');
+        route = (username && onboardingDone) ? '/dashboard' : '/onboarding';
       }
-    }).catch(async () => router.push(await getPostLoginRoute()));
+      if (!cancelled) router.push(route);
+    };
+    resolve();
+    return () => { cancelled = true; };
   }, [isConnected, connectedAddress, router]);
 
   const triggerConnect = async (loginProvider = 'google') => {
