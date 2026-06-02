@@ -66,6 +66,7 @@ export default function DashboardPage() {
   const [username, setUsername] = useState('');
   const [currentStreak, setCurrentStreak] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
+  const [lastCompletionDate, setLastCompletionDate] = useState<string | null>(null);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [completedToday, setCompletedToday] = useState<string[]>([]);
   const [circleMembers, setCircleMembers] = useState<CircleMember[]>([]);
@@ -137,6 +138,7 @@ export default function DashboardPage() {
         setCurrentStreak(data.currentStreak);
         setLongestStreak(data.longestStreak);
       }
+      if (data.lastCompletionDate) setLastCompletionDate(data.lastCompletionDate.split('T')[0]);
     }).catch(() => {});
   }, []);
 
@@ -240,9 +242,11 @@ export default function DashboardPage() {
           // If every habit was already completed today (e.g. via timer / habits page),
           // fire the streak update now so the daily streak accumulates correctly.
           if (userHabits.length > 0 && userHabits.every((h: any) => todayDone.includes(h.id))) {
+            const todayStr = new Date().toISOString().split('T')[0];
             updateDailyStreak(addr).then(newStreak => {
               setCurrentStreak(newStreak);
               setLongestStreak(prev => Math.max(prev, newStreak));
+              setLastCompletionDate(todayStr);
             }).catch(() => {});
           }
         })
@@ -268,15 +272,34 @@ export default function DashboardPage() {
   const totalHabits = habits.length;
   const progressPercent = totalHabits > 0 ? (completedCount / totalHabits) * 100 : 0;
 
-  // Build last 7 days for streak card
-  const last7 = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (6 - i));
-    const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-    const isToday = i === 6;
-    const filled = isToday ? completedToday.length > 0 : i < 6 && currentStreak >= (6 - i);
-    return { label: dayNames[d.getDay()], isToday, filled };
-  });
+  // Build last 7 days for streak card.
+  // A day is filled only if it falls within [lastCompletionDate - (streak-1), lastCompletionDate].
+  // This prevents yesterday from appearing filled when the user's first-ever day is today.
+  const last7 = (() => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const yd = new Date(); yd.setDate(yd.getDate() - 1);
+    const yesterdayStr = yd.toISOString().split('T')[0];
+    const lcd = lastCompletionDate ? lastCompletionDate.split('T')[0] : null;
+    // How many days ago was the last completion? Only trust 0 (today) or 1 (yesterday).
+    const daysAgoLast = lcd === todayStr ? 0 : lcd === yesterdayStr ? 1 : null;
+
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+      const isToday = i === 6;
+      let filled: boolean;
+      if (isToday) {
+        filled = completedToday.length > 0;
+      } else if (daysAgoLast === null || currentStreak === 0) {
+        filled = false;
+      } else {
+        const daysAgo = 6 - i;
+        filled = daysAgo >= daysAgoLast && daysAgo < daysAgoLast + currentStreak;
+      }
+      return { label: dayNames[d.getDay()], isToday, filled };
+    });
+  })();
 
   const handleToggleHabit = async (habitId: string) => {
     if (completedToday.includes(habitId)) return;
@@ -301,9 +324,11 @@ export default function DashboardPage() {
 
     const allDone = habits.every(h => newCompleted.includes(h.id));
     if (allDone && habits.length > 0) {
+      const todayStr = new Date().toISOString().split('T')[0];
       const newStreak = await updateDailyStreak(addr).catch(() => currentStreak + 1);
       setCurrentStreak(newStreak);
       setLongestStreak(prev => Math.max(prev, newStreak));
+      setLastCompletionDate(todayStr);
       proovTx.recordStreakIncrement(newStreak);
       showToast(`${newStreak} day streak! 🔥`);
     }
