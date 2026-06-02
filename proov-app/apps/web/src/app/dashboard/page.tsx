@@ -81,7 +81,7 @@ export default function DashboardPage() {
   const [habitStreaks, setHabitStreaks] = useState<Record<string, number>>({});
   const [fuelBalance, setFuelBalance] = useState(0);
   const [verifiedHabits, setVerifiedHabits] = useState<string[]>([]);
-  const [proofSheet, setProofSheet] = useState<{ habitId: string; habitName: string } | null>(null);
+  const [proofSheet, setProofSheet] = useState<{ habitId: string; habitName: string; habitCategory?: string } | null>(null);
   const [avatarUrl, setAvatarUrl] = useState('');
   const [pendingHabits, setPendingHabits] = useState<Set<string>>(new Set());
   const proovTx = useProovTx();
@@ -574,7 +574,7 @@ export default function DashboardPage() {
                         <button
                           onClick={e => {
                             e.stopPropagation();
-                            setProofSheet({ habitId: habit.id, habitName: habit.name });
+                            setProofSheet({ habitId: habit.id, habitName: habit.name, habitCategory: habit.category });
                           }}
                           style={{
                             width: '100%', padding: '5px 0', borderRadius: 8, fontSize: 9, fontWeight: 700, cursor: 'pointer',
@@ -731,6 +731,7 @@ export default function DashboardPage() {
         <ProofSheet
           habitId={proofSheet.habitId}
           habitName={proofSheet.habitName}
+          habitCategory={proofSheet.habitCategory}
           userAddress={localStorage.getItem('proov_address') || ''}
           onVerified={() => {
             setVerifiedHabits(prev => [...prev, proofSheet.habitId]);

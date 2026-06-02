@@ -507,6 +507,7 @@ export default function HabitDetailPage() {
       <ProofSheet
         habitId={habit.id}
         habitName={habit.name}
+        habitCategory={habit.category}
         userAddress={localStorage.getItem('proov_address') || ''}
         onVerified={() => { setIsVerifiedToday(true); setIsDoneToday(true); }}
         onSelfReport={() => handleMarkDone()}
