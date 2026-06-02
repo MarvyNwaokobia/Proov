@@ -35,6 +35,7 @@ type HabitCompletion @entity(immutable: true) {
   streak: BigInt!
   timestamp: BigInt!
   txHash: String!
+  verificationHash: Bytes!
 }
 
 type Session @entity(immutable: false) {

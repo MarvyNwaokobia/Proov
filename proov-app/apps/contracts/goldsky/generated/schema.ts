@@ -445,6 +445,19 @@ export class HabitCompletion extends Entity {
   set txHash(value: string) {
     this.set("txHash", Value.fromString(value));
   }
+
+  get verificationHash(): Bytes {
+    let value = this.get("verificationHash");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBytes();
+    }
+  }
+
+  set verificationHash(value: Bytes) {
+    this.set("verificationHash", Value.fromBytes(value));
+  }
 }
 
 export class Session extends Entity {

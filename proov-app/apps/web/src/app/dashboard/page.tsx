@@ -733,9 +733,25 @@ export default function DashboardPage() {
           habitName={proofSheet.habitName}
           habitCategory={proofSheet.habitCategory}
           userAddress={localStorage.getItem('proov_address') || ''}
-          onVerified={() => {
+          onVerified={async (verificationHash) => {
+            const addr = localStorage.getItem('proov_address') || '';
+            const habit = habits.find(h => h.id === proofSheet.habitId);
+            setPendingHabits(prev => new Set(prev).add(proofSheet.habitId));
+            const txOk = await proovTx.completeHabit((habit as any)?.on_chain_id ?? undefined, verificationHash);
+            setPendingHabits(prev => { const s = new Set(prev); s.delete(proofSheet.habitId); return s; });
+            if (!txOk) return;
             setVerifiedHabits(prev => [...prev, proofSheet.habitId]);
-            setCompletedToday(prev => prev.includes(proofSheet.habitId) ? prev : [...prev, proofSheet.habitId]);
+            const newCompleted = completedToday.includes(proofSheet.habitId) ? completedToday : [...completedToday, proofSheet.habitId];
+            setCompletedToday(newCompleted);
+            setHabitStreaks(prev => ({ ...prev, [proofSheet.habitId]: (prev[proofSheet.habitId] || 0) + 1 }));
+            await saveHabitCompletion(proofSheet.habitId, addr, currentStreak).catch(() => {});
+            const allDone = habits.every(h => newCompleted.includes(h.id));
+            if (allDone && habits.length > 0) {
+              const newStreak = await updateDailyStreak(addr).catch(() => currentStreak + 1);
+              setCurrentStreak(newStreak);
+              setLongestStreak(prev => Math.max(prev, newStreak));
+              showToast(`${newStreak} day streak! 🔥`);
+            }
           }}
           onSelfReport={() => handleToggleHabit(proofSheet.habitId)}
           onClose={() => setProofSheet(null)}

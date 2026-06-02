@@ -32,17 +32,18 @@ export function useProovTx() {
       });
     },
 
-    completeHabit: (onChainId: number | undefined) => {
+    completeHabit: (onChainId: number | undefined, verificationHash?: `0x${string}`) => {
       const id = safeId(onChainId);
       if (id === null) {
         console.warn('[tx] completeHabit: no valid on_chain_id, skipping');
         return Promise.resolve('0x' as `0x${string}`);
       }
+      const hash = verificationHash ?? '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`;
       return sendTx({
         address: CONTRACTS.PROOV_CORE, abi: PROOV_CORE_ABI,
         functionName: 'selfCompleteHabit',
-        args: [id, '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`],
-        _successMessage: null, // page shows "Habit done ✓"
+        args: [id, hash],
+        _successMessage: null,
       } as any);
     },
 
