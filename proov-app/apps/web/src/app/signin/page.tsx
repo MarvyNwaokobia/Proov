@@ -53,8 +53,8 @@ export default function SignInPage() {
 
   useEffect(() => {
     if (isMiniPay()) {
-      connectMiniPay().then(addr => {
-        if (addr) { resolveIdentity(addr, '', 'wallet', 'injected'); router.push(getPostLoginRoute()); }
+      connectMiniPay().then(async addr => {
+        if (addr) { await resolveIdentity(addr, '', 'wallet', 'injected'); router.push(await getPostLoginRoute()); }
       });
     }
   }, [router]);
@@ -63,23 +63,17 @@ export default function SignInPage() {
     if (!isConnected || !connectedAddress) return;
     import('@/lib/wagmi-config').then(({ getWeb3Auth }) =>
       getWeb3Auth().getUserInfo().catch(() => null)
-    ).then(info => {
+    ).then(async info => {
       if ((info as any)?.email) localStorage.setItem('proov_email', (info as any).email);
       const emailVal = localStorage.getItem('proov_email') || '';
-      resolveIdentity(connectedAddress, emailVal, 'google', 'web3auth');
-      return import('@/lib/supabase').then(({ getUsernameForAddress }) =>
-        getUsernameForAddress(connectedAddress).then(existing => {
-          if (existing) {
-            localStorage.setItem('proov_username', existing as string);
-            localStorage.setItem('proov_tutorial_done', '1');
-            localStorage.setItem('proov_onboarding_done', '1');
-            router.push('/dashboard');
-          } else {
-            router.push('/onboarding');
-          }
-        })
-      );
-    }).catch(() => router.push(getPostLoginRoute()));
+      const identity = await resolveIdentity(connectedAddress, emailVal, 'google', 'web3auth');
+      if (identity.username) {
+        localStorage.setItem('proov_tutorial_done', '1');
+        router.push('/dashboard');
+      } else {
+        router.push('/onboarding');
+      }
+    }).catch(async () => router.push(await getPostLoginRoute()));
   }, [isConnected, connectedAddress, router]);
 
   const triggerConnect = async (loginProvider = 'google') => {

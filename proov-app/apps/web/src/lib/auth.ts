@@ -19,50 +19,59 @@ export interface ProovIdentity {
   createdAt: string;
 }
 
-export function resolveIdentity(
+export async function resolveIdentity(
   address: string,
   email: string,
   signInMethod: ProovIdentity['signInMethod'],
   walletType: ProovIdentity['walletType']
-): ProovIdentity {
+): Promise<ProovIdentity> {
   if (typeof window === 'undefined') {
     return { address, email, username: null, signInMethod, walletType, createdAt: new Date().toISOString() };
   }
 
   const addressKey = address.toLowerCase();
 
+  // Build identity from localStorage (fast path / offline)
   const existing = localStorage.getItem(`proov_identity_${addressKey}`);
+  let identity: ProovIdentity;
   if (existing) {
     try {
-      const identity: ProovIdentity = JSON.parse(existing);
-      localStorage.setItem('proov_authenticated', 'true');
-      localStorage.setItem('proov_address', identity.address);
-      localStorage.setItem('proov_email', identity.email);
-      localStorage.setItem('proov_username', identity.username || '');
-      return identity;
-    } catch {}
+      identity = JSON.parse(existing);
+    } catch {
+      identity = { address: addressKey, email: email.toLowerCase(), username: null, signInMethod, walletType, createdAt: new Date().toISOString() };
+    }
+  } else {
+    identity = { address: addressKey, email: email.toLowerCase(), username: null, signInMethod, walletType, createdAt: new Date().toISOString() };
+    if (email) {
+      const emailKey = email.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      localStorage.setItem(`proov_email_to_address_${emailKey}`, addressKey);
+    }
   }
 
-  const identity: ProovIdentity = {
-    address: addressKey,
-    email: email.toLowerCase(),
-    username: null,
-    signInMethod,
-    walletType,
-    createdAt: new Date().toISOString(),
-  };
+  // Supabase is source of truth — hydrate username and onboarding state into the cache
+  try {
+    const { supabase } = await import('./supabase');
+    if (supabase) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('username, onboarding_complete')
+        .eq('address', addressKey)
+        .maybeSingle();
+      if (data?.username) {
+        identity.username = data.username;
+        if (data.onboarding_complete) {
+          localStorage.setItem('proov_onboarding_done', '1');
+          localStorage.setItem('proov_tutorial_done', '1');
+        }
+      }
+    }
+  } catch {}
 
   localStorage.setItem(`proov_identity_${addressKey}`, JSON.stringify(identity));
-
-  if (email) {
-    const emailKey = email.toLowerCase().replace(/[^a-z0-9]/g, '_');
-    localStorage.setItem(`proov_email_to_address_${emailKey}`, addressKey);
-  }
-
   localStorage.setItem('proov_authenticated', 'true');
-  localStorage.setItem('proov_address', addressKey);
-  localStorage.setItem('proov_email', email);
-  localStorage.setItem('proov_username', '');
+  localStorage.setItem('proov_address', identity.address);
+  localStorage.setItem('proov_email', identity.email);
+  localStorage.setItem('proov_username', identity.username || '');
 
   return identity;
 }
@@ -96,8 +105,26 @@ export function getAddressByEmail(email: string): string | null {
   return localStorage.getItem(`proov_email_to_address_${emailKey}`);
 }
 
-export function getPostLoginRoute(): string {
+export async function getPostLoginRoute(): Promise<string> {
   if (typeof window === 'undefined') return '/dashboard';
+
+  const address = localStorage.getItem('proov_address');
+  if (address) {
+    try {
+      const { supabase } = await import('./supabase');
+      if (supabase) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('username, onboarding_complete')
+          .eq('address', address.toLowerCase())
+          .maybeSingle();
+        if (data?.username) {
+          localStorage.setItem('proov_username', data.username);
+          if (data.onboarding_complete) localStorage.setItem('proov_onboarding_done', '1');
+        }
+      }
+    } catch {}
+  }
 
   const username = localStorage.getItem('proov_username');
   if (!username) return '/username-setup';
