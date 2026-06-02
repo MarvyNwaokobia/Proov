@@ -26,9 +26,13 @@ contract ProovCore is Initializable, OwnableUpgradeable, UUPSUpgradeable {
 
     // ── Custom errors ─────────────────────────────────────────────────────────
     error NotAuthorized();
+    error AlreadyCompletedToday();
 
     // ── Packed user data ──────────────────────────────────────────────────────
     mapping(address => uint256) private _userData;
+
+    // ── Per-habit, per-day completion guard (one SSTORE per user per habit per day) ──
+    mapping(address => mapping(uint256 => uint32)) private _lastHabitDay;
 
     // ── Events ────────────────────────────────────────────────────────────────
     event HabitCreated(
@@ -116,11 +120,13 @@ contract ProovCore is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         uint32 count   = uint32(packed);
         if (habitId >= count) revert NotAuthorized();
 
+        uint32 today = uint32(block.timestamp / 1 days);
+        if (_lastHabitDay[msg.sender][habitId] == today) revert AlreadyCompletedToday();
+        _lastHabitDay[msg.sender][habitId] = today;
+
         uint32 lastDay = uint32(packed >> 32);
         uint32 streak  = uint32(packed >> 64);
         uint32 longest = uint32(packed >> 96);
-
-        uint32 today = uint32(block.timestamp / 1 days);
 
         if (today != lastDay) {
             uint32 oldStreak = streak;
