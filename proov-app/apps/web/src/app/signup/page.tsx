@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import { getPostLoginRoute, resolveIdentity } from '@/lib/auth';
 import { isMiniPay, connectMiniPay } from '@/lib/minipay';
 import { clearWeb3AuthSession } from '@/lib/clearSession';
-import { IconMail, IconHash, IconDeviceMobile, IconMessage, IconMailOpened } from '@tabler/icons-react';
+import { IconMail, IconHash, IconDeviceMobile, IconMessage, IconMailOpened, type Icon as TablerIcon } from '@tabler/icons-react';
 
 const GoogleIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
@@ -94,7 +94,7 @@ export default function SignUpPage() {
 
   const switchMethod = (m: AltMethod) => { setAltMethod(m); setInput(''); setSent(false); };
 
-  const tabs: { id: AltMethod; label: string; Icon: React.ComponentType<{ size?: number; stroke?: number }> }[] = [
+  const tabs: { id: AltMethod; label: string; Icon: TablerIcon }[] = [
     { id: 'magic', label: 'Magic link', Icon: IconMail         },
     { id: 'code',  label: 'Email code', Icon: IconHash         },
     { id: 'sms',   label: 'SMS',        Icon: IconDeviceMobile },
