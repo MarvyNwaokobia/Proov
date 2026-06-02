@@ -44,7 +44,9 @@ export function createAAConnector({ web3AuthInstance }: { web3AuthInstance: Web3
         await web3AuthInstance.initModal({ modalConfig: MODAL_CONFIG as any });
       }
       if (!web3AuthInstance.connected) {
-        await web3AuthInstance.connect();
+        // Use connectTo (direct provider) instead of connect() (shows modal picker)
+        // so re-auth after sign-out never surfaces the Web3Auth UI a second time.
+        await web3AuthInstance.connectTo(WALLET_ADAPTERS.AUTH, { loginProvider: 'google' });
       }
 
       web3AuthInstance.provider?.on?.('disconnect' as any, () => this.onDisconnect());

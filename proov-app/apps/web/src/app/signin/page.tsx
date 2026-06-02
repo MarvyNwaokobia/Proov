@@ -83,7 +83,9 @@ export default function SignInPage() {
     const { getWeb3Auth } = await import('@/lib/wagmi-config');
     const web3auth = getWeb3Auth();
     try {
-      if ((web3auth as any).status === 'not_ready') await (web3auth as any).initModal();
+      // Always re-init the auth adapter before connectTo — this resets any stale
+      // post-logout state and ensures a clean direct-to-Google flow every time.
+      await (web3auth as any).initModal();
       const { WALLET_ADAPTERS } = await import('@web3auth/base');
       await (web3auth as any).connectTo(WALLET_ADAPTERS.AUTH, { loginProvider });
     } catch {
