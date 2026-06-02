@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { celo } from 'viem/chains';
 import { useTxToast } from '@/components/shared/TxToast';
+import { isMiniPay } from '@/lib/minipay';
 
 interface QueuedTx {
   id: string;
@@ -145,12 +146,13 @@ export function useBackgroundTx() {
         return null;
       }
 
-      // Non-blocking low-balance warning — once per session to avoid spam
-      if (typeof window !== 'undefined' && !sessionStorage.getItem('proov_low_gas_warned')) {
+      // Non-blocking low-balance warning — once per session, not shown in MiniPay
+      // (MiniPay pays network fees in cUSD, CELO balance is irrelevant)
+      if (typeof window !== 'undefined' && !isMiniPay() && !sessionStorage.getItem('proov_low_gas_warned')) {
         const cachedBal = parseFloat(localStorage.getItem('proov_fuel_balance') || '0');
         if (cachedBal > 0 && cachedBal < 0.01) {
           sessionStorage.setItem('proov_low_gas_warned', '1');
-          showWarning('Running low on gas. Go to Settings → Claim Fuel.');
+          showWarning('Running low on network fee. Go to Settings → Claim Fuel.');
         }
       }
 
