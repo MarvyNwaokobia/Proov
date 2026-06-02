@@ -1,6 +1,5 @@
-export const dynamic = "force-dynamic";
-
 import type { Metadata } from "next";
+import { Bricolage_Grotesque, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 import { WalletProvider } from "@/components/wallet-provider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
@@ -9,6 +8,21 @@ import { AuthSessionGuard } from "@/components/providers/AuthSessionGuard";
 import { OfflineIndicator } from "@/components/shared/OfflineIndicator";
 import { BottomNav } from "@/components/shared/BottomNav";
 import { TxToastProvider } from "@/components/shared/TxToast";
+
+const bricolage = Bricolage_Grotesque({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+  variable: "--font-bricolage",
+});
+
+const instrumentSerif = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"],
+  display: "swap",
+  variable: "--font-instrument",
+});
 
 export const metadata: Metadata = {
   title: "Proov — Do the work. Own the proof.",
@@ -43,12 +57,9 @@ r.setAttribute('data-mode',dark?'dark':'light');
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={`${bricolage.variable} ${instrumentSerif.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
       </head>
       <body>
         <AppErrorBoundary>
