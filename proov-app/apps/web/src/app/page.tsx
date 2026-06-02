@@ -33,9 +33,7 @@ export default function LandingPage() {
         {/* Nav */}
         <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.1rem 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div className="logo-float" style={{ width: 34, height: 34, borderRadius: 9, background: 'linear-gradient(135deg, var(--accent), var(--accent2, var(--accent)))', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-              <img src="/logo.png" style={{ width: 24, height: 24, objectFit: 'contain' }} alt="Proov" />
-            </div>
+            <img src="/logo.png" className="logo-float" style={{ width: 34, height: 34, objectFit: 'contain' }} alt="Proov" />
             <span style={{ fontWeight: 700, fontSize: 17, color: 'var(--text)', letterSpacing: '-.3px' }}>Proov</span>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>

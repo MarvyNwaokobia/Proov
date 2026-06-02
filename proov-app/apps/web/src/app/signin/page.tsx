@@ -181,9 +181,7 @@ export default function SignInPage() {
     <>
       {(connecting || isPending) && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24 }}>
-          <div style={{ width: 60, height: 60, borderRadius: 18, background: 'var(--btn-primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-            <img src="/logo.png" style={{ width: 40, height: 40, objectFit: 'contain' }} alt="Proov" />
-          </div>
+          <img src="/logo.png" style={{ width: 60, height: 60, objectFit: 'contain' }} alt="Proov" />
           <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.1, repeat: Infinity, ease: 'linear' }}
             style={{ width: 36, height: 36, borderRadius: '50%', border: '3px solid var(--border2)', borderTopColor: 'var(--accent)' }} />
           <div style={{ textAlign: 'center' }}>
@@ -199,9 +197,7 @@ export default function SignInPage() {
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 1.25rem 3rem', position: 'relative', zIndex: 1, background: 'var(--bg)' }}>
 
         <div style={{ marginTop: '1.5rem', marginBottom: '1.25rem', textAlign: 'center' }}>
-          <div style={{ width: 48, height: 48, borderRadius: 14, background: 'var(--btn-primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', boxShadow: '0 4px 16px rgba(0,0,0,.12)', overflow: 'hidden' }}>
-            <img src="/logo.png" style={{ width: 32, height: 32, objectFit: 'contain' }} alt="Proov" />
-          </div>
+          <img src="/logo.png" style={{ width: 48, height: 48, objectFit: 'contain', margin: '0 auto 12px', display: 'block' }} alt="Proov" />
           <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: '-.5px', marginBottom: 4 }}>Welcome back</h2>
           <p style={{ fontSize: 13, color: 'var(--text2)' }}>Take accountability for your habits</p>
         </div>
