@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Instrument_Serif } from "next/font/google";
 import "./globals.css";
-import { WalletProvider } from "@/components/wallet-provider";
+import dynamic from "next/dynamic";
+const WalletProvider = dynamic(
+  () => import("@/components/wallet-provider").then(m => m.WalletProvider),
+  { ssr: false }
+);
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { AppErrorBoundary } from "@/components/providers/AppErrorBoundary";
 import { AuthSessionGuard } from "@/components/providers/AuthSessionGuard";
