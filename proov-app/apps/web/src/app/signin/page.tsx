@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { getPostLoginRoute, resolveIdentity } from '@/lib/auth';
 import { isMiniPay, connectMiniPay } from '@/lib/minipay';
-import { clearWeb3AuthSession } from '@/lib/clearSession';
+
 import { IconMail, IconHash, IconDeviceMobile, IconMessage, IconMailOpened, type Icon as TablerIcon } from '@tabler/icons-react';
 
 const GoogleIcon = () => (
@@ -45,13 +45,15 @@ export default function SignInPage() {
     if (msg) { setNotice(msg); localStorage.removeItem('proov_auth_notice'); }
   }, []);
 
-  // Pre-clear stale Web3Auth session on mount so connectTo fires immediately
-  // on button click — popup blockers kill popups opened after async delays.
+  // On mount: reset in-memory Web3Auth state and remove wagmi's stored connection
+  // so auto-reconnect cannot bypass this page. Do NOT call clearWeb3AuthSession()
+  // here — that deletes the user's MPC device key share from IndexedDB, which
+  // causes Web3Auth to generate a new wallet address on the next login and the
+  // user ends up in onboarding as if they're a brand new user.
   useEffect(() => {
-    clearWeb3AuthSession().then(() => {
-      import('@/lib/wagmi-config').then(({ getWeb3Auth }) => {
-        try { getWeb3Auth().logout({ cleanup: true }).catch(() => {}); } catch {}
-      });
+    localStorage.removeItem('wagmi.store');
+    import('@/lib/wagmi-config').then(({ getWeb3Auth }) => {
+      try { getWeb3Auth().logout({ cleanup: true }).catch(() => {}); } catch {}
     });
   }, []);
 
