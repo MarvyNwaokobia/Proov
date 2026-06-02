@@ -72,6 +72,10 @@ export class HabitCompleted__Params {
   get streak(): BigInt {
     return this._event.parameters[2].value.toBigInt();
   }
+
+  get verificationHash(): Bytes {
+    return this._event.parameters[3].value.toBytes();
+  }
 }
 
 export class HabitDeactivated extends ethereum.Event {

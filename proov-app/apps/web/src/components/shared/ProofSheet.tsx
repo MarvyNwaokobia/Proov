@@ -10,7 +10,7 @@ interface ProofSheetProps {
   habitName: string;
   habitCategory?: string;
   userAddress: string;
-  onVerified: () => void;
+  onVerified: (verificationHash: `0x${string}`) => void;
   onSelfReport: () => void;
   onClose: () => void;
 }
@@ -20,7 +20,7 @@ export function ProofSheet({ habitId, habitName, habitCategory, userAddress, onV
   const [text, setText] = useState('');
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ verdict: string; reasoning: string } | null>(null);
+  const [result, setResult] = useState<{ verdict: string; reasoning: string; verificationHash?: `0x${string}` } | null>(null);
   const [usageUsed, setUsageUsed] = useState(0);
   const [visible, setVisible] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -82,13 +82,13 @@ export function ProofSheet({ habitId, habitName, habitCategory, userAddress, onV
         setLoading(false);
         return;
       }
-      setResult({ verdict: data.verdict, reasoning: data.reasoning });
+      setResult({ verdict: data.verdict, reasoning: data.reasoning, verificationHash: data.verificationHash });
       if (data.verdict === 'approved') {
         await markHabitVerified(habitId, userAddress, data.reasoning).catch(() => {});
         setUsageUsed(prev => prev + 1);
         setTimeout(() => {
           showToast('Proov accepted ✓ +3 leaderboard points');
-          onVerified();
+          onVerified(data.verificationHash as `0x${string}`);
           handleClose();
         }, 1200);
       }

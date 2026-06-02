@@ -62,6 +62,7 @@ export function handleHabitCompleted(event: HabitCompleted): void {
   completion.streak = event.params.streak
   completion.timestamp = event.block.timestamp
   completion.txHash = event.transaction.hash.toHexString()
+  completion.verificationHash = event.params.verificationHash
   completion.save()
 
   user.totalCompletions = user.totalCompletions + 1

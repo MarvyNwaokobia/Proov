@@ -25,6 +25,15 @@ export const PROOV_CORE_ABI = [
     outputs: [],
   },
   {
+    name: 'HabitCompleted', type: 'event',
+    inputs: [
+      { name: 'user',             type: 'address', indexed: true  },
+      { name: 'habitId',          type: 'uint256', indexed: true  },
+      { name: 'streak',           type: 'uint256', indexed: false },
+      { name: 'verificationHash', type: 'bytes32', indexed: false },
+    ],
+  },
+  {
     name: 'deactivateHabit', type: 'function', stateMutability: 'nonpayable',
     inputs: [{ name: 'habitId', type: 'uint256' }],
     outputs: [],
