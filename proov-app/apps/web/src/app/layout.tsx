@@ -11,16 +11,17 @@ import { TxToastProvider } from "@/components/shared/TxToast";
 
 const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  display: "swap",
+  weight: ["400", "700", "800"],
+  display: "optional",
   variable: "--font-bricolage",
+  adjustFontFallback: true,
 });
 
 const instrumentSerif = Instrument_Serif({
   subsets: ["latin"],
   weight: "400",
   style: ["normal", "italic"],
-  display: "swap",
+  display: "optional",
   variable: "--font-instrument",
 });
 
