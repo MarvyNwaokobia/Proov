@@ -53,7 +53,14 @@ export default function SignInPage() {
   useEffect(() => {
     localStorage.removeItem('wagmi.store');
     import('@/lib/wagmi-config').then(({ getWeb3Auth }) => {
-      try { getWeb3Auth().logout({ cleanup: true }).catch(() => {}); } catch {}
+      const w = getWeb3Auth();
+      // logout resets in-memory state, then initModal warms up the auth adapter
+      // so it is ready before the user clicks. This avoids the ~2s async gap that
+      // triggers popup blockers — connectTo must fire with no await between it and
+      // the user gesture or mobile browsers silently block the Google OAuth window.
+      w.logout({ cleanup: true }).catch(() => {}).then(() =>
+        (w as any).initModal().catch(() => {})
+      );
     });
   }, []);
 
@@ -101,9 +108,8 @@ export default function SignInPage() {
     const { getWeb3Auth } = await import('@/lib/wagmi-config');
     const web3auth = getWeb3Auth();
     try {
-      // Always re-init the auth adapter before connectTo — this resets any stale
-      // post-logout state and ensures a clean direct-to-Google flow every time.
-      await (web3auth as any).initModal();
+      // Mount already warmed up initModal — only re-init if it didn't finish in time.
+      if ((web3auth as any).status === 'not_ready') await (web3auth as any).initModal();
       const { WALLET_ADAPTERS } = await import('@web3auth/base');
       await (web3auth as any).connectTo(WALLET_ADAPTERS.AUTH, { loginProvider });
     } catch {

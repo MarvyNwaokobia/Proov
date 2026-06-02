@@ -41,7 +41,10 @@ export default function SignUpPage() {
   useEffect(() => {
     localStorage.removeItem('wagmi.store');
     import('@/lib/wagmi-config').then(({ getWeb3Auth }) => {
-      try { getWeb3Auth().logout({ cleanup: true }).catch(() => {}); } catch {}
+      const w = getWeb3Auth();
+      w.logout({ cleanup: true }).catch(() => {}).then(() =>
+        (w as any).initModal().catch(() => {})
+      );
     });
   }, []);
 
@@ -88,9 +91,7 @@ export default function SignUpPage() {
     const { getWeb3Auth } = await import('@/lib/wagmi-config');
     const web3auth = getWeb3Auth();
     try {
-      // Always re-init the auth adapter before connectTo — this resets any stale
-      // post-logout state and ensures a clean direct-to-Google flow every time.
-      await (web3auth as any).initModal();
+      if ((web3auth as any).status === 'not_ready') await (web3auth as any).initModal();
       const { WALLET_ADAPTERS } = await import('@web3auth/base');
       await (web3auth as any).connectTo(WALLET_ADAPTERS.AUTH, { loginProvider });
     } catch {
