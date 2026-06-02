@@ -123,6 +123,25 @@ describe("ProovCore", function () {
         .to.be.revertedWithCustomError(proovCore, "NotAuthorized");
     });
 
+    it("reverts with AlreadyCompletedToday on same habit same day", async function () {
+      await proovCore.connect(user1).selfCompleteHabit(0, ethers.ZeroHash);
+      await expect(proovCore.connect(user1).selfCompleteHabit(0, ethers.ZeroHash))
+        .to.be.revertedWithCustomError(proovCore, "AlreadyCompletedToday");
+    });
+
+    it("allows completing a different habit on the same day", async function () {
+      await proovCore.connect(user1).selfCompleteHabit(0, ethers.ZeroHash);
+      await expect(proovCore.connect(user1).selfCompleteHabit(1, ethers.ZeroHash))
+        .to.emit(proovCore, "HabitCompleted");
+    });
+
+    it("allows completing the same habit again on the next day", async function () {
+      await proovCore.connect(user1).selfCompleteHabit(0, ethers.ZeroHash);
+      await time.increase(86400);
+      await expect(proovCore.connect(user1).selfCompleteHabit(0, ethers.ZeroHash))
+        .to.emit(proovCore, "HabitCompleted");
+    });
+
     it("preserves longestStreak across a reset", async function () {
       await proovCore.connect(user1).selfCompleteHabit(0, ethers.ZeroHash);
       await time.increase(86400);
