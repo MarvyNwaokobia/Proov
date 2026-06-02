@@ -27,19 +27,19 @@ dataSources:
         - name: ProovCore
           file: ./abis/ProovCore.json
       eventHandlers:
-        - event: HabitCreated(indexed address,indexed uint256,string,uint8,uint256,uint8,uint256)
+        - event: HabitCreated(indexed address,indexed uint256,string,uint8,uint256,uint8)
           handler: handleHabitCreated
-        - event: HabitCompleted(indexed address,indexed uint256,uint256,uint256)
+        - event: HabitCompleted(indexed address,indexed uint256,uint256)
           handler: handleHabitCompleted
-        - event: HabitDeactivated(indexed address,indexed uint256,uint256)
+        - event: HabitDeactivated(indexed address,indexed uint256)
           handler: handleHabitDeactivated
-        - event: HabitReactivated(indexed address,indexed uint256,uint256)
+        - event: HabitReactivated(indexed address,indexed uint256)
           handler: handleHabitReactivated
-        - event: StreakUpdated(indexed address,uint256,uint256,uint256)
+        - event: StreakUpdated(indexed address,uint256,uint256)
           handler: handleStreakUpdated
-        - event: StreakBroken(indexed address,uint256,uint256)
+        - event: StreakBroken(indexed address,uint256)
           handler: handleStreakBroken
-        - event: MilestoneReached(indexed address,uint256,uint256)
+        - event: MilestoneReached(indexed address,uint256)
           handler: handleMilestoneReached
       file: ./src/proov-core.ts
 
@@ -60,7 +60,7 @@ dataSources:
         - name: SessionManager
           file: ./abis/SessionManager.json
       eventHandlers:
-        - event: SessionStarted(indexed address,indexed uint256,uint256)
+        - event: SessionStarted(indexed address,indexed uint256)
           handler: handleSessionStarted
         - event: SessionCompleted(indexed address,indexed uint256,uint256)
           handler: handleSessionCompleted
@@ -86,12 +86,12 @@ dataSources:
         - name: CircleManager
           file: ./abis/CircleManager.json
       eventHandlers:
-        - event: CircleRequestSent(indexed address,indexed address,uint256)
+        - event: CircleRequestSent(indexed address,indexed address)
           handler: handleCircleRequestSent
-        - event: MemberAdded(indexed address,indexed address,uint256)
+        - event: MemberAdded(indexed address,indexed address)
           handler: handleMemberAdded
-        - event: CheerSent(indexed address,indexed address,uint256)
+        - event: CheerSent(indexed address,indexed address)
           handler: handleCheerSent
-        - event: RemovedFromCircle(indexed address,indexed address,uint256)
+        - event: RemovedFromCircle(indexed address,indexed address)
           handler: handleRemovedFromCircle
       file: ./src/circle-manager.ts

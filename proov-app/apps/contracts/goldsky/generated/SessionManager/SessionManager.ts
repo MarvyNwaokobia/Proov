@@ -10,16 +10,16 @@ import {
   BigInt,
 } from "@graphprotocol/graph-ts";
 
-export class SessionAbandoned extends ethereum.Event {
-  get params(): SessionAbandoned__Params {
-    return new SessionAbandoned__Params(this);
+export class SessionStarted extends ethereum.Event {
+  get params(): SessionStarted__Params {
+    return new SessionStarted__Params(this);
   }
 }
 
-export class SessionAbandoned__Params {
-  _event: SessionAbandoned;
+export class SessionStarted__Params {
+  _event: SessionStarted;
 
-  constructor(event: SessionAbandoned) {
+  constructor(event: SessionStarted) {
     this._event = event;
   }
 
@@ -29,10 +29,6 @@ export class SessionAbandoned__Params {
 
   get habitId(): BigInt {
     return this._event.parameters[1].value.toBigInt();
-  }
-
-  get duration(): BigInt {
-    return this._event.parameters[2].value.toBigInt();
   }
 }
 
@@ -62,16 +58,16 @@ export class SessionCompleted__Params {
   }
 }
 
-export class SessionStarted extends ethereum.Event {
-  get params(): SessionStarted__Params {
-    return new SessionStarted__Params(this);
+export class SessionAbandoned extends ethereum.Event {
+  get params(): SessionAbandoned__Params {
+    return new SessionAbandoned__Params(this);
   }
 }
 
-export class SessionStarted__Params {
-  _event: SessionStarted;
+export class SessionAbandoned__Params {
+  _event: SessionAbandoned;
 
-  constructor(event: SessionStarted) {
+  constructor(event: SessionAbandoned) {
     this._event = event;
   }
 
@@ -83,7 +79,7 @@ export class SessionStarted__Params {
     return this._event.parameters[1].value.toBigInt();
   }
 
-  get startTimestamp(): BigInt {
+  get duration(): BigInt {
     return this._event.parameters[2].value.toBigInt();
   }
 }

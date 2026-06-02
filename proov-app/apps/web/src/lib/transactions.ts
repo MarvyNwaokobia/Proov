@@ -9,17 +9,17 @@ export const PROOV_CORE_ABI = [
   {
     name: 'createHabit', type: 'function', stateMutability: 'nonpayable',
     inputs: [
-      { name: 'name', type: 'string' },
-      { name: 'habitType', type: 'uint8' },
+      { name: 'name',           type: 'string'  },
+      { name: 'habitType',      type: 'uint8'   },
       { name: 'targetDuration', type: 'uint256' },
-      { name: 'frequency', type: 'uint8' },
+      { name: 'frequency',      type: 'uint8'   },
     ],
     outputs: [{ name: 'habitId', type: 'uint256' }],
   },
   {
     name: 'selfCompleteHabit', type: 'function', stateMutability: 'nonpayable',
     inputs: [
-      { name: 'habitId', type: 'uint256' },
+      { name: 'habitId',          type: 'uint256' },
       { name: 'verificationHash', type: 'bytes32' },
     ],
     outputs: [],
@@ -35,24 +35,29 @@ export const PROOV_CORE_ABI = [
     outputs: [],
   },
   {
-    name: 'recordStreakIncrement', type: 'function', stateMutability: 'nonpayable',
-    inputs: [{ name: 'newStreak', type: 'uint256' }],
-    outputs: [],
-  },
-  {
     name: 'setUsername', type: 'function', stateMutability: 'nonpayable',
     inputs: [{ name: 'username', type: 'string' }],
-    outputs: [],
-  },
-  {
-    name: 'editUsername', type: 'function', stateMutability: 'nonpayable',
-    inputs: [{ name: 'newUsername', type: 'string' }],
     outputs: [],
   },
   {
     name: 'updateVisibility', type: 'function', stateMutability: 'nonpayable',
     inputs: [{ name: 'visibilitySetting', type: 'string' }],
     outputs: [],
+  },
+  {
+    name: 'logJournalEntry', type: 'function', stateMutability: 'nonpayable',
+    inputs: [{ name: 'contentHash', type: 'bytes32' }],
+    outputs: [],
+  },
+  {
+    name: 'getUserStats', type: 'function', stateMutability: 'view',
+    inputs: [{ name: 'user', type: 'address' }],
+    outputs: [
+      { name: 'habitCount',        type: 'uint32' },
+      { name: 'lastCompletionDay', type: 'uint32' },
+      { name: 'currentStreak',     type: 'uint32' },
+      { name: 'longestStreak',     type: 'uint32' },
+    ],
   },
 ] as const;
 
@@ -65,7 +70,7 @@ export const SESSION_MANAGER_ABI = [
   {
     name: 'endSession', type: 'function', stateMutability: 'nonpayable',
     inputs: [
-      { name: 'habitId', type: 'uint256' },
+      { name: 'habitId',         type: 'uint256' },
       { name: 'durationSeconds', type: 'uint256' },
     ],
     outputs: [],
@@ -73,14 +78,9 @@ export const SESSION_MANAGER_ABI = [
   {
     name: 'abandonSession', type: 'function', stateMutability: 'nonpayable',
     inputs: [
-      { name: 'habitId', type: 'uint256' },
+      { name: 'habitId',         type: 'uint256' },
       { name: 'durationSeconds', type: 'uint256' },
     ],
-    outputs: [],
-  },
-  {
-    name: 'recordProgress', type: 'function', stateMutability: 'nonpayable',
-    inputs: [{ name: 'sessionId', type: 'uint256' }],
     outputs: [],
   },
 ] as const;
@@ -104,11 +104,6 @@ export const CIRCLE_MANAGER_ABI = [
   {
     name: 'removeFromCircle', type: 'function', stateMutability: 'nonpayable',
     inputs: [{ name: 'member', type: 'address' }],
-    outputs: [],
-  },
-  {
-    name: 'cheer', type: 'function', stateMutability: 'nonpayable',
-    inputs: [{ name: 'to', type: 'address' }],
     outputs: [],
   },
 ] as const;

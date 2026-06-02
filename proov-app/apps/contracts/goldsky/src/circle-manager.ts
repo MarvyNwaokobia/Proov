@@ -31,7 +31,7 @@ export function handleCircleRequestSent(event: CircleRequestSent): void {
   const req = new CircleRequest(id)
   req.from = event.params.from
   req.to = event.params.to
-  req.timestamp = event.params.timestamp
+  req.timestamp = event.block.timestamp
   req.save()
 }
 
@@ -40,7 +40,7 @@ export function handleMemberAdded(event: MemberAdded): void {
   const connection = new CircleConnection(id)
   connection.owner = event.params.circleOwner.toHexString()
   connection.member = event.params.member
-  connection.createdAt = event.params.timestamp
+  connection.createdAt = event.block.timestamp
   connection.active = true
   connection.save()
 }
@@ -53,7 +53,7 @@ export function handleCheerSent(event: CheerSent): void {
   const cheer = new Cheer(cheerId)
   cheer.from = event.params.from
   cheer.to = event.params.to
-  cheer.timestamp = event.params.timestamp
+  cheer.timestamp = event.block.timestamp
   cheer.save()
 
   from.cheersSent = from.cheersSent + 1

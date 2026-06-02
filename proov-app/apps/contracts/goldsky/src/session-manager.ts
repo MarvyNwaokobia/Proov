@@ -41,7 +41,7 @@ export function handleSessionStarted(event: SessionStarted): void {
     session.user = user.id
     session.habitId = event.params.habitId
   }
-  session.startTime = event.params.startTimestamp
+  session.startTime = event.block.timestamp
   session.status = 'active'
   session.save()
 
