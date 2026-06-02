@@ -6,12 +6,16 @@ import { useTheme } from '@/components/providers/ThemeProvider';
 import { THEMES, type ThemeId, type ColorMode } from '@/lib/themes';
 import { saveHabit, setOnboardingComplete } from '@/lib/supabase';
 import { useProovTx } from '@/hooks/useProovTx';
+import {
+  IconSun, IconMoon, IconSettings, IconPalette, IconTarget, IconSparkles,
+  type Icon as TablerIcon,
+} from '@tabler/icons-react';
 
 const EMOJI_OPTIONS = ['💪', '🧘', '📚', '🏃', '💧', '🍎', '🎯', '🌅', '✍️', '🎵'];
-const MODES: { value: ColorMode; label: string; emoji: string }[] = [
-  { value: 'light', label: 'Light', emoji: '☀️' },
-  { value: 'dark', label: 'Dark', emoji: '🌙' },
-  { value: 'system', label: 'Auto', emoji: '⚙️' },
+const MODES: { value: ColorMode; label: string; Icon: TablerIcon }[] = [
+  { value: 'light',  label: 'Light',  Icon: IconSun      },
+  { value: 'dark',   label: 'Dark',   Icon: IconMoon     },
+  { value: 'system', label: 'Auto',   Icon: IconSettings },
 ];
 
 type Step = 'welcome' | 'theme' | 'habit';
@@ -102,7 +106,7 @@ function OnboardingInner() {
           {step === 'welcome' && (
             <>
               <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-                <div style={{ fontSize: 60, marginBottom: 18 }}>👋</div>
+                <div style={{ marginBottom: 18 }}><IconSparkles size={60} stroke={1.3} color="var(--accent-text)" /></div>
                 <h1 style={{ fontSize: 28, fontWeight: 800, color: 'var(--text)', letterSpacing: '-.5px', marginBottom: 12 }}>
                   Welcome to Proov
                 </h1>
@@ -121,7 +125,7 @@ function OnboardingInner() {
           {step === 'theme' && (
             <>
               <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
-                <div style={{ fontSize: 48, marginBottom: 14 }}>🎨</div>
+                <div style={{ marginBottom: 14 }}><IconPalette size={48} stroke={1.3} color="var(--accent-text)" /></div>
                 <h2 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)', letterSpacing: '-.5px', marginBottom: 8 }}>
                   Choose your vibe
                 </h2>
@@ -143,7 +147,7 @@ function OnboardingInner() {
                         color: themeId === id ? 'var(--accent-text)' : 'var(--text3)',
                         transition: 'all .15s',
                       }}>
-                      {THEMES[id].emoji} {THEMES[id].label}
+                      {THEMES[id].label}
                     </button>
                   ))}
                 </div>
@@ -159,8 +163,9 @@ function OnboardingInner() {
                         background: mode === m.value ? 'var(--accent-bg)' : 'transparent',
                         color: mode === m.value ? 'var(--accent-text)' : 'var(--text3)',
                         transition: 'all .15s',
+                        display: 'flex', alignItems: 'center', gap: 5,
                       }}>
-                      {m.emoji} {m.label}
+                      <m.Icon size={14} stroke={2} /> {m.label}
                     </button>
                   ))}
                 </div>
@@ -177,7 +182,7 @@ function OnboardingInner() {
           {step === 'habit' && (
             <>
               <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
-                <div style={{ fontSize: 48, marginBottom: 14 }}>🎯</div>
+                <div style={{ marginBottom: 14 }}><IconTarget size={48} stroke={1.3} color="var(--accent-text)" /></div>
                 <h2 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)', letterSpacing: '-.5px', marginBottom: 8 }}>
                   Add your first habit
                 </h2>

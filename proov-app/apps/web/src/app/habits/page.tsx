@@ -4,8 +4,20 @@ import { useRouter } from "next/navigation";
 import {
   IconBrain, IconRun, IconYoga, IconBook, IconSalad, IconPalette,
   IconArrowLeft, IconFlame, IconClock, IconCheck, IconArchive, IconPlayerPlay, IconPlus,
+  IconUsers, IconStar, IconCalendar, IconCalendarWeek, IconLock, IconTrash,
   type Icon as TablerIcon,
 } from '@tabler/icons-react';
+
+const CAT_ICONS: Record<string, TablerIcon> = {
+  focus: IconBrain,
+  fitness: IconRun,
+  wellness: IconYoga,
+  learning: IconBook,
+  nutrition: IconSalad,
+  social: IconUsers,
+  creative: IconPalette,
+  custom: IconStar,
+};
 import {
   getUserHabits, saveHabit, deactivateHabit as supabaseDeactivate,
   getTodayCompletions, saveHabitCompletion, getAllHabitStreaks, type Habit,
@@ -225,11 +237,15 @@ function CreateForm({ onSave, isSaving, onCancel, prefill }: {
           <input autoFocus value={name} onChange={e => { setName(e.target.value); setFormError(""); }} onKeyDown={e => e.key === "Enter" && next()} placeholder="e.g. Morning Run, Deep Work..." style={{ marginBottom: 12 }} />
           <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: "var(--text3)", marginBottom: 8 }}>Category</p>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
-            {HABIT_CATEGORIES.map(c => (
-              <button key={c.id} onClick={() => setCatId(c.id)} style={{ borderRadius: 12, padding: "10px 4px", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, fontSize: 10, cursor: "pointer", fontFamily: "inherit", border: `1px solid ${catId === c.id ? c.color + "80" : "var(--border)"}`, background: catId === c.id ? c.color + "18" : "transparent", color: catId === c.id ? c.color : "var(--text3)" }}>
-                <span style={{ fontSize: 16 }}>{c.emoji}</span><span>{c.label.split(" ")[0]}</span>
-              </button>
-            ))}
+            {HABIT_CATEGORIES.map(c => {
+              const CatIc = CAT_ICONS[c.id];
+              return (
+                <button key={c.id} onClick={() => setCatId(c.id)} style={{ borderRadius: 12, padding: "10px 4px", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, fontSize: 10, cursor: "pointer", fontFamily: "inherit", border: `1px solid ${catId === c.id ? c.color + "80" : "var(--border)"}`, background: catId === c.id ? c.color + "18" : "transparent", color: catId === c.id ? c.color : "var(--text3)" }}>
+                  {CatIc ? <CatIc size={16} stroke={1.8} /> : null}
+                  <span>{c.label.split(" ")[0]}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -259,9 +275,11 @@ function CreateForm({ onSave, isSaving, onCancel, prefill }: {
         <div>
           <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 12 }}>How often?</p>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            {[{ val: Frequency.DAILY, label: "Daily", emoji: "📅", desc: "Every day" }, { val: Frequency.WEEKLY, label: "Weekly", emoji: "📆", desc: "Once a week" }].map(f => (
+            {[{ val: Frequency.DAILY, label: "Daily", Icon: IconCalendar, desc: "Every day" }, { val: Frequency.WEEKLY, label: "Weekly", Icon: IconCalendarWeek, desc: "Once a week" }].map(f => (
               <button key={f.val} onClick={() => setFrequency(f.val)} style={{ padding: "1rem", borderRadius: 14, cursor: "pointer", fontFamily: "inherit", textAlign: "center", border: `1px solid ${frequency === f.val ? "var(--accent)" : "var(--border)"}`, background: frequency === f.val ? "var(--accent-bg)" : "transparent" }}>
-                <div style={{ fontSize: 24, marginBottom: 4 }}>{f.emoji}</div>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
+                  <f.Icon size={24} stroke={1.5} color={frequency === f.val ? "var(--accent-text)" : "var(--text3)"} />
+                </div>
                 <p style={{ fontSize: 13, fontWeight: 600, color: frequency === f.val ? "var(--accent-text)" : "var(--text)" }}>{f.label}</p>
                 <p style={{ fontSize: 10, color: "var(--text3)" }}>{f.desc}</p>
               </button>
@@ -274,9 +292,9 @@ function CreateForm({ onSave, isSaving, onCancel, prefill }: {
         <div>
           <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 12 }}>Who can see this habit?</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
-            {[{ key: "private" as const, emoji: "🔒", label: "Private", desc: "Only you." }, { key: "public" as const, emoji: "👥", label: "Circle", desc: "All circle members see your progress." }].map(opt => (
+            {[{ key: "private" as const, Icon: IconLock, label: "Private", desc: "Only you." }, { key: "public" as const, Icon: IconUsers, label: "Circle", desc: "All circle members see your progress." }].map(opt => (
               <button key={opt.key} onClick={() => setPrivacy(opt.key)} style={{ padding: "11px 14px", borderRadius: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 12, textAlign: "left", border: `1px solid ${privacy === opt.key ? "var(--accent)" : "var(--border)"}`, background: privacy === opt.key ? "var(--accent-bg)" : "transparent" }}>
-                <span style={{ fontSize: 20 }}>{opt.emoji}</span>
+                <opt.Icon size={20} stroke={1.6} color={privacy === opt.key ? "var(--accent-text)" : "var(--text3)"} />
                 <div>
                   <p style={{ fontSize: 12, fontWeight: 600, color: privacy === opt.key ? "var(--accent-text)" : "var(--text)", margin: 0 }}>{opt.label}</p>
                   <p style={{ fontSize: 10, color: "var(--text3)", margin: 0 }}>{opt.desc}</p>
@@ -803,7 +821,7 @@ export default function HabitsPage() {
         {/* Tab switcher */}
         {!showForm && (
           <div style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 12, padding: 4, gap: 3, marginBottom: 14 }}>
-            {([['my', 'My habits'], ['all', 'Discover'], ['templates', 'Templates'], ['archived', `🗑 ${archivedHabits.length > 0 ? archivedHabits.length : ''}`]] as const).map(([tab, label]) => (
+            {(['my', 'all', 'templates', 'archived'] as const).map(tab => (
               <button key={tab} onClick={() => setActiveTab(tab)} style={{
                 flex: 1, textAlign: 'center', padding: '7px 0',
                 borderRadius: 9, border: 'none', cursor: 'pointer',
@@ -813,8 +831,12 @@ export default function HabitsPage() {
                 fontWeight: activeTab === tab ? 700 : 500,
                 boxShadow: activeTab === tab ? '0 1px 3px rgba(0,0,0,0.07)' : 'none',
                 transition: 'all 0.2s',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
               }}>
-                {label}
+                {tab === 'archived'
+                  ? <><IconTrash size={11} stroke={1.8} />{archivedHabits.length > 0 ? archivedHabits.length : ''}</>
+                  : ({ my: 'My habits', all: 'Discover', templates: 'Templates' } as Record<string, string>)[tab]
+                }
               </button>
             ))}
           </div>
@@ -1022,7 +1044,7 @@ export default function HabitsPage() {
           <div style={{ padding: '0 4px' }}>
             {archivedHabits.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text3)' }}>
-                <div style={{ fontSize: 36, marginBottom: 10 }}>🗑</div>
+                <div style={{ marginBottom: 10 }}><IconTrash size={36} stroke={1.4} color="var(--text3)" /></div>
                 <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text2)', marginBottom: 4 }}>No archived habits</p>
                 <p style={{ fontSize: 12, color: 'var(--text3)' }}>Archived habits will appear here.</p>
               </div>
