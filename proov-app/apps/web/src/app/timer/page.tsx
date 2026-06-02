@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useProovTx } from '@/hooks/useProovTx';
 import {
@@ -39,7 +39,7 @@ function fmtTime(secs: number) {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-export default function GrindTimerPage() {
+function GrindTimerPageContent() {
   const searchParams = useSearchParams();
   const proovTx = useProovTx();
 
@@ -982,5 +982,13 @@ export default function GrindTimerPage() {
 
       </div>
     </div>
+  );
+}
+
+export default function GrindTimerPage() {
+  return (
+    <Suspense>
+      <GrindTimerPageContent />
+    </Suspense>
   );
 }
