@@ -2,13 +2,13 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { IconFlame } from '@tabler/icons-react';
+import { IconFlame, IconBrain, IconUsers, IconTrophy, type Icon as TablerIcon } from '@tabler/icons-react';
 
-const FEATURES = [
-  { emoji: '🧠', title: 'Verified progress',     desc: 'Log what you did. We check it.' },
-  { emoji: '🤝', title: 'Your people witness it', desc: 'They see everything.' },
-  { emoji: '🏆', title: 'Leaderboard',            desc: 'Every day counts.' },
-  { emoji: '🔥', title: 'Real progress',          desc: 'Earned, not claimed.' },
+const FEATURES: { Icon: TablerIcon; title: string; desc: string }[] = [
+  { Icon: IconBrain,  title: 'Verified progress',     desc: 'Log what you did. We check it.' },
+  { Icon: IconUsers,  title: 'Your people witness it', desc: 'They see everything.' },
+  { Icon: IconTrophy, title: 'Leaderboard',            desc: 'Every day counts.' },
+  { Icon: IconFlame,  title: 'Real progress',          desc: 'Earned, not claimed.' },
 ];
 
 export default function LandingPage() {
@@ -33,7 +33,9 @@ export default function LandingPage() {
         {/* Nav */}
         <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.1rem 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div className="logo-float" style={{ width: 34, height: 34, borderRadius: 9, background: 'linear-gradient(135deg, var(--accent), var(--accent2, var(--accent)))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 15, color: '#fff' }}>P</div>
+            <div className="logo-float" style={{ width: 34, height: 34, borderRadius: 9, background: 'linear-gradient(135deg, var(--accent), var(--accent2, var(--accent)))', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+              <img src="/logo.png" style={{ width: 24, height: 24, objectFit: 'contain' }} alt="Proov" />
+            </div>
             <span style={{ fontWeight: 700, fontSize: 17, color: 'var(--text)', letterSpacing: '-.3px' }}>Proov</span>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -98,7 +100,7 @@ export default function LandingPage() {
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(0,0,0,.08)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = ''; }}
             >
-              <div style={{ fontSize: 22, marginBottom: 7 }}>{f.emoji}</div>
+              <div style={{ marginBottom: 7 }}><f.Icon size={24} stroke={1.6} color="var(--accent-text)" /></div>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>{f.title}</div>
               <div style={{ fontSize: 11, color: 'var(--text3)', lineHeight: 1.55 }}>{f.desc}</div>
             </div>

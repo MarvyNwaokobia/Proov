@@ -1,6 +1,7 @@
 "use client";
 
 import { Component, type ReactNode } from "react";
+import { IconAlertTriangle } from "@tabler/icons-react";
 
 interface State { hasError: boolean; }
 
@@ -24,7 +25,7 @@ export class AppErrorBoundary extends Component<{ children: ReactNode }, State> 
           padding: "2rem", fontFamily: "system-ui, sans-serif", textAlign: "center",
         }}>
           <div>
-            <div style={{ fontSize: 52, marginBottom: 16 }}>⚡</div>
+            <div style={{ marginBottom: 16 }}><IconAlertTriangle size={52} stroke={1.4} color="var(--accent)" /></div>
             <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text, #052e16)", marginBottom: 8 }}>
               Something went wrong
             </h2>

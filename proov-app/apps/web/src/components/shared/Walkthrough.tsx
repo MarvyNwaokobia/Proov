@@ -1,35 +1,45 @@
 'use client';
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  IconSparkles, IconFlame, IconCircleCheck, IconUsers, IconBolt, IconTrophy,
+  type Icon as TablerIcon,
+} from '@tabler/icons-react';
 
-const STEPS = [
+interface WalkthroughStep {
+  Icon: TablerIcon;
+  title: string;
+  description: string;
+}
+
+const STEPS: WalkthroughStep[] = [
   {
-    emoji: '👋',
+    Icon: IconSparkles,
     title: 'Good to have you here',
     description: 'This is your dashboard. Everything you need to show up daily lives right here.',
   },
   {
-    emoji: '🔥',
+    Icon: IconFlame,
     title: 'Build your streak',
     description: 'Complete all your habits every day to grow your streak. Miss a day and it resets — your circle sees everything.',
   },
   {
-    emoji: '✅',
+    Icon: IconCircleCheck,
     title: "Log today's habits",
     description: 'Tap checkbox habits to mark them done, or start the Grind Timer for timed ones. Hit all of them to keep your streak alive.',
   },
   {
-    emoji: '🤝',
+    Icon: IconUsers,
     title: 'Your circle',
     description: 'Invite people who will hold you accountable. You can cheer each other on and witness habit completions onchain.',
   },
   {
-    emoji: '⚡',
+    Icon: IconBolt,
     title: 'Claim your fuel',
     description: 'Grab free CELO daily to power your activity in the app. Come back every day to refuel.',
   },
   {
-    emoji: '🏆',
+    Icon: IconTrophy,
     title: 'Earn your rank',
     description: 'Show up daily and climb the leaderboard. Your rank is earned, not bought.',
   },
@@ -114,8 +124,8 @@ export function Walkthrough({ onComplete }: WalkthroughProps) {
             exit={{ opacity: 0, x: -14 }}
             transition={{ duration: 0.18 }}
           >
-            <div style={{ fontSize: 52, marginBottom: 14, lineHeight: 1 }}>
-              {current.emoji}
+            <div style={{ marginBottom: 14 }}>
+              <current.Icon size={52} stroke={1.4} color="var(--accent-text)" />
             </div>
             <h3 style={{
               fontSize: 19,
@@ -164,7 +174,7 @@ export function Walkthrough({ onComplete }: WalkthroughProps) {
           onMouseEnter={e => ((e.target as HTMLButtonElement).style.opacity = '0.88')}
           onMouseLeave={e => ((e.target as HTMLButtonElement).style.opacity = '1')}
         >
-          {isLast ? "Let's go 🚀" : 'Next →'}
+          {isLast ? "Let's go →" : 'Next →'}
         </button>
         <button
           onClick={handleComplete}

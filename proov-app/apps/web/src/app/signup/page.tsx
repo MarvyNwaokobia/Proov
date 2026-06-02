@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { getPostLoginRoute, resolveIdentity } from '@/lib/auth';
 import { isMiniPay, connectMiniPay } from '@/lib/minipay';
 import { clearWeb3AuthSession } from '@/lib/clearSession';
+import { IconMail, IconHash, IconDeviceMobile, IconMessage, IconMailOpened } from '@tabler/icons-react';
 
 const GoogleIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
@@ -93,10 +94,10 @@ export default function SignUpPage() {
 
   const switchMethod = (m: AltMethod) => { setAltMethod(m); setInput(''); setSent(false); };
 
-  const tabs: { id: AltMethod; label: string }[] = [
-    { id: 'magic', label: '✉️ Magic link' },
-    { id: 'code',  label: '🔢 Email code' },
-    { id: 'sms',   label: '📱 SMS' },
+  const tabs: { id: AltMethod; label: string; Icon: React.ComponentType<{ size?: number; stroke?: number }> }[] = [
+    { id: 'magic', label: 'Magic link', Icon: IconMail         },
+    { id: 'code',  label: 'Email code', Icon: IconHash         },
+    { id: 'sms',   label: 'SMS',        Icon: IconDeviceMobile },
   ];
 
   const tabStyle = (active: boolean): React.CSSProperties => ({
@@ -106,12 +107,13 @@ export default function SignUpPage() {
     color: active ? 'var(--text)' : 'var(--text3)',
     fontWeight: active ? 700 : 500,
     boxShadow: active ? '0 1px 4px rgba(0,0,0,0.07)' : 'none',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
   });
 
   const placeholder = altMethod === 'sms' ? '+1 (555) 000-0000' : 'your@email.com';
   const inputType  = altMethod === 'sms' ? 'tel' : 'email';
   const sendLabel  = altMethod === 'magic' ? 'Send magic link' : altMethod === 'code' ? 'Send code' : 'Send SMS code';
-  const sentEmoji  = altMethod === 'sms' ? '💬' : '📬';
+  const SentIcon   = altMethod === 'sms' ? IconMessage : IconMailOpened;
   const sentTitle  = altMethod === 'sms' ? 'Check your messages' : altMethod === 'magic' ? 'Check your inbox' : 'Check your inbox';
   const sentDesc   = altMethod === 'sms'
     ? `We sent a code to ${input}`
@@ -123,8 +125,8 @@ export default function SignUpPage() {
     <>
       {(connecting || isPending) && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24 }}>
-          <div style={{ width: 60, height: 60, borderRadius: 18, background: 'var(--btn-primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontSize: 30, fontWeight: 800, color: '#fff' }}>P</span>
+          <div style={{ width: 60, height: 60, borderRadius: 18, background: 'var(--btn-primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+            <img src="/logo.png" style={{ width: 40, height: 40, objectFit: 'contain' }} alt="Proov" />
           </div>
           <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.1, repeat: Infinity, ease: 'linear' }}
             style={{ width: 36, height: 36, borderRadius: '50%', border: '3px solid var(--border2)', borderTopColor: 'var(--accent)' }} />
@@ -141,8 +143,8 @@ export default function SignUpPage() {
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 1.25rem 3rem', position: 'relative', zIndex: 1, background: 'var(--bg)' }}>
 
         <div style={{ marginTop: '1.5rem', marginBottom: '1.25rem', textAlign: 'center' }}>
-          <div style={{ width: 48, height: 48, borderRadius: 14, background: 'var(--btn-primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', boxShadow: '0 4px 16px rgba(0,0,0,.12)' }}>
-            <span style={{ fontSize: 24, fontWeight: 800, color: '#fff' }}>P</span>
+          <div style={{ width: 48, height: 48, borderRadius: 14, background: 'var(--btn-primary-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', boxShadow: '0 4px 16px rgba(0,0,0,.12)', overflow: 'hidden' }}>
+            <img src="/logo.png" style={{ width: 32, height: 32, objectFit: 'contain' }} alt="Proov" />
           </div>
           <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: '-.5px', marginBottom: 4 }}>Welcome to Proov</h2>
           <p style={{ fontSize: 13, color: 'var(--text2)' }}>Your discipline. Onchain.</p>
@@ -182,6 +184,7 @@ export default function SignUpPage() {
           <div style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 10, padding: 3, gap: 3, marginBottom: 12 }}>
             {tabs.map(t => (
               <button key={t.id} onClick={() => switchMethod(t.id)} style={tabStyle(altMethod === t.id)}>
+                <t.Icon size={11} stroke={2} />
                 {t.label}
               </button>
             ))}
@@ -207,7 +210,7 @@ export default function SignUpPage() {
             </>
           ) : (
             <div style={{ textAlign: 'center', padding: '8px 0 20px' }}>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>{sentEmoji}</div>
+              <div style={{ marginBottom: 8 }}><SentIcon size={32} stroke={1.5} color="var(--accent-text)" /></div>
               <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>{sentTitle}</p>
               <p style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 10 }}>{sentDesc}</p>
               <button onClick={() => setSent(false)} style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--accent-text)', cursor: 'pointer', fontFamily: 'inherit' }}>
