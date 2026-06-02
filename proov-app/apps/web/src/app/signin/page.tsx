@@ -50,7 +50,9 @@ export default function SignInPage() {
   // here — that deletes the user's MPC device key share from IndexedDB, which
   // causes Web3Auth to generate a new wallet address on the next login and the
   // user ends up in onboarding as if they're a brand new user.
+  // MiniPay: skip both — the injected provider manages its own state.
   useEffect(() => {
+    if (isMiniPay()) return;
     localStorage.removeItem('wagmi.store');
     import('@/lib/wagmi-config').then(({ getWeb3Auth }) => {
       const w = getWeb3Auth();
@@ -65,15 +67,22 @@ export default function SignInPage() {
   }, []);
 
   useEffect(() => {
-    if (isMiniPay()) {
-      connectMiniPay().then(async addr => {
-        if (addr) { await resolveIdentity(addr, '', 'wallet', 'injected'); router.push(await getPostLoginRoute()); }
-      });
-    }
-  }, [router]);
+    if (!isMiniPay()) return;
+    setConnecting(true);
+    // Connect wagmi to the injected MiniPay provider (sets up useAccount/useWriteContract)
+    const c = connectors[0];
+    if (c) connect({ connector: c });
+    // Also resolve identity directly so localStorage is primed before navigation
+    connectMiniPay().then(async addr => {
+      if (addr) { await resolveIdentity(addr, '', 'wallet', 'injected'); router.push(await getPostLoginRoute()); }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!isConnected || !connectedAddress) return;
+    // MiniPay: identity was already resolved in the MiniPay connect effect — just navigate
+    if (isMiniPay()) return;
     let cancelled = false;
     const resolve = async () => {
       let route = '/onboarding';

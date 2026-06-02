@@ -5,6 +5,7 @@ import { CHAIN_NAMESPACES, WEB3AUTH_NETWORK } from "@web3auth/base";
 import { EthereumPrivateKeyProvider } from "@web3auth/ethereum-provider";
 import { createConfig, http, mock } from "wagmi";
 import { celo, celoSepolia } from "viem/chains";
+import { isMiniPay } from "./minipay";
 
 export const clientId = process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID || "";
 export const hasWeb3AuthClientId = !!clientId;
@@ -43,7 +44,15 @@ export function getWeb3Auth(): Web3Auth {
 }
 
 function buildConnectors() {
-  if (!clientId || typeof window === "undefined") {
+  if (typeof window === "undefined") {
+    return [mock({ accounts: ["0x0000000000000000000000000000000000000001"] as const })];
+  }
+  // MiniPay injects window.ethereum — use it directly, skip Web3Auth entirely
+  if (isMiniPay()) {
+    const { injected } = require("wagmi/connectors");
+    return [injected()];
+  }
+  if (!clientId) {
     return [mock({ accounts: ["0x0000000000000000000000000000000000000001"] as const })];
   }
   try {

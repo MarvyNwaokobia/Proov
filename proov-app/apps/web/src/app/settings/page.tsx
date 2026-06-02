@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDisconnect } from 'wagmi';
 import Link from 'next/link';
+import { isMiniPay } from '@/lib/minipay';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
 import { validateUsername, isUsernameTaken, registerUsername } from '@/lib/username';
 import { setIdentityUsername } from '@/lib/auth';
@@ -46,6 +47,7 @@ export default function SettingsPage() {
   const [copied, setCopied] = useState(false);
   const [showUsernameConfirm, setShowUsernameConfirm] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [miniPayUser, setMiniPayUser] = useState(false);
   const [celoBalance, setCeloBalance] = useState(0);
   const [canClaimFuel, setCanClaimFuel] = useState(false);
   const [secondsUntilClaim, setSecondsUntilClaim] = useState(0);
@@ -61,6 +63,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setMounted(true);
+    setMiniPayUser(isMiniPay());
     const addr = localStorage.getItem('proov_address') || '';
     setAddress(addr);
     if (addr) {
@@ -74,7 +77,7 @@ export default function SettingsPage() {
     const storedEmail = localStorage.getItem('proov_email') || '';
     if (storedEmail) {
       setEmail(storedEmail);
-    } else {
+    } else if (!isMiniPay()) {
       import('@/lib/wagmi-config').then(({ getWeb3Auth }) =>
         getWeb3Auth().getUserInfo().catch(() => null)
       ).then(info => {
@@ -215,20 +218,22 @@ export default function SettingsPage() {
   };
 
   const handleSignOut = async () => {
-    // Always attempt Web3Auth logout — don't check .connected which may lag
-    try {
-      const { getWeb3Auth } = await import('@/lib/wagmi-config');
-      await getWeb3Auth().logout({ cleanup: true });
-    } catch {}
+    if (!isMiniPay()) {
+      // Attempt Web3Auth logout — don't check .connected which may lag
+      try {
+        const { getWeb3Auth } = await import('@/lib/wagmi-config');
+        await getWeb3Auth().logout({ cleanup: true });
+      } catch {}
+      // Wipe ALL Web3Auth / OpenLogin session storage (localStorage + sessionStorage + IndexedDB)
+      const { clearWeb3AuthSession } = await import('@/lib/clearSession');
+      await clearWeb3AuthSession();
+    }
     // Disconnect wagmi
     disconnect();
     // Clear our app auth flags
     localStorage.removeItem('proov_authenticated');
     localStorage.removeItem('proov_address');
     localStorage.removeItem('proov_email');
-    // Wipe ALL Web3Auth / OpenLogin session storage (localStorage + sessionStorage + IndexedDB)
-    const { clearWeb3AuthSession } = await import('@/lib/clearSession');
-    await clearWeb3AuthSession();
     window.location.href = '/';
   };
 
@@ -504,39 +509,43 @@ export default function SettingsPage() {
           <ThemeToggle />
         </div>
 
-        {/* ── Fuel ── */}
-        <p style={{ ...sectionLabel, marginTop: 16 }}>Fuel</p>
-        <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14, padding: 14, marginBottom: 0 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <span style={{ fontSize: 13, color: 'var(--text2)' }}>Balance</span>
-            <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 4 }}>
-              <IconBolt size={14} stroke={2} color="var(--accent-text)" />
-              {celoBalance >= 0.01 ? celoBalance.toFixed(2) : '0.00'} Fuel
-            </span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <span style={{ fontSize: 13, color: 'var(--text2)' }}>Daily Fuel</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: canClaimFuel ? 'var(--accent-text)' : 'var(--text3)' }}>
-              {canClaimFuel ? 'Claimable now' : fmtCountdown(secondsUntilClaim)}
-            </span>
-          </div>
-          <button
-            onClick={handleClaimFuel}
-            disabled={!canClaimFuel || claimingFuel}
-            style={{
-              width: '100%', padding: 12, borderRadius: 12, border: 'none',
-              background: canClaimFuel ? 'var(--btn-primary-bg)' : 'var(--bg3)',
-              color: canClaimFuel ? 'var(--btn-primary-text)' : 'var(--text3)',
-              fontSize: 13, fontWeight: 700,
-              cursor: canClaimFuel && !claimingFuel ? 'pointer' : 'not-allowed',
-              fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              opacity: claimingFuel ? 0.7 : 1,
-            }}
-          >
-            <IconBolt size={14} stroke={2} />
-            {claimingFuel ? 'Claiming…' : 'Claim Daily Fuel'}
-          </button>
-        </div>
+        {/* ── Fuel — hidden in MiniPay (gas paid in cUSD, no CELO faucet needed) ── */}
+        {!miniPayUser && (
+          <>
+            <p style={{ ...sectionLabel, marginTop: 16 }}>Fuel</p>
+            <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14, padding: 14, marginBottom: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontSize: 13, color: 'var(--text2)' }}>Balance</span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <IconBolt size={14} stroke={2} color="var(--accent-text)" />
+                  {celoBalance >= 0.01 ? celoBalance.toFixed(2) : '0.00'} Fuel
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <span style={{ fontSize: 13, color: 'var(--text2)' }}>Daily Fuel</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: canClaimFuel ? 'var(--accent-text)' : 'var(--text3)' }}>
+                  {canClaimFuel ? 'Claimable now' : fmtCountdown(secondsUntilClaim)}
+                </span>
+              </div>
+              <button
+                onClick={handleClaimFuel}
+                disabled={!canClaimFuel || claimingFuel}
+                style={{
+                  width: '100%', padding: 12, borderRadius: 12, border: 'none',
+                  background: canClaimFuel ? 'var(--btn-primary-bg)' : 'var(--bg3)',
+                  color: canClaimFuel ? 'var(--btn-primary-text)' : 'var(--text3)',
+                  fontSize: 13, fontWeight: 700,
+                  cursor: canClaimFuel && !claimingFuel ? 'pointer' : 'not-allowed',
+                  fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  opacity: claimingFuel ? 0.7 : 1,
+                }}
+              >
+                <IconBolt size={14} stroke={2} />
+                {claimingFuel ? 'Claiming…' : 'Claim Daily Fuel'}
+              </button>
+            </div>
+          </>
+        )}
 
         {/* ── Proov Verification ── */}
         <p style={{ ...sectionLabel, marginTop: 16 }}>Proov Verification</p>
@@ -626,6 +635,42 @@ export default function SettingsPage() {
             <span className="notif-toggle-thumb" style={{ left: notifCircle ? 21 : 3 }} />
           </button>
         </div>
+
+        {/* ── Support ── */}
+        <p style={{ ...sectionLabel, marginTop: 16 }}>Support</p>
+        <a
+          href="https://t.me/ProovApp"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ ...listRow, borderBottom: 'none', textDecoration: 'none', color: 'inherit' }}
+        >
+          <div style={{
+            width: 36, height: 36, borderRadius: 10,
+            background: 'rgba(0,136,204,.1)', border: '1px solid rgba(0,136,204,.25)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0, marginRight: 12,
+          }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.93 6.686l-1.683 7.93c-.126.568-.457.706-.925.44l-2.558-1.885-1.234 1.188c-.137.137-.252.252-.516.252l.184-2.62 4.757-4.297c.207-.184-.045-.286-.32-.102L7.43 14.332l-2.52-.787c-.547-.172-.557-.547.115-.81l9.849-3.795c.456-.165.855.113.055.746z" fill="#0088CC"/>
+            </svg>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Chat with us on Telegram</div>
+            <div style={{ fontSize: 11, color: 'var(--text3)' }}>24h support · @ProovApp</div>
+          </div>
+          <IconChevronRight size={16} stroke={2} color="var(--text3)" />
+        </a>
+
+        {/* ── Legal ── */}
+        <p style={{ ...sectionLabel, marginTop: 16 }}>Legal</p>
+        <Link href="/terms" style={{ ...listRow, textDecoration: 'none', color: 'inherit' }}>
+          <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>Terms of Service</span>
+          <IconChevronRight size={14} stroke={2} color="var(--text3)" />
+        </Link>
+        <Link href="/privacy" style={{ ...listRow, borderBottom: 'none', textDecoration: 'none', color: 'inherit' }}>
+          <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>Privacy Policy</span>
+          <IconChevronRight size={14} stroke={2} color="var(--text3)" />
+        </Link>
 
         {/* ── Sign out ── */}
         <button
