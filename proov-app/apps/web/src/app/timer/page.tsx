@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useProovTx } from '@/hooks/useProovTx';
 import {
@@ -39,7 +39,7 @@ function fmtTime(secs: number) {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-export default function GrindTimerPage() {
+function GrindTimerPageContent() {
   const searchParams = useSearchParams();
   const proovTx = useProovTx();
 
@@ -68,7 +68,6 @@ export default function GrindTimerPage() {
   // On-chain session tracking
   const [onChainSessionId, setOnChainSessionId] = useState<bigint | null>(null);
   const [txPending, setTxPending] = useState<'starting' | 'ending' | null>(null);
-  const progressFiredRef = useRef(false);
 
   // Session editing state
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
@@ -119,7 +118,6 @@ export default function GrindTimerPage() {
               if (!ok) { setTxPending(null); setView('setup'); return; }
               const newOnChainId = result ?? null;
               setOnChainSessionId(newOnChainId);
-              progressFiredRef.current = false;
 
               const now = Date.now();
               const saved = await saveTimerSession({
@@ -250,17 +248,7 @@ export default function GrindTimerPage() {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [view]);
 
-  // recordProgress at the halfway point for sessions longer than 30 minutes
   const totalSeconds = duration * 60;
-  useEffect(() => {
-    if (view !== 'running' || !onChainSessionId) return;
-    if (duration <= 30) return;
-    const midpoint = Math.floor(totalSeconds / 2);
-    if (secondsLeft === midpoint && !progressFiredRef.current) {
-      progressFiredRef.current = true;
-      proovTx.recordProgress(onChainSessionId); // fire-and-forget
-    }
-  }, [secondsLeft, view, onChainSessionId, duration, totalSeconds]);
 
   const startTimer = async () => {
     const address = localStorage.getItem('proov_address') || '';
@@ -283,7 +271,6 @@ export default function GrindTimerPage() {
     }
 
     setOnChainSessionId(newOnChainId);
-    progressFiredRef.current = false;
 
     const now = Date.now();
     setSessionHabitName(selectedHabit?.name || '');
@@ -995,5 +982,13 @@ export default function GrindTimerPage() {
 
       </div>
     </div>
+  );
+}
+
+export default function GrindTimerPage() {
+  return (
+    <Suspense>
+      <GrindTimerPageContent />
+    </Suspense>
   );
 }

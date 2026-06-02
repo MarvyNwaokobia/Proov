@@ -67,7 +67,7 @@ describe("ProovCore", function () {
     it("emits HabitCompleted with streak=1 on first completion", async function () {
       await expect(proovCore.connect(user1).selfCompleteHabit(0, ethers.ZeroHash))
         .to.emit(proovCore, "HabitCompleted")
-        .withArgs(user1.address, 0, 1);
+        .withArgs(user1.address, 0, 1, ethers.ZeroHash);
     });
 
     it("emits StreakUpdated on first completion", async function () {
@@ -86,7 +86,7 @@ describe("ProovCore", function () {
       await proovCore.connect(user1).selfCompleteHabit(0, ethers.ZeroHash);
       await expect(proovCore.connect(user1).selfCompleteHabit(1, ethers.ZeroHash))
         .to.emit(proovCore, "HabitCompleted")
-        .withArgs(user1.address, 1, 1);
+        .withArgs(user1.address, 1, 1, ethers.ZeroHash);
     });
 
     it("increments streak on consecutive day", async function () {

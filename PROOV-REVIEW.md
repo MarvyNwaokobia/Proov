@@ -65,9 +65,17 @@ Several critical issues from the first review have been addressed. This section 
 | **No Terms of Service / Privacy Policy** | `/terms` and `/privacy` pages built. |
 | **All 4 contracts packed user data into one uint256 slot** | `getUserStats(address)` view returns habitCount, lastCompletionDay, currentStreak, longestStreak — all from one SLOAD. |
 
-### Still Pending (addressed in sections below)
+### Also Fixed This Session ✓
 
-The v3 contracts are written and tested (48/48 tests pass), but **not yet deployed to mainnet**. The existing mainnet proxies still run v2 logic. Deploying the v3 implementations is the next concrete action.
+| Item | Status |
+|---|---|
+| Safe multisig created + ownership transferred to `0x1F22b145b092177330354074CC5e9300fe049B5c` | ✓ Done |
+| v3 contracts deployed to mainnet via Safe (ProovCore impl `0xB59eC059...`) | ✓ Done |
+| v3.1 contracts deployed — `verificationHash` emitted in `HabitCompleted` event | ✓ Done |
+| Goldsky subgraph v5.1.0 deployed (no timestamps, `verificationHash` indexed) | ✓ Done |
+| Frontend ABIs (`contracts.ts`, `transactions.ts`) synced to v3.1 | ✓ Done |
+| AI verification extended to all habit types — "Proov it" now fires on-chain tx with proof hash | ✓ Done |
+| `.env.local` Goldsky URL updated to v5.1.0 | ✓ Done |
 
 ---
 
@@ -310,43 +318,22 @@ CircleManager has no hard cap on circle size. The v3 contract removed the fake 1
 
 ---
 
-## 10. Deployment Sequence for v3
+## 10. Deployment Sequence — COMPLETED ✓
 
-The v3 contracts are written and fully tested. Deploying them requires doing the following in order to avoid breaking the live app:
+All steps below were executed in the same session on 2026-06-02.
 
-**Step 1 — Create a Safe multisig** (do this before anything else)
-- Go to `app.safe.global`, deploy a 2/3 Safe on Celo Mainnet.
-- Cost: ~0.01 CELO in gas.
+| Step | Status | Details |
+|---|---|---|
+| Safe multisig created | ✓ | `0x1F22b145b092177330354074CC5e9300fe049B5c` |
+| Ownership transferred to Safe | ✓ | `transfer-ownership.ts` — 4 txs confirmed |
+| Goldsky subgraph v5.0.0 deployed | ✓ | v3 ABI, no timestamps |
+| v3 contracts deployed via Safe | ✓ | `upgrade-via-safe.ts` — all 4 proxies upgraded |
+| Goldsky subgraph v5.1.0 deployed | ✓ | Added `verificationHash` to `HabitCompleted` |
+| v3.1 contracts deployed via Safe | ✓ | ProovCore emits `verificationHash` |
+| Frontend ABIs updated | ✓ | `contracts.ts`, `transactions.ts` — synced to v3.1 |
+| `.env.local` Goldsky URL | ✓ | Points to v5.1.0 |
 
-**Step 2 — Deploy new Goldsky subgraph (v5.0.0)** against the v3 ABI
-- The v3 events have no `timestamp` param. The v4 subgraph expects them.
-- Update `subgraph.yaml` event definitions to match v3 ABI.
-- Deploy as a new version: `goldsky subgraph deploy proov/5.0.0`
-- Keep v4 running until v3 contracts are live.
-
-**Step 3 — Deploy v3 implementations to mainnet**
-```bash
-cd apps/contracts && pnpm upgrade:celo
-```
-This calls `upgrades.upgradeProxy()` on all four proxies — proxy addresses stay the same, only the implementation changes.
-
-**Step 4 — Transfer ownership to Safe**
-```solidity
-proovCore.transferOwnership(safeAddress);
-sessionManager.transferOwnership(safeAddress);
-circleManager.transferOwnership(safeAddress);
-fuelFaucet.transferOwnership(safeAddress);
-```
-
-**Step 5 — Update frontend ABIs**
-- In `contracts.ts` and `transactions.ts`: remove `editUsername`, `recordStreakIncrement`, `cheer`; update event definitions to remove `timestamp` params; add `getUserStats`.
-- Deploy updated frontend to Vercel.
-
-**Step 6 — Point Goldsky to v3 subgraph URL**
-- Update `NEXT_PUBLIC_GOLDSKY_URL` to the v5.0.0 subgraph endpoint.
-
-**Step 7 — Remove `recordProgress` call from `useProovTx`**
-- It currently sends a no-op tx that costs 21k gas. Remove the call, not the contract stub.
+**Remaining:** Update `NEXT_PUBLIC_GOLDSKY_URL` in Vercel to `5.1.0` and redeploy frontend.
 
 ---
 

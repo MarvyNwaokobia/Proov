@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createHash } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 
 const MONTHLY_LIMIT = 20;
@@ -174,6 +175,11 @@ Accept proof that is specific and plausible for the habit type. Reject only vagu
       return NextResponse.json({ error: 'Could not parse verification response' }, { status: 500 });
     }
 
+    // Deterministic hash of this proof — passed to selfCompleteHabit on-chain.
+    const verificationHash = ('0x' + createHash('sha256')
+      .update(`${habitId}|${addr}|${proofType}|${proofContent}|${reasoning}`)
+      .digest('hex')) as `0x${string}`;
+
     // Only increment usage on approved
     if (verdict === 'approved') {
       await incrementUsage(addr);
@@ -182,7 +188,12 @@ Accept proof that is specific and plausible for the habit type. Reject only vagu
     // Always record the proof attempt
     await recordProof(habitId, addr, proofType, verdict, reasoning).catch(() => {});
 
-    return NextResponse.json({ verdict, reasoning, remaining: MONTHLY_LIMIT - used - (verdict === 'approved' ? 1 : 0) });
+    return NextResponse.json({
+      verdict,
+      reasoning,
+      verificationHash,
+      remaining: MONTHLY_LIMIT - used - (verdict === 'approved' ? 1 : 0),
+    });
   } catch (err) {
     console.error('verify-habit route error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

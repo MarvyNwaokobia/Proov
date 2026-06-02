@@ -46,7 +46,8 @@ contract ProovCore is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     event HabitCompleted(
         address indexed user,
         uint256 indexed habitId,
-        uint256 streak
+        uint256 streak,
+        bytes32 verificationHash  // 0x0 for self-report, keccak256(proof) for AI-verified
     );
     event HabitDeactivated(
         address indexed user,
@@ -115,7 +116,7 @@ contract ProovCore is Initializable, OwnableUpgradeable, UUPSUpgradeable {
      * Streak increments once per calendar day (UTC). Completing multiple habits
      * on the same day does not increment the streak twice.
      */
-    function selfCompleteHabit(uint256 habitId, bytes32 /* verificationHash */) external {
+    function selfCompleteHabit(uint256 habitId, bytes32 verificationHash) external {
         uint256 packed = _userData[msg.sender];
         uint32 count   = uint32(packed);
         if (habitId >= count) revert NotAuthorized();
@@ -152,7 +153,7 @@ contract ProovCore is Initializable, OwnableUpgradeable, UUPSUpgradeable {
                 | (uint256(longest) << 96);
         }
 
-        emit HabitCompleted(msg.sender, habitId, streak);
+        emit HabitCompleted(msg.sender, habitId, streak, verificationHash);
     }
 
     function deactivateHabit(uint256 habitId) external {

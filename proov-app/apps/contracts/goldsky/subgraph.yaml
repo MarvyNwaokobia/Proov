@@ -29,7 +29,7 @@ dataSources:
       eventHandlers:
         - event: HabitCreated(indexed address,indexed uint256,string,uint8,uint256,uint8)
           handler: handleHabitCreated
-        - event: HabitCompleted(indexed address,indexed uint256,uint256)
+        - event: HabitCompleted(indexed address,indexed uint256,uint256,bytes32)
           handler: handleHabitCompleted
         - event: HabitDeactivated(indexed address,indexed uint256)
           handler: handleHabitDeactivated
