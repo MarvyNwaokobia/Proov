@@ -59,7 +59,7 @@ function parseError(err: unknown): string {
     const cachedBal = typeof window !== 'undefined'
       ? parseFloat(localStorage.getItem('proov_fuel_balance') || '0')
       : 0;
-    const genuinelyLow = cachedBal < 0.05;
+    const genuinelyLow = cachedBal < 0.01;
     if (genuinelyLow) {
       return isMiniPay()
         ? '⚡ Low cUSD balance — top up via MiniPay to continue'
@@ -169,7 +169,7 @@ export function useBackgroundTx() {
         const cachedBal = parseFloat(localStorage.getItem('proov_fuel_balance') || '0');
         if (cachedBal > 0 && cachedBal < 0.01) {
           sessionStorage.setItem('proov_low_gas_warned', '1');
-          showWarning('Running low on network fee. Go to Settings → Claim Fuel.');
+          showWarning('⛽ Tank is low — claim fuel in Settings.');
         }
       }
 

@@ -1,6 +1,8 @@
 import { createPublicClient, http, formatEther, type Address } from 'viem';
 import { celo } from 'viem/chains';
 
+export const LOW_FUEL_THRESHOLD = 0.01;
+
 function getPublicClient() {
   return createPublicClient({
     chain: celo,
@@ -19,10 +21,8 @@ export async function getUserCeloBalance(userAddress: string): Promise<number> {
 }
 
 /**
- * Server-side faucet: pushes 0.02 CELO to the user from a funded server wallet.
- * Safe to call speculatively — the server skips the drip if the user already has
- * enough balance or hit the 24h cooldown.
- * Returns true if CELO was actually sent.
+ * Server-side faucet: pushes 0.2 CELO to the user from a funded server wallet.
+ * Returns true if CELO was actually sent (not skipped).
  */
 export async function requestServerFaucet(address: string): Promise<boolean> {
   try {
@@ -41,7 +41,6 @@ export async function requestServerFaucet(address: string): Promise<boolean> {
 
 /**
  * Manual "Claim Fuel" from settings — delegates to the server faucet.
- * Returns a result object compatible with the existing settings page handler.
  */
 export async function claimFuel(): Promise<{ success: boolean; error?: string }> {
   const address = typeof window !== 'undefined'
@@ -49,27 +48,63 @@ export async function claimFuel(): Promise<{ success: boolean; error?: string }>
     : '';
   if (!address) return { success: false, error: 'Not connected' };
 
-  const sent = await requestServerFaucet(address);
-  if (sent) return { success: true };
-  return { success: false, error: 'Already topped up or faucet unavailable' };
+  const res = await fetch('/api/faucet', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ address }),
+  });
+
+  if (!res.ok) return { success: false, error: 'Faucet unavailable — try again later' };
+
+  const data = await res.json();
+  if (!data.ok) return { success: false, error: data.error || 'Faucet error' };
+  if (data.skipped === 'sufficient') return { success: false, error: 'Tank is fine — no top-up needed' };
+  if (data.skipped === 'daily_limit') return { success: false, error: 'Already claimed today — come back tomorrow' };
+  if (data.skipped) return { success: false, error: 'Faucet unavailable — try again later' };
+
+  return { success: true };
+}
+
+/** Seconds until midnight UTC — how long until the daily gate resets. */
+function secsUntilMidnightUtc(): number {
+  const now = new Date();
+  const midnight = new Date(now);
+  midnight.setUTCHours(24, 0, 0, 0);
+  return Math.max(0, Math.floor((midnight.getTime() - now.getTime()) / 1000));
 }
 
 /**
- * Check if the user can claim (balance is low enough and cooldown has passed).
- * Without a deployed faucet contract, we approximate using balance check only.
+ * Check if the user can claim fuel.
+ * Rules: tank must be below LOW_FUEL_THRESHOLD AND they must not have claimed today (UTC).
  */
 export async function checkCanClaim(userAddress: string): Promise<{
   canClaim: boolean;
+  tankIsLow: boolean;
+  claimedToday: boolean;
   secondsLeft: number;
   nextClaimTime: Date | null;
 }> {
   try {
-    const balance = await getUserCeloBalance(userAddress);
-    // Can claim only when genuinely insufficient — less than ~2 transactions worth.
-    // No time gate: the balance is the only lock.
-    if (balance < 0.05) return { canClaim: true, secondsLeft: 0, nextClaimTime: null };
-    return { canClaim: false, secondsLeft: 0, nextClaimTime: null };
+    const todayUtc = new Date().toISOString().split('T')[0];
+
+    const [balance, lastClaim] = await Promise.all([
+      getUserCeloBalance(userAddress),
+      import('@/lib/supabase').then(m => m.getLastFuelClaim(userAddress)).catch(() => null),
+    ]);
+
+    const tankIsLow = balance < LOW_FUEL_THRESHOLD;
+    const claimedToday = lastClaim === todayUtc;
+    const canClaim = tankIsLow && !claimedToday;
+    const secondsLeft = claimedToday ? secsUntilMidnightUtc() : 0;
+
+    return {
+      canClaim,
+      tankIsLow,
+      claimedToday,
+      secondsLeft,
+      nextClaimTime: claimedToday ? new Date(Date.now() + secondsLeft * 1000) : null,
+    };
   } catch {
-    return { canClaim: false, secondsLeft: 0, nextClaimTime: null };
+    return { canClaim: false, tankIsLow: false, claimedToday: false, secondsLeft: 0, nextClaimTime: null };
   }
 }

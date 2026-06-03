@@ -801,4 +801,18 @@ export async function setOnboardingComplete(address: string): Promise<void> {
   } catch {}
 }
 
+export async function getLastFuelClaim(address: string): Promise<string | null> {
+  if (!supabase || !address) return null;
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('last_fuel_claim')
+      .eq('address', address.toLowerCase())
+      .maybeSingle();
+    return (data as any)?.last_fuel_claim || null;
+  } catch {
+    return null;
+  }
+}
+
 
