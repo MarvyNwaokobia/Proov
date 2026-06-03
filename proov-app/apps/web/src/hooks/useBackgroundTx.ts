@@ -48,13 +48,17 @@ const MINIPAY_DEPOSIT_URL = 'https://minipay.opera.com/add_cash';
 
 function isInsufficientFunds(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err);
-  return /insufficient.*funds|insufficient balance|error_forwarding_sequencer.*insufficient/i.test(msg);
+  return /insufficient.*funds|funds.*insufficient|insufficient balance|error_forwarding_sequencer.*insufficient/i.test(msg);
 }
 
 function parseError(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
   if (/user rejected|rejected by user/i.test(msg)) return 'Transaction rejected';
-  if (isInsufficientFunds(err)) return "⚡ Tank's empty — head to Settings to claim more fuel";
+  if (isInsufficientFunds(err)) {
+    return isMiniPay()
+      ? '⚡ Low cUSD balance — top up via MiniPay to continue'
+      : "⚡ Tank's empty — head to Settings to claim more fuel";
+  }
   if (/network changed|chain.*mismatch/i.test(msg)) return 'Network mismatch. Please refresh.';
   if (/nonce/i.test(msg)) return 'Transaction conflict. Please try again.';
   const short = msg.split('\n')[0].slice(0, 120);

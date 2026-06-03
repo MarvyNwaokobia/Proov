@@ -6,7 +6,7 @@ import { privateKeyToAccount } from 'viem/accounts';
 // Each Celo L2 tx costs ~0.005–0.009 CELO. 0.2 CELO ≈ 20 transactions.
 // Gate is balance only — drip whenever the user is genuinely insufficient.
 const DRIP = parseEther('0.2');
-const MIN_BALANCE = parseEther('0.02');
+const MIN_BALANCE = parseEther('0.05');
 
 export async function POST(req: NextRequest) {
   try {
