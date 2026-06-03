@@ -61,10 +61,13 @@ export function TxToastProvider({ children }: { children: ReactNode }) {
             style={{
               position: 'fixed',
               bottom: 96,
-              left: '50%',
-              transform: 'translateX(-50%)',
+              left: 0,
+              right: 0,
               zIndex: 9999,
               pointerEvents: 'none',
+              display: 'flex',
+              justifyContent: 'center',
+              padding: '0 16px',
             }}
           >
             <div

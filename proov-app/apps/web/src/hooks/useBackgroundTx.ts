@@ -48,7 +48,8 @@ const MINIPAY_DEPOSIT_URL = 'https://minipay.opera.com/add_cash';
 
 function isInsufficientFunds(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err);
-  return /insufficient.*funds|funds.*insufficient|insufficient balance|error_forwarding_sequencer.*insufficient/i.test(msg);
+  // Only match actual gas/fee shortages, not contract-level "insufficient balance/allowance" reverts
+  return /insufficient funds for gas|insufficient.*funds.*\bgas\b|\bgas\b.*insufficient|error_forwarding_sequencer.*insufficient/i.test(msg);
 }
 
 function parseError(err: unknown): string {
