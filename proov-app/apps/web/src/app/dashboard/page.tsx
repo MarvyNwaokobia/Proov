@@ -23,7 +23,6 @@ import {
   IconHeart,
   IconBell,
   IconCheck,
-  IconBolt,
   IconShieldCheck,
 } from '@tabler/icons-react';
 
@@ -373,12 +372,34 @@ export default function DashboardPage() {
             <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>{formatDate()}</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            {fuelBalance >= 0.01 && !isMiniPay() && (
-              <div style={{ padding: '5px 10px', borderRadius: 20, background: 'var(--bg2)', border: '1px solid var(--border)', fontSize: 11, color: 'var(--accent-text)', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
-                <IconBolt size={12} stroke={2} />
-                {fuelBalance.toFixed(2)} Fuel
-              </div>
-            )}
+            {fuelBalance > 0 && !isMiniPay() && (() => {
+              const fillPct = Math.min(100, Math.max(3, (fuelBalance / 0.2) * 100));
+              const isLow = fuelBalance < 0.02;
+              const isAmber = !isLow && fuelBalance < 0.08;
+              const borderCol = isLow ? 'rgba(244,63,94,.4)' : isAmber ? 'rgba(217,119,6,.4)' : 'rgba(5,150,105,.3)';
+              const nozzleCol = isLow ? 'rgba(244,63,94,.5)' : isAmber ? 'rgba(217,119,6,.5)' : 'rgba(5,150,105,.45)';
+              const fillGrad = isLow
+                ? 'linear-gradient(to top,rgba(244,63,94,.82),rgba(244,63,94,.36))'
+                : isAmber
+                  ? 'linear-gradient(to top,rgba(217,119,6,.78),rgba(217,119,6,.32))'
+                  : 'linear-gradient(to top,rgba(5,150,105,.72),rgba(5,150,105,.3))';
+              const labelCol = isLow ? '#f43f5e' : isAmber ? '#d97706' : 'var(--accent-text)';
+              return (
+                <div
+                  onClick={() => router.push('/settings')}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, cursor: 'pointer', flexShrink: 0 }}
+                >
+                  <div style={{ width: 5, height: 3, background: nozzleCol, borderRadius: '1.5px 1.5px 0 0', flexShrink: 0 }} />
+                  <div style={{ width: 13, height: 20, borderRadius: 3, border: `1.5px solid ${borderCol}`, background: 'rgba(255,255,255,.04)', overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
+                    <div className="fuel-wave" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: `${fillPct}%`, background: fillGrad, borderRadius: '50% 50% 0 0 / 3px 3px 0 0' }} />
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,rgba(255,255,255,.14) 0%,transparent 60%)', pointerEvents: 'none' }} />
+                    <div style={{ position: 'absolute', right: 1, top: '33%', width: 2, height: 1, background: 'rgba(255,255,255,.22)' }} />
+                    <div style={{ position: 'absolute', right: 1, top: '66%', width: 2, height: 1, background: 'rgba(255,255,255,.22)' }} />
+                  </div>
+                  <div style={{ fontSize: 7, fontWeight: 700, color: labelCol, letterSpacing: '.1px', marginTop: 1 }}>{fuelBalance.toFixed(2)}</div>
+                </div>
+              );
+            })()}
             <button
               onClick={() => { const addr = localStorage.getItem('proov_address'); if (addr) router.push(`/profile/${addr}`); }}
               style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid var(--accent-border)', overflow: 'hidden', cursor: 'pointer', background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 }}
