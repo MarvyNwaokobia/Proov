@@ -389,8 +389,8 @@ export default function DashboardPage() {
                   onClick={() => router.push('/settings')}
                   style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, cursor: 'pointer', flexShrink: 0 }}
                 >
-                  <div style={{ width: 5, height: 3, background: nozzleCol, borderRadius: '1.5px 1.5px 0 0', flexShrink: 0 }} />
-                  <div style={{ width: 13, height: 20, borderRadius: 3, border: `1.5px solid ${borderCol}`, background: 'rgba(255,255,255,.04)', overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
+                  <div style={{ width: 5, height: 4, background: nozzleCol, borderRadius: '1.5px 1.5px 0 0', flexShrink: 0 }} />
+                  <div style={{ width: 13, height: 28, borderRadius: 3, border: `1.5px solid ${borderCol}`, background: 'rgba(255,255,255,.04)', overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
                     <div className="fuel-wave" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: `${fillPct}%`, background: fillGrad, borderRadius: '50% 50% 0 0 / 3px 3px 0 0' }} />
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,rgba(255,255,255,.14) 0%,transparent 60%)', pointerEvents: 'none' }} />
                     <div style={{ position: 'absolute', right: 1, top: '33%', width: 2, height: 1, background: 'rgba(255,255,255,.22)' }} />
