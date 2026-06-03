@@ -111,6 +111,7 @@ export interface Habit {
   visible_to: string[];
   active: boolean;
   created_at: string;
+  on_chain_id?: number | null;
 }
 
 export async function saveHabit(habit: Omit<Habit, 'id' | 'created_at'>): Promise<Habit | null> {

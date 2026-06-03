@@ -12,24 +12,27 @@ function safeDuration(minutes: number | undefined): bigint {
   return BigInt(Math.round((minutes ?? 0) * 60));
 }
 
-function safeId(id: number | undefined): bigint | null {
-  if (id === undefined || id === null || id < 0) return null;
+function safeId(id: number | undefined | null): bigint | null {
+  if (id === undefined || id === null || id <= 0) return null;
   return BigInt(id);
 }
 
 export function useProovTx() {
-  const { sendTx } = useBackgroundTx();
+  const { sendTx, sendTxWithResult } = useBackgroundTx();
 
   return {
     // ── HABIT ACTIONS ──────────────────────────────────────────────────────
-    createHabit: (name: string, category: string, isTimed: boolean, durationMinutes: number | undefined) => {
+    createHabit: async (name: string, category: string, _isTimed: boolean, durationMinutes: number | undefined): Promise<number | null> => {
       const catMap: Record<string, number> = { focus: 0, fitness: 1, reading: 2, hydration: 3, sleep: 4 };
-      return sendTx({
+      const { ok, result } = await sendTxWithResult<bigint>({
         address: CONTRACTS.PROOV_CORE, abi: PROOV_CORE_ABI,
         functionName: 'createHabit',
         args: [name, catMap[category.toLowerCase()] ?? 5, safeDuration(durationMinutes), 0],
-        _successMessage: null, // page shows "✓ Habit saved!"
-      });
+        _successMessage: null,
+      } as any);
+      if (!ok || result === undefined || result === null) return null;
+      const onChainId = Number(result);
+      return onChainId > 0 ? onChainId : null;
     },
 
     completeHabit: (onChainId: number | undefined, verificationHash?: `0x${string}`) => {
