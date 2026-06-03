@@ -639,7 +639,7 @@ export default function SettingsPage() {
         {/* ── Support ── */}
         <p style={{ ...sectionLabel, marginTop: 16 }}>Support</p>
         <a
-          href="https://t.me/ProovApp"
+          href="https://t.me/Proovhq"
           target="_blank"
           rel="noopener noreferrer"
           style={{ ...listRow, borderBottom: 'none', textDecoration: 'none', color: 'inherit' }}

@@ -81,7 +81,7 @@ export default function PrivacyPage() {
       <section>
         <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>8. Contact</h2>
         <p style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--text2)' }}>
-          Privacy questions? Reach us on <a href="https://t.me/ProovApp" style={{ color: 'var(--accent-text)' }}>Telegram @ProovApp</a>.
+          Privacy questions? Reach us on <a href="https://t.me/Proovhq" style={{ color: 'var(--accent-text)' }}>Telegram @Proovhq</a>.
         </p>
       </section>
     </div>

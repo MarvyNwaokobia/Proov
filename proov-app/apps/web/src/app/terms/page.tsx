@@ -80,7 +80,7 @@ export default function TermsPage() {
       <section>
         <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>10. Contact</h2>
         <p style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--text2)' }}>
-          Questions? Reach us on <a href="https://t.me/ProovApp" style={{ color: 'var(--accent-text)' }}>Telegram @ProovApp</a>.
+          Questions? Reach us on <a href="https://t.me/Proovhq" style={{ color: 'var(--accent-text)' }}>Telegram @Proovhq</a>.
         </p>
       </section>
     </div>
