@@ -92,22 +92,6 @@ export default function DashboardPage() {
     if (!isAuth) router.replace('/');
   }, [router]);
 
-  // Auto-fund new users: fires once per session when they first land on dashboard
-  useEffect(() => {
-    const addr = localStorage.getItem('proov_address') || '';
-    if (!addr) return;
-    const key = `proov_fuel_checked_${addr.toLowerCase()}`;
-    if (sessionStorage.getItem(key)) return;
-    sessionStorage.setItem(key, '1');
-
-    import('@/lib/fuel').then(({ getUserCeloBalance, requestServerFaucet }) => {
-      getUserCeloBalance(addr).then(balance => {
-        if (balance < 0.05) {
-          requestServerFaucet(addr).catch(() => {});
-        }
-      }).catch(() => {});
-    }).catch(() => {});
-  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -275,7 +259,9 @@ export default function DashboardPage() {
     d.setDate(d.getDate() - (6 - i));
     const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
     const isToday = i === 6;
-    const filled = isToday ? completedToday.length > 0 : i < 6 && currentStreak >= (6 - i);
+    const filled = isToday
+      ? totalHabits > 0 && completedToday.length >= totalHabits
+      : i < 6 && currentStreak >= (6 - i);
     return { label: dayNames[d.getDay()], isToday, filled };
   });
 
