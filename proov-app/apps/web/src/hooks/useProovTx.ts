@@ -171,9 +171,9 @@ export function useProovTx() {
 
     sendNudge: (toAddress: `0x${string}`) => sendTx({
       address: CONTRACTS.CIRCLE_MANAGER, abi: CIRCLE_MANAGER_ABI,
-      functionName: 'cheer',
+      functionName: 'sendCheer',
       args: [toAddress],
-      _successMessage: null, // page shows "Nudge sent"
+      _successMessage: null,
     }),
 
     removeFromCircle: (memberAddress: `0x${string}`) => sendTx({
