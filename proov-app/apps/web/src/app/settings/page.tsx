@@ -50,6 +50,8 @@ export default function SettingsPage() {
   const [miniPayUser, setMiniPayUser] = useState(false);
   const [celoBalance, setCeloBalance] = useState(0);
   const [canClaimFuel, setCanClaimFuel] = useState(false);
+  const [tankIsLow, setTankIsLow] = useState(false);
+  const [claimedToday, setClaimedToday] = useState(false);
   const [secondsUntilClaim, setSecondsUntilClaim] = useState(0);
   const [claimingFuel, setClaimingFuel] = useState(false);
   const [verificationUsed, setVerificationUsed] = useState(0);
@@ -128,6 +130,8 @@ export default function SettingsPage() {
         getUserCeloBalance(addr),
       ]);
       setCanClaimFuel(claimStatus.canClaim);
+      setTankIsLow(claimStatus.tankIsLow);
+      setClaimedToday(claimStatus.claimedToday);
       setSecondsUntilClaim(claimStatus.secondsLeft);
       setCeloBalance(balance);
     };
@@ -243,12 +247,18 @@ export default function SettingsPage() {
     const { claimFuel, getUserCeloBalance } = await import('@/lib/fuel');
     const result = await claimFuel();
     if (result.success) {
-      showToast('✓ Fuel claimed! Your balance will update shortly.');
+      showToast('✓ Fuel claimed! Balance updates in a moment.');
       setCanClaimFuel(false);
-      setSecondsUntilClaim(86400);
+      setClaimedToday(true);
+      // Seconds until midnight UTC
+      const now = new Date();
+      const midnight = new Date(now);
+      midnight.setUTCHours(24, 0, 0, 0);
+      setSecondsUntilClaim(Math.floor((midnight.getTime() - now.getTime()) / 1000));
       const addr = localStorage.getItem('proov_address') || '';
       const newBalance = await getUserCeloBalance(addr);
       setCeloBalance(newBalance);
+      setTankIsLow(false);
     } else {
       showToast(result.error || 'Faucet unavailable — try again later');
     }
@@ -522,9 +532,15 @@ export default function SettingsPage() {
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <span style={{ fontSize: 13, color: 'var(--text2)' }}>Daily Fuel</span>
+                <span style={{ fontSize: 13, color: 'var(--text2)' }}>Tank</span>
                 <span style={{ fontSize: 13, fontWeight: 700, color: canClaimFuel ? 'var(--accent-text)' : 'var(--text3)' }}>
-                  {canClaimFuel ? 'Claimable now' : fmtCountdown(secondsUntilClaim)}
+                  {canClaimFuel
+                    ? 'Low — claim now'
+                    : claimedToday
+                      ? fmtCountdown(secondsUntilClaim)
+                      : tankIsLow
+                        ? 'Low'
+                        : 'OK'}
                 </span>
               </div>
               <button
@@ -541,7 +557,13 @@ export default function SettingsPage() {
                 }}
               >
                 <IconBolt size={14} stroke={2} />
-                {claimingFuel ? 'Claiming…' : 'Claim Daily Fuel'}
+                {claimingFuel
+                  ? 'Claiming…'
+                  : !tankIsLow
+                    ? 'Tank is fine'
+                    : claimedToday
+                      ? 'Claimed today'
+                      : 'Claim Fuel'}
               </button>
             </div>
           </>
