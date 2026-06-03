@@ -355,7 +355,6 @@ export default function DashboardPage() {
   };
 
   const displayName = username ? username.charAt(0).toUpperCase() + username.slice(1) : 'there';
-  const myLbEntry = lbEntries.find(e => e.address === (localStorage.getItem('proov_address') || '').toLowerCase());
 
   if (!mounted) return null;
 
