@@ -56,9 +56,15 @@ function parseError(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
   if (/user rejected|rejected by user/i.test(msg)) return 'Cancelled';
   if (isInsufficientFunds(err)) {
-    return isMiniPay()
-      ? '⚡ Low cUSD balance — top up via MiniPay to continue'
-      : "⚡ Tank's empty — head to Settings to claim more fuel";
+    const cachedBal = typeof window !== 'undefined'
+      ? parseFloat(localStorage.getItem('proov_fuel_balance') || '0')
+      : 0;
+    const genuinelyLow = cachedBal < 0.05;
+    if (genuinelyLow) {
+      return isMiniPay()
+        ? '⚡ Low cUSD balance — top up via MiniPay to continue'
+        : "⚡ Tank's empty — head to Settings to claim more fuel";
+    }
   }
   if (/network changed|chain.*mismatch/i.test(msg)) return 'Wrong network — please refresh.';
   if (/nonce/i.test(msg)) return 'Action conflict — please try again.';
