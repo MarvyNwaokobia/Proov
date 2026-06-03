@@ -664,7 +664,7 @@ export default function SettingsPage() {
           href="https://t.me/Proovhq"
           target="_blank"
           rel="noopener noreferrer"
-          style={{ ...listRow, borderBottom: 'none', textDecoration: 'none', color: 'inherit' }}
+          style={{ ...listRow, textDecoration: 'none', color: 'inherit' }}
         >
           <div style={{
             width: 36, height: 36, borderRadius: 10,
@@ -678,7 +678,28 @@ export default function SettingsPage() {
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Chat with us on Telegram</div>
-            <div style={{ fontSize: 11, color: 'var(--text3)' }}>24h support · @ProovApp</div>
+            <div style={{ fontSize: 11, color: 'var(--text3)' }}>@Proovhq</div>
+          </div>
+          <IconChevronRight size={16} stroke={2} color="var(--text3)" />
+        </a>
+        <a
+          href="mailto:proovhq@gmail.com"
+          style={{ ...listRow, borderBottom: 'none', textDecoration: 'none', color: 'inherit' }}
+        >
+          <div style={{
+            width: 36, height: 36, borderRadius: 10,
+            background: 'var(--accent-bg)', border: '1px solid var(--accent-border)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0, marginRight: 12,
+          }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <rect x="2" y="4" width="20" height="16" rx="3" stroke="var(--accent-text)" strokeWidth="1.8"/>
+              <path d="M2 7l10 7 10-7" stroke="var(--accent-text)" strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Email us</div>
+            <div style={{ fontSize: 11, color: 'var(--text3)' }}>proovhq@gmail.com</div>
           </div>
           <IconChevronRight size={16} stroke={2} color="var(--text3)" />
         </a>
