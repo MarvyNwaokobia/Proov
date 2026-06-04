@@ -33,19 +33,31 @@ export default function SignUpPage() {
   // Only clear the loading screen if wagmi finished AND we did NOT get a connection.
   useEffect(() => { if (!isPending && !isConnected) setConnecting(false); }, [isPending, isConnected]);
 
-  // On mount: reset in-memory Web3Auth state and remove wagmi's stored connection
-  // so auto-reconnect cannot bypass this page. Do NOT call clearWeb3AuthSession()
-  // here — that deletes the user's MPC device key share from IndexedDB, which
-  // causes Web3Auth to generate a new wallet address on the next login and the
-  // user ends up in onboarding as if they're a brand new user.
+  // On mount: either complete a redirect-mode OAuth callback or reset stale session state.
+  // In redirect mode Web3Auth returns to this page with ?code=... — calling logout() here
+  // would wipe that just-completed session, so we skip it when a callback is detected.
   useEffect(() => {
-    localStorage.removeItem('wagmi.store');
+    const isCallback = new URLSearchParams(window.location.search).has('code') ||
+      window.location.hash.includes('access_token=');
+
+    if (!isCallback) localStorage.removeItem('wagmi.store');
+
     import('@/lib/wagmi-config').then(({ getWeb3Auth }) => {
       const w = getWeb3Auth();
-      w.logout({ cleanup: true }).catch(() => {}).then(() =>
-        (w as any).initModal().catch(() => {})
-      );
+      if (isCallback) {
+        (w as any).initModal().then(() => {
+          if (w.connected) {
+            const c = connectors[0];
+            if (c) connect({ connector: c });
+          }
+        }).catch(() => {});
+      } else {
+        w.logout({ cleanup: true }).catch(() => {}).then(() =>
+          (w as any).initModal().catch(() => {})
+        );
+      }
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

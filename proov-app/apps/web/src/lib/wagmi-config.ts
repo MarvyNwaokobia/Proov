@@ -37,7 +37,7 @@ export function getWeb3Auth(): Web3Auth {
     clientId,
     web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_MAINNET,
     privateKeyProvider,
-    // No uiConfig — whitelabel requires paid plan
+    uiConfig: { uxMode: 'redirect' },
   });
 
   return _web3auth;
