@@ -1,8 +1,8 @@
-# Proov — Full Review v2
+# Proov — Full Review v3
 ### Brutal Honesty · Gas Audit · MiniPay · Grants
 
-> Updated: 2026-06-02  
-> Reflects the current state of the codebase including v3 contract upgrades, new pages, and live grant data from celopg.eco
+> Updated: 2026-06-04  
+> Reflects the current state of the codebase including v3.1 contracts, MiniPay blocker fixes (June 3), and live grant data from celopg.eco
 
 ---
 
@@ -36,7 +36,7 @@ Proov is a habit-tracking and personal accountability dApp on Celo. Users create
 | FuelFaucet | `0x500e1c72aB3c5C5be17255fe6f66bA8f3c37E988` |
 
 **Live app:** https://proov-one.vercel.app  
-**Subgraph:** Goldsky v4.0.0  
+**Subgraph:** Goldsky v5.1.0  
 **Analytics:** Dune dashboard  
 **AI Agent:** ERC-8004 registered at `0xc8BF2144e4742230c8Fd692d940032E6277883e2`
 
@@ -44,9 +44,9 @@ Proov is a habit-tracking and personal accountability dApp on Celo. Users create
 
 ## 2. What Has Been Fixed Since v1 Review
 
-Several critical issues from the first review have been addressed. This section is here to document progress so grant reviewers (and you) can see the trajectory.
+Several critical issues from the first review have been addressed. This section documents progress so grant reviewers can see the trajectory.
 
-### Fixed ✓
+### Fixed in v3 contracts ✓
 
 | Issue | Fix Applied |
 |---|---|
@@ -61,21 +61,29 @@ Several critical issues from the first review have been addressed. This section 
 | **FuelFaucet used string require messages** | Replaced with 5 custom errors (`FaucetEmpty`, `ClaimTooSoon`, etc.). |
 | **FuelFaucet did multiple cold SLOADs** | `dripAmount` and `minContractBalance` cached in memory at function start. |
 | **No `/stats` page** | `/stats` page built. |
-| **No `/recovery` page** | `/recovery` page built (343 lines, reads from Goldsky subgraph with no Supabase dependency). |
+| **No `/recovery` page** | `/recovery` page built (reads from Goldsky subgraph with no Supabase dependency). |
 | **No Terms of Service / Privacy Policy** | `/terms` and `/privacy` pages built. |
 | **All 4 contracts packed user data into one uint256 slot** | `getUserStats(address)` view returns habitCount, lastCompletionDay, currentStreak, longestStreak — all from one SLOAD. |
 
-### Also Fixed This Session ✓
+### Fixed in June 2–3 session ✓
 
 | Item | Status |
 |---|---|
 | Safe multisig created + ownership transferred to `0x1F22b145b092177330354074CC5e9300fe049B5c` | ✓ Done |
-| v3 contracts deployed to mainnet via Safe (ProovCore impl `0xB59eC059...`) | ✓ Done |
+| v3 contracts deployed to mainnet via Safe | ✓ Done |
 | v3.1 contracts deployed — `verificationHash` emitted in `HabitCompleted` event | ✓ Done |
-| Goldsky subgraph v5.1.0 deployed (no timestamps, `verificationHash` indexed) | ✓ Done |
-| Frontend ABIs (`contracts.ts`, `transactions.ts`) synced to v3.1 | ✓ Done |
-| AI verification extended to all habit types — "Proov it" now fires on-chain tx with proof hash | ✓ Done |
-| `.env.local` Goldsky URL updated to v5.1.0 | ✓ Done |
+| Goldsky subgraph v5.1.0 deployed (`verificationHash` indexed) | ✓ Done |
+| Frontend ABIs synced to v3.1 | ✓ Done |
+| AI verification extended to all habit types — "Proov it" fires on-chain tx with proof hash | ✓ Done |
+| LCP fixed (5s → <1s) — logo 650KB→20KB, fonts non-blocking, lazy WalletProvider | ✓ Done — PageSpeed 67→90+ |
+| **Zero-click MiniPay connect** — `signin` calls `connectMiniPay()` on mount, no connect button shown | ✓ Done |
+| **Fuel section hidden in MiniPay** — `{!miniPayUser && ...}` guard in settings | ✓ Done |
+| **CELO balance hidden in MiniPay** — `user-balance.tsx` shows only cUSD when `isMiniPay()` | ✓ Done |
+| **In-app support links** — Telegram (@Proovhq) + email (proovhq@gmail.com) rows in settings | ✓ Done |
+| **Low-balance deeplink** — `useBackgroundTx.ts` redirects to `https://minipay.opera.com/add_cash` | ✓ Done |
+| **`recordProgress` no longer sends a tx** — hook returns `Promise.resolve('0x')` immediately | ✓ Done |
+| **Auto-drip removed** — fuel is now user-claimed when tank is low, once per UTC day | ✓ Done |
+| **No "gas" copy in UI** — grep confirms zero user-facing "gas", "onramp", "offramp" strings | ✓ Done |
 
 ---
 
@@ -87,17 +95,17 @@ The architecture is right. Event-log-only contracts with Supabase as the app lay
 
 The v3 streak fix is significant. Before, the "Your discipline. Onchain. Forever." tagline was marketing. Now the streak can be verified from the chain without trusting Supabase. That's a real improvement in the core claim.
 
-### 3.2 — The "Proof" Claim Still Has a Partial Hole
+### 3.2 — The "Proof" Claim Is Now Honest and Defensible
 
-Even with the v3 fix, there's a subtle issue: `selfCompleteHabit` does not verify that the user actually *did* the habit. It just proves they pressed a button. The AI verification (Claude Sonnet) exists for fitness habits and partially addresses this — but it runs server-side and the `verificationHash` parameter is currently ignored in the contract.
+AI verification now covers all habit categories — Fitness, Wellness, Focus, Learning, Nutrition, Creative, and Custom. Both photo and text proof modes work for every habit type. The API system prompt explicitly instructs Claude Sonnet to judge each by what makes sense for that category. The `verificationHash` (`sha256(habitId|addr|proofType|proofContent|reasoning)`) is computed server-side, returned to the frontend, and passed directly into `selfCompleteHabit` — emitted on-chain in the `HabitCompleted` event and indexed by Goldsky v5.1.0.
 
-**What this means in practice:** for non-fitness habits (Focus, Hydration, Sleep, Reading, Custom), there is zero verification that the completion is real. A bot could auto-complete all habits every day.
+**The one honest nuance that remains:** verification is optional. Users can skip "Proov it" and self-report, or tap "Just self-report instead" after a rejection. So a determined bot could still auto-complete without verifying.
 
-**Fix:** Either extend AI verification to all habit types (low cost — the API call is already wired) or be upfront in the grant application that "proof" means "the user attested to completing this" rather than "this was externally verified." The second framing is honest and still valuable. The first is better.
+**The right grant framing:** *"Verified completions have an on-chain proof hash committed by Claude Sonnet; self-reported completions are user-attested."* Both tiers are valuable — the chain records when and how consistently a user completed, regardless of tier. This is honest and no grant reviewer can fault it.
 
-### 3.3 — FuelFaucet Is Still a Ticking Cost
+### 3.3 — FuelFaucet Is Still a Ticking Cost (Improved Model)
 
-The daily drip is still 0.2 CELO/user. The contract is still owner-funded with no revenue mechanism to offset it.
+The faucet was changed from auto-drip to user-triggered (claim only when tank is low, once per UTC day). This is a meaningful improvement — no one drains the faucet by accident. But the fundamental math hasn't changed.
 
 | Daily Active Users | Monthly cost at $0.35/CELO |
 |---|---|
@@ -108,68 +116,55 @@ The daily drip is still 0.2 CELO/user. The contract is still owner-funded with n
 
 **Fix (no code required):** Register with Divvi at `divvi.xyz`. Proov earns a share of the gas fees its users already pay. This is free revenue and partially offsets faucet costs. Divvi integration is a strong signal to grant reviewers — it means Proov is thinking about sustainability, not just grants.
 
-### 3.4 — Single Owner Key on All 4 Contracts
+### 3.4 — Single Owner Key Risk Is Resolved
 
-All four UUPS proxies have a single EOA as owner. One compromised key = all four contracts can be upgraded to malicious code by an attacker. This is the highest-impact security risk in the project.
+Safe multisig at `0x1F22b145b092177330354074CC5e9300fe049B5c` is live. Ownership of all four UUPS proxies transferred. This was the highest-impact security risk; it is now closed.
 
-**Fix:** Transfer ownership to a Safe multisig (2/3) before deploying v3. Then add a `TimelockController` (48-hour minimum delay on upgrades). This is two steps:
-1. Deploy Safe at `app.safe.global` — free, takes 10 minutes.
-2. Call `transferOwnership(safeAddress)` on all four proxies.
-3. Later: add timelock when there are real users to protect.
+**What's still missing:** a `TimelockController` (48-hour minimum delay on upgrades). This is the next security hardening step once there are real users to protect. Scripts already exist at `scripts/deploy-timelock.ts` and `scripts/timelock-add-safe.ts`.
 
-### 3.5 — The Goldsky Subgraph Must Be Updated Before v3 Deployment
+### 3.5 — `verificationHash` Is Emitted But Not Yet Anchored
 
-The v3 contracts emit different event signatures — timestamps were removed from all events. The deployed Goldsky subgraph (v4.0.0) is built against the v2 ABI which includes timestamp params. When v3 contracts go live and start emitting new-format events, the subgraph will stop indexing correctly.
+The v3.1 contract emits `verificationHash` in `HabitCompleted` and Goldsky v5.1.0 indexes it. The hash is passed from the frontend to the contract for verified completions. However, there is no on-chain way to independently re-derive that hash from the original photo — the chain stores the hash but not the image, and there's no canonical commitment scheme documented.
 
-**Fix:** Before deploying v3 contracts to mainnet, deploy a new Goldsky subgraph version (v5.0.0) built against the v3 ABI. The handler code itself doesn't need changing (it already uses `event.block.timestamp`), only the ABI definitions in `subgraph.yaml` need updating.
+**This is fine for now.** The hash proves the server processed something and committed to a result before the tx confirmed. For grant purposes this is a genuine differentiator. If Proov later documents the hash scheme (e.g. `sha256(imageBytes + walletAddress + habitId + date)`), it becomes independently verifiable.
 
-### 3.6 — Frontend ABIs Are Out of Sync with v3 Contracts
+### 3.6 — `/stats` Page Metrics Are Incomplete for MiniPay
 
-`contracts.ts` and `transactions.ts` still reference the v2 ABI (with `editUsername`, `recordStreakIncrement`, `cheer`, and timestamp params in events). This is correct while v2 is on mainnet, but these files must be updated atomically when v3 deploys. Do not deploy v3 contracts without also updating the frontend ABIs and Goldsky subgraph in the same release.
-
-### 3.7 — `_lastHabitDay` Adds Storage Cost But Is Worth It
-
-The per-habit-per-day completion guard in v3 adds one SSTORE (~5,000 gas for a slot that was zero, ~2,900 if warm) per first daily completion per habit. This raises the cost of `selfCompleteHabit` slightly. It's worth it — it closes the "complete same habit 100 times" spam vector and protects the integrity of the on-chain data. But users who have many habits will pay slightly more gas per day.
-
-### 3.8 — `recordProgress` in SessionManager Is a Wasted Transaction
-
-The frontend calls `recordProgress(sessionId)` as a no-op stub that emits nothing and costs 21,000 base gas for zero value. The hook sends this transaction. 21k gas × however many sessions = pure waste.
-
-**Fix:** Remove the `recordProgress` call from `useProovTx`. The stub in the contract can stay for ABI compat but the frontend should not call it.
+The current `/stats` page shows on-chain activity (habit completions, streaks, sessions). MiniPay listing requires tx volume per stablecoin, failed-tx rate, and retention cohorts. These are not present. This is the last substantive gap before MiniPay submission.
 
 ---
 
 ## 4. Does It Work in MiniPay?
 
-**Short answer: Partially.** The detection plumbing exists but the integration is incomplete.
+**Short answer: Almost ready to submit.**
 
-### What's Already There
+### What's Working ✓
 
-- `minipay.ts` — `isMiniPay()` detection and `connectMiniPay()` both implemented correctly.
-- `withCeloFee()` helper in `constants.ts` uses the correct USDm address for CIP-64 fee abstraction.
-- Contracts verified on Celoscan ✓
-- `/stats` page exists ✓
-- `/terms` and `/privacy` pages exist ✓
+| Item | Evidence |
+|---|---|
+| **Zero-click connect** | `signin/page.tsx:70-80` — `connectMiniPay()` called on mount when `isMiniPay()`. No connect button shown. |
+| **Fuel section hidden** | `settings/page.tsx:522-570` — `{!miniPayUser && (...)}` wraps entire fuel block |
+| **CELO balance hidden** | `user-balance.tsx:42-51` — shows only cUSD inside MiniPay |
+| **In-app support** | Settings: Telegram (@Proovhq) + email (proovhq@gmail.com) rows with icons |
+| **Low-balance deeplink** | `useBackgroundTx.ts:47,211` — `https://minipay.opera.com/add_cash` |
+| **No "gas" copy** | Grep across all TSX/TS confirms zero user-facing "gas", "onramp", "offramp", "crypto" strings |
+| **Contracts verified on Celoscan** | ✓ |
+| **PageSpeed ≥ 90 mobile** | ✓ (67→90+ after June 2 fix) |
+| **`/stats`, `/terms`, `/privacy` pages** | ✓ |
+| **Fee abstraction (CIP-64)** | `withCeloFee()` in `constants.ts` uses correct USDm address |
 
-### What's Blocking MiniPay Listing
+### Remaining Before Submission
 
-| Blocker | Status | Fix |
+| Item | Gap | Effort |
 |---|---|---|
-| Zero-click connect — no Connect Wallet button when `isMiniPay()` is true | Unknown — verify in wallet provider | When `isMiniPay()`, call `eth_requestAccounts` on mount; never render a connect button |
-| FuelFaucet UI must be hidden inside MiniPay | Not verified | Wrap faucet UI in `if (!isMiniPay())` |
-| CELO balance display hidden from users | Not verified | MiniPay hides CELO — remove any CELO balance from UI when in MiniPay context |
-| UI copy: "gas" → "Network fee" | Not verified | Grep all UI strings: "gas", "onramp", "offramp", "crypto" |
-| 360 × 640 mobile resolution | Not tested | Test in Chrome DevTools, fix any layout breaks |
-| Images SVG or WebP only | Not verified | Audit `<img>` tags and CSS background-image |
-| PageSpeed Insights score ≥ 90 mobile | Not captured | Run `https://pagespeed.web.dev` on production URL |
-| Low-balance redirect to `https://minipay.opera.com/add_cash` | Not present | Add redirect on insufficient balance |
-| In-app support link (Telegram / email) | Not present | Add in settings or footer |
-| No `personal_sign` / `eth_signTypedData` in MiniPay flow | Not verified | Audit Web3Auth flow — some paths use message signing |
-| Stats page shows on-chain metrics | Partial | Current `/stats` page needs tx volume per stablecoin, failed-tx rate, retention |
+| **360×640 layout test** | Not tested — may have overflow or truncation at mobile resolution | 2 hours |
+| **SVG/WebP image audit** | MiniPay requires SVG or WebP only — `<img>` tags not audited | 1 hour |
+| **`personal_sign` / `eth_signTypedData` audit** | Web3Auth sign flows must not appear in MiniPay paths | 1 hour |
+| **`/stats` stablecoin metrics** | MiniPay requires tx volume per stablecoin, retention, failed-tx rate | 1 day |
 
-**Estimate:** 2–3 days of work to reach MiniPay submission readiness given the detection layer is already built.
+**Revised estimate:** ~1–2 days to full submission readiness. The blockers from the previous review are resolved. What remains is polish and testing.
 
-**Do this before submitting the intake form at `https://minipay.to/mini-apps`.** MiniPay deprioritizes follow-up on half-built submissions — you typically get one good first impression.
+**Submit the intake form at `https://minipay.to/mini-apps` after the 360×640 test passes.** MiniPay deprioritizes follow-up on half-built submissions — you get one good first impression.
 
 ---
 
@@ -182,13 +177,13 @@ The frontend calls `recordProgress(sessionId)` as a no-op stub that emits nothin
 The hybrid architecture (event-log on chain + Supabase for app state + Goldsky for indexing) scales well. The v3 contract changes make it even cheaper per interaction:
 
 - One SLOAD per `selfCompleteHabit` call instead of multiple (packed storage)
-- Half as many transactions per habit completion (streak removed from frontend)
+- One transaction per habit completion (streak integrated, no second tx)
 - ~500 gas saved per transaction (timestamps removed from events)
 - `getUserStats` is a free view call — no RPC spam needed
 
 ### Economic Scaling Risk
 
-The FuelFaucet remains the primary scaling constraint. 0.2 CELO per user per day. There is no revenue to offset this. At 1,000 DAU, that's ~$2,100/month out of pocket.
+The FuelFaucet remains the primary scaling constraint. 0.2 CELO per user per day, user-triggered. There is no revenue to offset this. At 1,000 DAU, that's ~$2,100/month out of pocket.
 
 **Fix path:**
 1. Register with Divvi (immediate, free) — earns gas fee revenue share from existing users
@@ -203,25 +198,27 @@ CircleManager has no hard cap on circle size. The v3 contract removed the fake 1
 
 ## 6. Gas & Cost — What Was Done, What's Left
 
-### Done (v3 contracts, 48/48 tests passing)
+### Done
 
 | Optimization | Gas Saved |
 |---|---|
 | Removed `timestamp` from all events (4 contracts) | ~500 gas per tx |
 | Packed user data into one uint256 slot (ProovCore) | 1 SLOAD instead of N reads per user |
-| Streak computed inside `selfCompleteHabit` | Eliminates second tx entirely (~21k base gas + event gas) |
+| Streak computed inside `selfCompleteHabit` | Eliminates second tx (~21k base gas + event gas) |
 | Custom errors in FuelFaucet | ~50 gas per revert path |
 | Storage var caching in FuelFaucet (`dripAmount`, `minContractBalance`) | ~2,100 gas saved on cold SLOADs |
 | `editUsername` and `cheer` removed | Smaller bytecode, cleaner ABI |
+| `recordProgress` returns immediately without sending tx | 21,000 gas saved per session |
+| Auto-drip removed — user-triggered faucet | No passive CELO drain for idle users |
 
 ### Still To Do
 
 | Optimization | Estimated Saving | Effort |
 |---|---|---|
-| Remove `recordProgress` call from frontend hook | 21,000 gas per session (wasted base tx cost) | 2 lines of code |
-| Extend `verificationHash` usage — store the hash in `_lastHabitDay` proof slot | Makes AI verification verifiable on-chain | Medium |
+| Extend `verificationHash` anchoring — document the hash scheme | Makes AI verification independently auditable | Medium |
 | ERC-4337 Paymaster for new-user gas sponsoring | Replaces FuelFaucet recurring cost with per-user-once model | High |
 | Divvi registration | Revenue share on all user gas fees | 20 minutes |
+| Reduce drip from 0.2 → 0.05 CELO | 75% faucet cost reduction | 10 minutes |
 
 ---
 
@@ -231,8 +228,7 @@ CircleManager has no hard cap on circle size. The v3 contract removed the fake 1
 
 | Item | Why |
 |---|---|
-| `recordProgress()` call in `useProovTx` | No-op function, 21k gas wasted per call |
-| Daily faucet model as the sole gas strategy | Not sustainable — needs Divvi alongside it |
+| Auto-drip faucet model as the *sole* gas strategy | Not sustainable — needs Divvi alongside it (already removed auto-drip ✓) |
 
 ### Keep
 
@@ -241,19 +237,19 @@ CircleManager has no hard cap on circle size. The v3 contract removed the fake 1
 | Event-log-only contract architecture | Correct. Cheap and indexable. |
 | UUPS upgradeable pattern | Already proved its value — v3 upgrade possible without proxy change |
 | Goldsky + Dune analytics | Required by multiple grant programs |
-| AI fitness verification (Claude Sonnet) | Genuine differentiator. The hash is in the tx. Expand it, don't cut it. |
+| AI fitness verification (Claude Sonnet) | Genuine differentiator. The hash is on-chain. Expand it, don't cut it. |
 | ERC-8004 agent registration | Directly relevant to Prezenti Frontier Pool (AI agent focus) |
-| FuelFaucet contract | Keep it — just add Divvi revenue alongside it and reduce drip amount |
+| FuelFaucet contract | Keep it — add Divvi revenue alongside it and reduce drip amount |
 | `/recovery` page | Makes "proof is permanent" claim actually true |
+| User-triggered fuel claim | Better UX and economics than auto-drip |
 
 ### Change
 
 | Item | What to Change |
 |---|---|
-| Single owner EOA on all contracts | Transfer to Safe multisig before next upgrade |
-| v2 frontend ABIs | Update atomically when v3 deploys — not before |
-| AI verification scope | Extend to all 6 habit types, not just Fitness |
 | `/stats` page metrics | Add tx volume per stablecoin, retention cohorts, failed-tx rate — required for MiniPay listing |
+| Faucet drip amount | Reduce from 0.2 → 0.05 CELO — 75% cost reduction, still covers typical usage |
+| `verificationHash` scheme | Document how the hash is derived so it's independently verifiable |
 
 ### Add
 
@@ -261,8 +257,7 @@ CircleManager has no hard cap on circle size. The v3 contract removed the fake 1
 |---|---|---|
 | **Divvi registration** | Free revenue share from existing user gas fees | 20 min |
 | **Karma GAP project profile** | Required for multiple retroactive programs. Set one up and update it monthly. | 30 min |
-| **In-app support link** | Required for MiniPay listing | 1 hour |
-| **Low-balance deeplink** (`https://minipay.opera.com/add_cash`) | Required for MiniPay listing | 30 min |
+| **TimelockController** | Next security hardening step after Safe (scripts already exist) | 1 hour |
 | **Streak freeze** (pay 0.5 USDm to protect a streak for 1 day) | First real revenue mechanism. Justifies the Web3 layer with actual stablecoin utility. | 2 days |
 | **Habit staking** (stake USDm on completing a streak goal) | Strongest possible Web3 use case for a habit app. Directly answers "why blockchain?" | 3–5 days |
 
@@ -276,25 +271,27 @@ CircleManager has no hard cap on circle size. The v3 contract removed the fake 1
 
 - **Live on Celo Mainnet** with verifiable on-chain activity. The majority of grant applicants don't have deployed contracts.
 - **AI agent registered** (ERC-8004). Directly aligned with Celo's current AI agent narrative and the Prezenti Frontier Pool focus.
+- **`verificationHash` on-chain** — Claude Sonnet verification result committed to the chain for all habit types.
 - **Dune + Goldsky analytics** already set up. Grant reviewers ask for this on day one.
 - **`/stats`, `/recovery`, `/terms`, `/privacy` pages** exist. These are checklist items for MiniPay and Prezenti.
+- **Safe multisig ownership** — signals mature security posture to technical reviewers.
 - **v3 contracts fix the gameable streak** — the integrity of the "proof" claim is now defensible.
+- **MiniPay-ready** — all major blockers resolved. Submission is days away.
 
 ### What Will Hurt Your Application If Not Fixed First
 
 | Gap | Impact |
 |---|---|
 | No Karma GAP profile | Multiple programs verify progress through it |
-| Single owner EOA | Signals immature security posture to technical reviewers |
 | FuelFaucet has no sustainability plan | Reviewers will ask how you fund user onboarding at scale |
 | No Divvi integration | Missing an obvious free revenue source — reviewers notice |
 | `/stats` page incomplete for MiniPay requirements | MiniPay requires tx volume per stablecoin, retention, failed-tx rate |
 
 ### Narrative by Program
 
-- **Prezenti Frontier Pool** — Lead with: ERC-8004 agent, Claude Sonnet AI verification, on-chain proof of habit discipline. The "AI and agent economy" framing fits perfectly. Link to the agent metadata URI and the `/api/verify-habit` route.
-- **Prezenti Anchor Round** — Frame as milestone-based: M1 = v3 deploy + multisig + Divvi, M2 = MiniPay listing, M3 = streak freeze + habit staking revenue model.
-- **Proof of Ship S2** — Requires MiniPay compatibility. Complete the MiniPay adaptation first, then apply.
+- **Prezenti Frontier Pool** — Lead with: ERC-8004 agent, Claude Sonnet AI verification with on-chain `verificationHash`, immutable habit proof. The "AI and agent economy" framing fits perfectly. Link to the agent metadata URI and the `/api/verify-habit` route.
+- **Prezenti Anchor Round** — Frame as milestone-based: M1 = MiniPay listing, M2 = streak freeze + habit staking revenue model, M3 = Paymaster replacing FuelFaucet.
+- **Proof of Ship S2** — Requires MiniPay compatibility. Submit intake form after 360×640 test, then apply.
 - **Celo Builder Fund** — Investment framing. Lead with: live product, real on-chain activity, AI agent, path to revenue (Divvi + streak freeze). Email team@verda.ventures.
 - **Divvi** — Not a grant but free revenue. Register your contracts, earn from existing users immediately.
 
@@ -302,25 +299,25 @@ CircleManager has no hard cap on circle size. The v3 contract removed the fake 1
 
 ## 9. Which Grants to Apply to Right Now
 
-**Live data fetched from celopg.eco on 2026-06-02:**
+**Live data fetched from celopg.eco on 2026-06-04:**
 
 | Grant | Amount | Deadline | Priority | Fit Score |
 |---|---|---|---|---|
 | **Prezenti: Frontier Pool** | up to $25K USD | 🔴 Jun 30, 2026 | Apply this week | ★★★★★ — AI agent + Claude verification is a direct match for their stated focus |
-| **Prezenti: Anchor Round** | up to $25K USD | 🔴 Jun 30, 2026 | Apply this week | ★★★★☆ — Milestone-based, Proov is live, frame the v3 deploy roadmap as funded milestones |
-| **Proof of Ship S2** | 20K USDT pool | Jul 31, 2026 | After MiniPay adapt | ★★★☆☆ — Monthly rewards for Mini App builders. Need MiniPay listing first. |
+| **Prezenti: Anchor Round** | up to $25K USD | 🔴 Jun 30, 2026 | Apply this week | ★★★★☆ — Milestone-based, Proov is live, frame MiniPay listing + streak freeze as funded milestones |
+| **Proof of Ship S2** | 20K USDT pool | Jul 31, 2026 | After MiniPay listing | ★★★☆☆ — Monthly rewards for Mini App builders. Need MiniPay listing first. |
 | **Celo Builder Fund** | $25K cUSD | Year-round | After `/stats` complete | ★★★☆☆ — Investment style. Needs DAU + retention data. |
 | **Divvi (Proof of Impact)** | Revenue share | Rolling | Register today | ★★★★★ — Zero effort to register. Immediate revenue from existing users. |
 | **Commons Builder Income** | Daily rewards | Rolling | Register today | ★★★☆☆ — Low barrier for active builders. |
 | **Karma GAP** | (credibility) | — | Do this today | N/A — Not a grant but feeds multiple retroactive programs |
 
-**You have 28 days until both Prezenti rounds close (June 30).** The Frontier Pool (AI agent) is the highest-priority application given the ERC-8004 registration and Claude verification already in place.
+**You have 26 days until both Prezenti rounds close (June 30).** The Frontier Pool (AI agent) is the highest-priority application given the ERC-8004 registration and Claude verification already in place.
 
 ---
 
 ## 10. Deployment Sequence — COMPLETED ✓
 
-All steps below were executed in the same session on 2026-06-02.
+All steps below were executed during the June 2–3 session.
 
 | Step | Status | Details |
 |---|---|---|
@@ -332,48 +329,45 @@ All steps below were executed in the same session on 2026-06-02.
 | v3.1 contracts deployed via Safe | ✓ | ProovCore emits `verificationHash` |
 | Frontend ABIs updated | ✓ | `contracts.ts`, `transactions.ts` — synced to v3.1 |
 | `.env.local` Goldsky URL | ✓ | Points to v5.1.0 |
+| MiniPay blockers resolved | ✓ | Zero-click connect, fuel gate, deeplink, support links, CELO balance hidden |
+| PageSpeed 67→90+ | ✓ | Logo compressed, fonts non-blocking, lazy WalletProvider |
 
-**Remaining:** Update `NEXT_PUBLIC_GOLDSKY_URL` in Vercel to `5.1.0` and redeploy frontend.
+**Remaining:** Update `NEXT_PUBLIC_GOLDSKY_URL` in Vercel to v5.1.0 if not already done, and confirm production deploy reflects all June 3 changes.
 
 ---
 
 ## 11. Priority Order — What to Do Next
 
-### This week (before June 30 grant deadline)
+### This week — unlock grants (before June 30)
 
-1. **Apply to Prezenti Frontier Pool** — takes ~2 hours. Don't wait for everything to be perfect.
-2. **Apply to Prezenti Anchor Round** — same application with different framing.
-3. **Set up Karma GAP profile** — takes 30 minutes, feeds multiple future programs.
+1. **Apply to Prezenti Frontier Pool** — takes ~2 hours. Lead with ERC-8004, `verificationHash`, Claude Sonnet. Don't wait for everything to be perfect.
+2. **Apply to Prezenti Anchor Round** — same application, milestone framing.
+3. **Set up Karma GAP profile** — 30 minutes, feeds multiple future programs.
 4. **Register with Divvi** — 20 minutes for immediate revenue.
 
-### Next 2 weeks (unlock MiniPay + Proof of Ship)
+### Next 1–2 days — complete MiniPay submission
 
-5. Wire `isMiniPay()` into wallet provider for zero-click connect
-6. Suppress FuelFaucet + CELO UI when `isMiniPay()` is true
-7. Sweep UI copy for "gas" → "Network fee"
-8. Add in-app Telegram support link
-9. Add low-balance deeplink redirect
-10. Test at 360×640, capture PageSpeed score
-11. Submit MiniPay intake form at `https://minipay.to/mini-apps`
-12. Apply to Proof of Ship S2
+5. Test at 360×640 — fix any layout overflow or truncation
+6. Audit `<img>` and CSS background-image — convert PNG/JPG to WebP
+7. Verify no `personal_sign` / `eth_signTypedData` in MiniPay code paths
+8. Add tx volume per stablecoin, retention, failed-tx rate to `/stats` page
+9. Submit MiniPay intake form at `https://minipay.to/mini-apps`
+10. Apply to Proof of Ship S2
 
-### Next month (security + revenue)
+### Next week — hardening
 
-13. Deploy Safe multisig + transfer ownership
-14. Deploy v3 contracts (follows Safe setup)
-15. Update Goldsky subgraph to v5.0.0 (new ABI)
-16. Update frontend ABIs
-17. Remove `recordProgress` call from hook
-18. Build streak freeze feature (first stablecoin revenue)
+11. Reduce FuelFaucet drip from 0.2 → 0.05 CELO
+12. Deploy TimelockController and connect to Safe (48-hour upgrade delay)
+13. Document `verificationHash` scheme for independent auditability
 
-### Later (product growth)
+### Next month — revenue
 
-19. Habit staking (stake USDm on a streak goal)
-20. Extend AI verification to all 6 habit types
-21. ERC-4337 Paymaster to replace FuelFaucet recurring cost
+14. Build streak freeze feature (first stablecoin revenue — 0.5 USDm per freeze)
+15. Build habit staking (stake USDm on a streak goal)
+16. ERC-4337 Paymaster to replace FuelFaucet recurring cost
 
 ---
 
-*Grant data: live from celopg.eco · 2026-06-02*  
+*Grant data: live from celopg.eco · 2026-06-04*  
 *Contract addresses: Celo Mainnet · block 68,295,054 · May 31 2026*  
-*v3 contracts compiled and tested (48/48 passing) — not yet deployed to mainnet*
+*v3.1 contracts live on mainnet · Goldsky v5.1.0 · PageSpeed ≥ 90*
