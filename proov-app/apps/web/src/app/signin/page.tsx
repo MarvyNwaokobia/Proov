@@ -25,7 +25,7 @@ type AltMethod = 'magic' | 'code' | 'sms';
 export default function SignInPage() {
   const router = useRouter();
   const { isConnected, address: connectedAddress } = useAccount();
-  const { connect, connectors, isPending } = useConnect();
+  const { connect, connectors, isPending, reset } = useConnect();
 
   const [notice, setNotice] = useState('');
   const [connecting, setConnecting] = useState(false);
@@ -53,6 +53,14 @@ export default function SignInPage() {
   // MiniPay: skip entirely — the injected provider manages its own state.
   useEffect(() => {
     if (isMiniPay()) return;
+
+    // OAuth error (e.g. user cancelled Google picker) — clean up and show the form
+    if (window.location.hash.startsWith('#error=')) {
+      window.history.replaceState(null, '', window.location.pathname);
+      reset();
+      getWeb3Auth().logout({ cleanup: true }).catch(() => {});
+      return;
+    }
 
     const isCallback = new URLSearchParams(window.location.search).has('code') ||
       window.location.hash.includes('access_token=');

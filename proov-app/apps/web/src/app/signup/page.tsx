@@ -25,7 +25,7 @@ type AltMethod = 'magic' | 'code' | 'sms';
 export default function SignUpPage() {
   const router = useRouter();
   const { isConnected, address: connectedAddress } = useAccount();
-  const { connect, connectors, isPending } = useConnect();
+  const { connect, connectors, isPending, reset } = useConnect();
 
   const [connecting, setConnecting] = useState(false);
   const [altMethod, setAltMethod] = useState<AltMethod>('magic');
@@ -39,6 +39,14 @@ export default function SignUpPage() {
   // In redirect mode Web3Auth returns to this page with ?code=... — calling logout() here
   // would wipe that just-completed session, so we skip it when a callback is detected.
   useEffect(() => {
+    // OAuth error (e.g. user cancelled Google picker) — clean up and show the form
+    if (window.location.hash.startsWith('#error=')) {
+      window.history.replaceState(null, '', window.location.pathname);
+      reset();
+      getWeb3Auth().logout({ cleanup: true }).catch(() => {});
+      return;
+    }
+
     const isCallback = new URLSearchParams(window.location.search).has('code') ||
       window.location.hash.includes('access_token=');
 
