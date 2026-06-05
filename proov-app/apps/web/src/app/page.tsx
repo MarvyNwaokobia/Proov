@@ -16,6 +16,18 @@ export default function LandingPage() {
   const router = useRouter();
 
   useEffect(() => {
+    // OAuth redirects land here when Web3Auth's redirect URL points to the root.
+    // Forward the callback or error to /signin so it can be handled properly.
+    const hasCode  = new URLSearchParams(window.location.search).has('code');
+    const hasError = window.location.hash.startsWith('#error=') ||
+                     new URLSearchParams(window.location.search).has('error');
+    const hasToken = window.location.hash.includes('access_token=');
+
+    if (hasCode || hasError || hasToken) {
+      router.replace('/signin' + window.location.search + window.location.hash);
+      return;
+    }
+
     const isAuth = localStorage.getItem('proov_authenticated') === 'true';
     if (isAuth) router.replace('/dashboard');
   }, [router]);

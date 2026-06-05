@@ -49,7 +49,7 @@ export default function SignInPage() {
     if (isMiniPay()) return;
 
     // OAuth error (e.g. user cancelled Google picker) — clean up and show the form
-    if (window.location.hash.startsWith('#error=')) {
+    if (window.location.hash.startsWith('#error=') || new URLSearchParams(window.location.search).has('error')) {
       window.history.replaceState(null, '', window.location.pathname);
       reset();
       getWeb3Auth().logout({ cleanup: true }).catch(() => {});
@@ -68,6 +68,7 @@ export default function SignInPage() {
         if (c) connect({ connector: c });
       }).catch(() => {});
     } else {
+      reset();
       w.logout({ cleanup: true }).catch(() => {}).then(() =>
         (w as any).initModal().catch(() => {})
       );
