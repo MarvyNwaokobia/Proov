@@ -27,7 +27,6 @@ export default function SignInPage() {
   const { isConnected, address: connectedAddress } = useAccount();
   const { connect, connectors, isPending, reset } = useConnect();
 
-  const [notice, setNotice] = useState('');
   const [connecting, setConnecting] = useState(false);
   const [altMethod, setAltMethod] = useState<AltMethod>('magic');
   const [input, setInput] = useState('');
@@ -41,11 +40,6 @@ export default function SignInPage() {
   // (i.e. the connect call failed). If isConnected=true, the navigation effect below
   // keeps the screen up until it finishes and navigates.
   useEffect(() => { if (!isPending && !isConnected) setConnecting(false); }, [isPending, isConnected]);
-
-  useEffect(() => {
-    const msg = localStorage.getItem('proov_auth_notice');
-    if (msg) { setNotice(msg); localStorage.removeItem('proov_auth_notice'); }
-  }, []);
 
   // On mount: either complete a redirect-mode OAuth callback or reset stale session state.
   // In redirect mode Web3Auth returns to this page with ?code=... — calling logout() here
@@ -239,12 +233,6 @@ export default function SignInPage() {
               Join free
             </button>
           </div>
-
-          {notice && (
-            <div style={{ background: 'rgba(244,63,94,.08)', border: '1px solid rgba(244,63,94,.2)', borderRadius: 10, padding: '9px 12px', fontSize: 11, color: '#f43f5e', marginBottom: 14, lineHeight: 1.5 }}>
-              {notice}
-            </div>
-          )}
 
           {/* Username login — above Google */}
           <div style={{ marginBottom: 12 }}>

@@ -3,7 +3,6 @@
 import { useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAccount, useReconnect } from 'wagmi';
-import { clearWeb3AuthSession } from '@/lib/clearSession';
 import { runMigrations } from '@/lib/auth';
 import { syncProfileToSupabase } from '@/lib/supabase';
 
@@ -27,28 +26,13 @@ function isProtectedPath(pathname: string): boolean {
     || PROTECTED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
-async function clearExpiredSession() {
-  if (typeof window === 'undefined') return;
-
-  localStorage.setItem('proov_auth_notice', 'Your session expired. Tap "Continue with Google" to pick up where you left off.');
-  localStorage.removeItem('proov_authenticated');
-  localStorage.removeItem('proov_address');
-
-  await clearWeb3AuthSession().catch(() => {});
-}
-
 export function AuthSessionGuard() {
   const pathname = usePathname();
   const router = useRouter();
   const { address, isConnected } = useAccount();
-  const { reconnect, status } = useReconnect();
+  const { reconnect } = useReconnect();
 
   const reconnectAttemptedRef = useRef(false);
-  const clearingRef = useRef(false);
-  // Only set to true once wagmi actually transitions to 'pending' — prevents the
-  // race where Effect 2 fires with status='idle' in the same tick Effect 1 calls
-  // reconnect(), before wagmi has had a chance to update its state.
-  const seenPendingRef = useRef(false);
 
   useEffect(() => {
     runMigrations().then(wiped => {
@@ -64,10 +48,6 @@ export function AuthSessionGuard() {
   );
 
   useEffect(() => {
-    if (status === 'pending') seenPendingRef.current = true;
-  }, [status]);
-
-  useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!isProtectedPath(pathname)) return;
 
@@ -80,36 +60,15 @@ export function AuthSessionGuard() {
     if (hasRealWalletConnection && address) {
       localStorage.setItem('proov_address', address.toLowerCase());
       reconnectAttemptedRef.current = false;
-      seenPendingRef.current = false;
-      // Background sync: repair any user whose Supabase profile was never written
       syncProfileToSupabase(address).catch(() => {});
       return;
     }
 
     if (!reconnectAttemptedRef.current) {
       reconnectAttemptedRef.current = true;
-      try {
-        reconnect();
-      } catch {}
+      try { reconnect(); } catch {}
     }
   }, [address, hasRealWalletConnection, pathname, reconnect, router]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (!isProtectedPath(pathname)) return;
-
-    const hasLocalAuth = localStorage.getItem('proov_authenticated') === 'true';
-    if (!hasLocalAuth || hasRealWalletConnection) return;
-    // Wait until wagmi actually went through 'pending' before deciding the session
-    // is gone — avoids false positives on the first render cycle.
-    if (!reconnectAttemptedRef.current || !seenPendingRef.current || status === 'pending' || clearingRef.current) return;
-
-    clearingRef.current = true;
-    clearExpiredSession()
-      .finally(() => {
-        router.replace('/signin');
-      });
-  }, [hasRealWalletConnection, pathname, router, status]);
 
   return null;
 }

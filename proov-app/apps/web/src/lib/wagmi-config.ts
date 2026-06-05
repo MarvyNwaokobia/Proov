@@ -38,6 +38,7 @@ export function getWeb3Auth(): Web3Auth {
     web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_MAINNET,
     privateKeyProvider,
     uiConfig: { uxMode: 'redirect' },
+    sessionTime: 604800, // 7 days — maximum Web3Auth allows
   });
 
   return _web3auth;

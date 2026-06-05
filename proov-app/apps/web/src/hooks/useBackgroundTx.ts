@@ -2,7 +2,6 @@
 
 import { useWriteContract, usePublicClient, useAccount, useConfig } from 'wagmi';
 import { useCallback, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import { celo } from 'viem/chains';
 import { useTxToast } from '@/components/shared/TxToast';
 import { isMiniPay } from '@/lib/minipay';
@@ -83,7 +82,6 @@ export function useBackgroundTx() {
   const { showError, showSuccess, showWarning } = useTxToast();
   const publicClient = usePublicClient();
   const { address: connectedAddress } = useAccount();
-  const router = useRouter();
   const wagmiConfig = useConfig();
 
   // Nonce chain: serial promise that allocates unique nonces for rapid-fire txs.
@@ -112,19 +110,9 @@ export function useBackgroundTx() {
     return nonce === -1 ? undefined : nonce;
   }, [publicClient]);
 
-  const clearStaleSession = useCallback(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('proov_auth_notice', 'Your session expired. Tap "Continue with Google" to pick up where you left off.');
-      localStorage.removeItem('proov_authenticated');
-      localStorage.removeItem('proov_address');
-    }
-    router.replace('/signin');
-  }, [router]);
-
   const waitForConnected = useCallback((): Promise<void> => {
     return new Promise((resolve, reject) => {
       if (wagmiConfig.state.status === 'connected') { resolve(); return; }
-      // 5s — if Web3Auth hasn't reconnected by then, treat as expired session
       const timeout = setTimeout(() => { unsub(); reject(new Error('timeout')); }, 5000);
       const unsub = wagmiConfig.subscribe(
         (state) => state.status,
@@ -147,8 +135,7 @@ export function useBackgroundTx() {
         try {
           await waitForConnected();
         } catch {
-          // Wallet didn't reconnect in time — send them back to sign in.
-          clearStaleSession();
+          showError('Wallet not connected — please refresh the page.');
           return null;
         }
       }
@@ -201,7 +188,7 @@ export function useBackgroundTx() {
               },
               onError: (err) => {
                 console.error('[tx] failed:', err);
-                if (isConnectorNotConnected(err)) { clearStaleSession(); resolve(null); return; }
+                if (isConnectorNotConnected(err)) { showError('Wallet disconnected — please refresh the page.'); resolve(null); return; }
                 // Nonce error → reset chain so next tx re-fetches from chain
                 if (/nonce/i.test((err as Error).message ?? '')) {
                   nonceChainRef.current = Promise.resolve(-1);
@@ -224,7 +211,7 @@ export function useBackgroundTx() {
         }
       });
     },
-    [connectedAddress, wagmiConfig, waitForConnected, writeContract, showSuccess, showError, showWarning, clearStaleSession, getNextNonce]
+    [connectedAddress, wagmiConfig, waitForConnected, writeContract, showSuccess, showError, showWarning, getNextNonce]
   );
 
   const sendTxWithResult = useCallback(
