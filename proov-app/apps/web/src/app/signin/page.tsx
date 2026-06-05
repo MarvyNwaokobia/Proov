@@ -65,11 +65,23 @@ export default function SignInPage() {
     // After this resolves: w.connected === true means a session was established.
     (w as any).initModal().then(() => {
       if (!w.connected) return; // no session — user will click the button
+      // Show the loading screen now so the user sees feedback during key derivation.
+      setConnecting(true);
       const c = connectors[0];
       if (c) connect({ connector: c });
+      else setConnecting(false);
     }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Safety valve: if sign-in is still loading after 20 s with no connection,
+  // reset so the user can try again rather than being stuck indefinitely.
+  useEffect(() => {
+    if (!connecting && !isPending) return;
+    if (isConnected) return;
+    const t = setTimeout(() => { reset(); setConnecting(false); }, 20_000);
+    return () => clearTimeout(t);
+  }, [connecting, isPending, isConnected, reset]);
 
   useEffect(() => {
     if (!isMiniPay()) return;

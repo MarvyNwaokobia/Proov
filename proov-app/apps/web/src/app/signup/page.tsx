@@ -52,11 +52,20 @@ export default function SignUpPage() {
     const w = getWeb3Auth();
     (w as any).initModal().then(() => {
       if (!w.connected) return;
+      setConnecting(true);
       const c = connectors[0];
       if (c) connect({ connector: c });
+      else setConnecting(false);
     }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!connecting && !isPending) return;
+    if (isConnected) return;
+    const t = setTimeout(() => { reset(); setConnecting(false); }, 20_000);
+    return () => clearTimeout(t);
+  }, [connecting, isPending, isConnected, reset]);
 
   useEffect(() => {
     if (isMiniPay()) {
