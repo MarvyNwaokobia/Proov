@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { getPostLoginRoute, resolveIdentity } from '@/lib/auth';
 import { isMiniPay, connectMiniPay } from '@/lib/minipay';
+import { getWeb3Auth } from '@/lib/wagmi-config';
+import { ADAPTER_STATUS, WALLET_ADAPTERS } from '@web3auth/base';
 
 import { IconMail, IconHash, IconDeviceMobile, IconMessage, IconMailOpened, type Icon as TablerIcon } from '@tabler/icons-react';
 
@@ -42,21 +44,19 @@ export default function SignUpPage() {
 
     if (!isCallback) localStorage.removeItem('wagmi.store');
 
-    import('@/lib/wagmi-config').then(({ getWeb3Auth }) => {
-      const w = getWeb3Auth();
-      if (isCallback) {
-        (w as any).initModal().then(() => {
-          if (w.connected) {
-            const c = connectors[0];
-            if (c) connect({ connector: c });
-          }
-        }).catch(() => {});
-      } else {
-        w.logout({ cleanup: true }).catch(() => {}).then(() =>
-          (w as any).initModal().catch(() => {})
-        );
-      }
-    });
+    const w = getWeb3Auth();
+    if (isCallback) {
+      (w as any).initModal().then(() => {
+        if (w.connected) {
+          const c = connectors[0];
+          if (c) connect({ connector: c });
+        }
+      }).catch(() => {});
+    } else {
+      w.logout({ cleanup: true }).catch(() => {}).then(() =>
+        (w as any).initModal().catch(() => {})
+      );
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -99,13 +99,10 @@ export default function SignUpPage() {
 
   const triggerConnect = async (loginProvider = 'google') => {
     setConnecting(true);
-    // Cleanup already ran on mount — call connectTo immediately to avoid popup blocker.
-    const { getWeb3Auth } = await import('@/lib/wagmi-config');
     const web3auth = getWeb3Auth();
     try {
-      if ((web3auth as any).status === 'not_ready') await (web3auth as any).initModal();
-      const { WALLET_ADAPTERS } = await import('@web3auth/base');
-      await (web3auth as any).connectTo(WALLET_ADAPTERS.AUTH, { loginProvider });
+      if (web3auth.status === ADAPTER_STATUS.NOT_READY) await (web3auth as any).initModal();
+      await web3auth.connectTo(WALLET_ADAPTERS.AUTH, { loginProvider });
     } catch {
       setConnecting(false);
       return;
