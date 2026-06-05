@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import { getPostLoginRoute, resolveIdentity } from '@/lib/auth';
 import { isMiniPay, connectMiniPay } from '@/lib/minipay';
 import { getWeb3Auth } from '@/lib/wagmi-config';
-import { WALLET_ADAPTERS } from '@web3auth/base';
+import { ADAPTER_STATUS, WALLET_ADAPTERS } from '@web3auth/base';
 
 import { IconMail, IconHash, IconDeviceMobile, IconMessage, IconMailOpened, type Icon as TablerIcon } from '@tabler/icons-react';
 
@@ -120,9 +120,7 @@ export default function SignInPage() {
     setConnecting(true);
     const web3auth = getWeb3Auth();
     try {
-      // Always (re-)initialize before connecting — ensures adapter is ready even
-      // after a previous logout() or error left it in an unexpected state.
-      await (web3auth as any).initModal();
+      if (web3auth.status === ADAPTER_STATUS.NOT_READY) await (web3auth as any).initModal();
       // Explicit redirectUrl overrides any dashboard-configured default so the
       // OAuth callback lands back on this page, not the root landing page.
       await (web3auth as any).connectTo(WALLET_ADAPTERS.AUTH, {

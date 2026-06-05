@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import { getPostLoginRoute, resolveIdentity } from '@/lib/auth';
 import { isMiniPay, connectMiniPay } from '@/lib/minipay';
 import { getWeb3Auth } from '@/lib/wagmi-config';
-import { WALLET_ADAPTERS } from '@web3auth/base';
+import { ADAPTER_STATUS, WALLET_ADAPTERS } from '@web3auth/base';
 
 import { IconMail, IconHash, IconDeviceMobile, IconMessage, IconMailOpened, type Icon as TablerIcon } from '@tabler/icons-react';
 
@@ -99,7 +99,7 @@ export default function SignUpPage() {
     setConnecting(true);
     const web3auth = getWeb3Auth();
     try {
-      await (web3auth as any).initModal();
+      if (web3auth.status === ADAPTER_STATUS.NOT_READY) await (web3auth as any).initModal();
       await (web3auth as any).connectTo(WALLET_ADAPTERS.AUTH, {
         loginProvider,
         redirectUrl: window.location.origin + window.location.pathname,
