@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import { getPostLoginRoute, resolveIdentity } from '@/lib/auth';
 import { isMiniPay, connectMiniPay } from '@/lib/minipay';
 import { getWeb3Auth } from '@/lib/wagmi-config';
-import { ADAPTER_STATUS, WALLET_ADAPTERS } from '@web3auth/base';
+import { WALLET_ADAPTERS } from '@web3auth/base';
 
 import { IconMail, IconHash, IconDeviceMobile, IconMessage, IconMailOpened, type Icon as TablerIcon } from '@tabler/icons-react';
 
@@ -35,35 +35,26 @@ export default function SignUpPage() {
   // Only clear the loading screen if wagmi finished AND we did NOT get a connection.
   useEffect(() => { if (!isPending && !isConnected) setConnecting(false); }, [isPending, isConnected]);
 
-  // On mount: either complete a redirect-mode OAuth callback or reset stale session state.
-  // In redirect mode Web3Auth returns to this page with ?code=... — calling logout() here
-  // would wipe that just-completed session, so we skip it when a callback is detected.
+  // On mount: clear stale state, then let initModal() auto-detect any pending
+  // OAuth callback from redirect mode. Web3Auth processes its own token format
+  // internally — we never need to detect ?code= ourselves.
   useEffect(() => {
-    // OAuth error (e.g. user cancelled Google picker) — clean up and show the form
+    reset(); // clear any stale wagmi mutation state
+
+    // OAuth error (e.g. user cancelled Google picker) — clear URL and show the form.
     if (window.location.hash.startsWith('#error=') || new URLSearchParams(window.location.search).has('error')) {
       window.history.replaceState(null, '', window.location.pathname);
-      reset();
-      getWeb3Auth().logout({ cleanup: true }).catch(() => {});
       return;
     }
 
-    const isCallback = new URLSearchParams(window.location.search).has('code') ||
-      window.location.hash.includes('access_token=');
-
-    if (!isCallback) localStorage.removeItem('wagmi.store');
+    localStorage.removeItem('wagmi.store');
 
     const w = getWeb3Auth();
-    if (isCallback) {
-      (w as any).initModal().then(() => {
-        const c = connectors[0];
-        if (c) connect({ connector: c });
-      }).catch(() => {});
-    } else {
-      reset();
-      w.logout({ cleanup: true }).catch(() => {}).then(() =>
-        (w as any).initModal().catch(() => {})
-      );
-    }
+    (w as any).initModal().then(() => {
+      if (!w.connected) return;
+      const c = connectors[0];
+      if (c) connect({ connector: c });
+    }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -108,8 +99,11 @@ export default function SignUpPage() {
     setConnecting(true);
     const web3auth = getWeb3Auth();
     try {
-      if (web3auth.status === ADAPTER_STATUS.NOT_READY) await (web3auth as any).initModal();
-      await web3auth.connectTo(WALLET_ADAPTERS.AUTH, { loginProvider });
+      await (web3auth as any).initModal();
+      await (web3auth as any).connectTo(WALLET_ADAPTERS.AUTH, {
+        loginProvider,
+        redirectUrl: window.location.origin + window.location.pathname,
+      });
     } catch {
       setConnecting(false);
       return;
