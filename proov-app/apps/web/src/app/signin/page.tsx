@@ -62,10 +62,8 @@ export default function SignInPage() {
     const w = getWeb3Auth();
     if (isCallback) {
       (w as any).initModal().then(() => {
-        if (w.connected) {
-          const c = connectors[0];
-          if (c) connect({ connector: c });
-        }
+        const c = connectors[0];
+        if (c) connect({ connector: c });
       }).catch(() => {});
     } else {
       w.logout({ cleanup: true }).catch(() => {}).then(() =>
