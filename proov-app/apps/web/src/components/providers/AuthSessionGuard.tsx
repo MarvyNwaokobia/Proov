@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAccount, useReconnect } from 'wagmi';
 import { runMigrations } from '@/lib/auth';
 import { syncProfileToSupabase } from '@/lib/supabase';
+import { isMiniPay } from '@/lib/minipay';
 
 const PROTECTED_PREFIXES = [
   '/dashboard',
@@ -51,7 +52,9 @@ export function AuthSessionGuard() {
     if (typeof window === 'undefined') return;
     if (!isProtectedPath(pathname)) return;
 
-    const hasLocalAuth = localStorage.getItem('proov_authenticated') === 'true';
+    const hasLocalAuth =
+      localStorage.getItem('proov_authenticated') === 'true' ||
+      isMiniPay();
     if (!hasLocalAuth) {
       router.replace('/signin');
       return;
