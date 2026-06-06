@@ -36,9 +36,9 @@ export async function POST(req: NextRequest) {
     const rpc = process.env.NEXT_PUBLIC_CELO_RPC_URL || 'https://forno.celo.org';
     const publicClient = createPublicClient({ chain: celo, transport: http(rpc) });
 
-    // Gate 1: tank must be low
+    // Gate 1: tank must be low (strict greater-than matches client-side <= threshold)
     const balance = await publicClient.getBalance({ address });
-    if (balance >= MIN_BALANCE) {
+    if (balance > MIN_BALANCE) {
       return NextResponse.json({ ok: true, skipped: 'sufficient' });
     }
 

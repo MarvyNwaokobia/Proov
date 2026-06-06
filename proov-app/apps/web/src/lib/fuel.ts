@@ -87,11 +87,16 @@ export async function checkCanClaim(userAddress: string): Promise<{
   try {
     const todayUtc = new Date().toISOString().split('T')[0];
 
-    const [balance, lastClaim] = await Promise.all([
-      getUserCeloBalance(userAddress),
+    // Fetch balance directly — no inner catch — so network failures propagate to
+    // the outer catch and return { canClaim: false } instead of treating a
+    // failed fetch (which returns 0) as "empty tank".
+    const client = getPublicClient();
+    const [rawBalance, lastClaim] = await Promise.all([
+      client.getBalance({ address: userAddress as Address }),
       import('@/lib/supabase').then(m => m.getLastFuelClaim(userAddress)).catch(() => null),
     ]);
 
+    const balance = parseFloat(formatEther(rawBalance));
     const displayedBalance = Math.round(balance * 100) / 100;
     const tankIsLow = displayedBalance <= LOW_FUEL_THRESHOLD;
     const claimedToday = lastClaim === todayUtc;
