@@ -92,7 +92,8 @@ export async function checkCanClaim(userAddress: string): Promise<{
       import('@/lib/supabase').then(m => m.getLastFuelClaim(userAddress)).catch(() => null),
     ]);
 
-    const tankIsLow = balance <= LOW_FUEL_THRESHOLD;
+    const displayedBalance = Math.round(balance * 100) / 100;
+    const tankIsLow = displayedBalance <= LOW_FUEL_THRESHOLD;
     const claimedToday = lastClaim === todayUtc;
     const canClaim = tankIsLow && !claimedToday;
     const secondsLeft = claimedToday ? secsUntilMidnightUtc() : 0;
