@@ -23,11 +23,20 @@ export function useProovTx() {
   return {
     // ── HABIT ACTIONS ──────────────────────────────────────────────────────
     createHabit: async (name: string, category: string, _isTimed: boolean, durationMinutes: number | undefined): Promise<number | null> => {
-      const catMap: Record<string, number> = { focus: 0, fitness: 1, reading: 2, hydration: 3, sleep: 4 };
+      const catMap: Record<string, number> = {
+        // canonical values the contract accepts (0-4)
+        focus: 0, fitness: 1, reading: 2, hydration: 3, sleep: 4,
+        // Discover / AI-generated aliases mapped to nearest equivalent
+        productivity: 0, mindfulness: 0, meditation: 0, creative: 0, social: 0,
+        learning: 2, study: 2,
+        wellness: 1, health: 1, exercise: 1,
+        nutrition: 3,
+        rest: 4, recovery: 4,
+      };
       const { ok, result } = await sendTxWithResult<bigint>({
         address: CONTRACTS.PROOV_CORE, abi: PROOV_CORE_ABI,
         functionName: 'createHabit',
-        args: [name, catMap[category.toLowerCase()] ?? 5, safeDuration(durationMinutes), 0],
+        args: [name, catMap[category.toLowerCase()] ?? 0, safeDuration(durationMinutes), 0],
         _successMessage: null,
       } as any);
       if (!ok || result === undefined || result === null) return null;
