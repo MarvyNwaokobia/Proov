@@ -148,7 +148,7 @@ export function useBackgroundTx() {
       // (MiniPay pays network fees in cUSD, CELO balance is irrelevant)
       if (typeof window !== 'undefined' && !isMiniPay() && !sessionStorage.getItem('proov_low_gas_warned')) {
         const cachedBal = parseFloat(localStorage.getItem('proov_fuel_balance') || '0');
-        if (cachedBal > 0 && cachedBal < 0.01) {
+        if (cachedBal > 0 && cachedBal <= 0.01) {
           sessionStorage.setItem('proov_low_gas_warned', '1');
           showWarning('⛽ Tank is low — claim fuel in Settings.');
         }
