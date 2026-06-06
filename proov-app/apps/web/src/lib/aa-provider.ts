@@ -13,12 +13,21 @@ export function createAAConnector({ web3AuthInstance }: { web3AuthInstance: Web3
     name: 'Proov',
     type: 'web3auth-aa',
 
-    async connect() {
+    async connect(params?: { isReconnecting?: boolean }) {
       config.emitter.emit('message', { type: 'connecting' });
 
       await initWeb3Auth();
 
       if (!web3AuthInstance.connected) {
+        // During wagmi auto-reconnect (session restore after expiry) do NOT
+        // trigger the OAuth redirect — it navigates the whole page to
+        // th.web3auth.io and fails with "Init parameters not found" because
+        // the redirect state in localStorage is gone after a long background
+        // timer. Throw instead so wagmi marks us disconnected and sendTx can
+        // show a clean "session expired" error rather than stranding the user.
+        if (params?.isReconnecting) {
+          throw new Error('Web3Auth session expired — please sign in again');
+        }
         await web3AuthInstance.connectTo(WALLET_ADAPTERS.AUTH, { loginProvider: 'google' });
       }
 

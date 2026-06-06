@@ -77,6 +77,11 @@ function isConnectorNotConnected(err: unknown): boolean {
     || /connector not connected/i.test(err.message);
 }
 
+function isSessionExpired(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  return /session expired|please sign in again/i.test(err.message);
+}
+
 export function useBackgroundTx() {
   const { writeContract } = useWriteContract();
   const { showError, showSuccess, showWarning } = useTxToast();
@@ -188,6 +193,12 @@ export function useBackgroundTx() {
               },
               onError: (err) => {
                 console.error('[tx] failed:', err);
+                if (isSessionExpired(err)) {
+                  showError('Session expired — signing you out.');
+                  setTimeout(() => { window.location.href = '/signin'; }, 1500);
+                  resolve(null);
+                  return;
+                }
                 if (isConnectorNotConnected(err)) { showError('Wallet disconnected — please refresh the page.'); resolve(null); return; }
                 // Nonce error → reset chain so next tx re-fetches from chain
                 if (/nonce/i.test((err as Error).message ?? '')) {
