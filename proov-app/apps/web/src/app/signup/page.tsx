@@ -27,7 +27,9 @@ export default function SignUpPage() {
   const { isConnected, address: connectedAddress } = useAccount();
   const { connect, connectors, isPending, reset } = useConnect();
 
-  const [connecting, setConnecting] = useState(false);
+  const [connecting, setConnecting] = useState(() =>
+    typeof window !== 'undefined' && !!sessionStorage.getItem('proov_oauth_pending')
+  );
   const [slowWarning, setSlowWarning] = useState(false);
   const [authError, setAuthError] = useState('');
   const [altMethod, setAltMethod] = useState<AltMethod>('magic');
@@ -53,13 +55,14 @@ export default function SignUpPage() {
     localStorage.removeItem('wagmi.store');
 
     initWeb3Auth().then(() => {
+      sessionStorage.removeItem('proov_oauth_pending');
       const w = getWeb3Auth();
-      if (!w.connected) return;
+      if (!w.connected) { setConnecting(false); return; }
       setConnecting(true);
       const c = connectors.find(c => c.id === 'web3auth-aa') ?? connectors[0];
       if (c) connect({ connector: c });
       else setConnecting(false);
-    }).catch(() => {});
+    }).catch(() => { sessionStorage.removeItem('proov_oauth_pending'); setConnecting(false); });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -119,6 +122,7 @@ export default function SignUpPage() {
   const triggerConnect = async (loginProvider = 'google') => {
     setConnecting(true);
     setAuthError('');
+    sessionStorage.setItem('proov_oauth_pending', '1');
     const web3auth = getWeb3Auth();
     try {
       await initWeb3Auth();
@@ -127,6 +131,7 @@ export default function SignUpPage() {
         redirectUrl: window.location.origin + window.location.pathname,
       });
     } catch {
+      sessionStorage.removeItem('proov_oauth_pending');
       setConnecting(false);
       return;
     }
