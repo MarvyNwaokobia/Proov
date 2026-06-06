@@ -50,6 +50,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .page-hdr{background:var(--nav-bg);border-bottom:1px solid var(--border);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20}
 .ph-title{font-size:16px;font-weight:800;color:var(--text);letter-spacing:-.3px}
 .bbtn{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:var(--bg2);border:1px solid var(--border);color:var(--text2);cursor:pointer}
+/* Fuel tank bounce */
+@keyframes fuel-slosh{
+  0%,100%{transform:translateY(0);border-radius:50% 50% 0 0/3px 3px 0 0}
+  25%{transform:translateY(-1.5px);border-radius:35% 60% 0 0/2px 4px 0 0}
+  55%{transform:translateY(1px);border-radius:60% 35% 0 0/4px 2px 0 0}
+  80%{transform:translateY(-.5px);border-radius:45% 52% 0 0/3px 3px 0 0}
+}
+.fuel-wave{animation:fuel-slosh 2.8s ease-in-out infinite}
 /* Flip card */
 .flip-card{width:100%;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .flip-inner{display:grid;transition:transform .55s cubic-bezier(.4,0,.2,1);transform-style:preserve-3d}
@@ -102,6 +110,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <button class="sbtn" onclick="go('proofsheet_approved')">AI Verify — approved</button>
     <div class="snav-s">Brand</div>
     <button class="sbtn" onclick="go('logo')">Logo</button>
+    <div class="snav-s">Components</div>
+    <button class="sbtn" onclick="go('fuel_tank')">Fuel Tank ✦ new</button>
   </nav>
   <div id="pw">
     <div id="phone">
@@ -828,6 +838,157 @@ proofsheet_approved:{title:'AI Verify — Approved ✓',nav:false,notes:[
   </div>
 </div>`},
 
+fuel_tank:{title:'Fuel Tank — Proposed Design',nav:true,notes:[
+{t:'new',s:'Tank replaces the text pill — same spot in header, same size as avatar'},
+{t:'new',s:'Liquid inside bounces gently at all times (CSS animation)'},
+{t:'new',s:'Fill = balance / 0.20 CELO. Color: green → amber → red'},
+{t:'kept',s:'Header layout unchanged — greeting, date, [tank], [avatar]'},
+{t:'kept',s:'Number label stays below tank so balance is still readable'},
+],html:`<div style="background:var(--bg);padding-bottom:80px">
+
+  <div style="padding:14px 18px 0;display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+    <div>
+      <div style="font-size:16px;font-weight:800;color:var(--text);letter-spacing:-.3px">Good morning, Marvy</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px">Saturday, May 23</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:7px">
+
+      <!-- ── NEW: mini fuel tank (replaces pill) ── -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer" title="0.12 CELO fuel — tap to go to Settings">
+        <!-- nozzle -->
+        <div style="width:6px;height:3px;background:rgba(5,150,105,.45);border-radius:1.5px 1.5px 0 0;flex-shrink:0"></div>
+        <!-- body -->
+        <div id="ctx-body" style="width:16px;height:26px;border-radius:3px;border:1.5px solid rgba(5,150,105,.3);background:rgba(255,255,255,.04);overflow:hidden;position:relative;flex-shrink:0">
+          <!-- animated fill -->
+          <div id="ctx-fill" class="fuel-wave" style="position:absolute;bottom:0;left:0;right:0;height:60%;background:linear-gradient(to top,rgba(5,150,105,.72),rgba(5,150,105,.3));border-radius:50% 50% 0 0/3px 3px 0 0"></div>
+          <!-- glass sheen -->
+          <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.14) 0%,transparent 60%);pointer-events:none"></div>
+          <!-- tick marks -->
+          <div style="position:absolute;right:2px;top:33%;width:2px;height:1px;background:rgba(255,255,255,.25)"></div>
+          <div style="position:absolute;right:2px;top:66%;width:2px;height:1px;background:rgba(255,255,255,.25)"></div>
+        </div>
+        <!-- balance label -->
+        <div id="ctx-label" style="font-size:7px;font-weight:700;color:var(--accent-text);letter-spacing:.1px;margin-top:1px">0.12</div>
+      </div>
+
+      <!-- avatar (unchanged) -->
+      <div style="width:32px;height:32px;border-radius:50%;border:2px solid var(--accent-border);overflow:hidden;background:var(--accent-bg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--accent-text)">M</div>
+    </div>
+  </div>
+
+  <!-- ── Slider ── -->
+  <div style="margin:0 18px 18px">
+    <div style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:14px;padding:14px">
+      <div style="font-size:10px;font-weight:700;color:var(--text2);margin-bottom:8px">Drag to preview fuel level</div>
+      <input type="range" min="0" max="100" value="60" style="width:100%;margin-bottom:8px;accent-color:var(--accent)" oninput="
+        var pct=parseInt(this.value);
+        var celo=(pct/100*0.2).toFixed(2);
+        document.getElementById('ctx-label').textContent=celo;
+        document.getElementById('ctx-fill').style.height=pct+'%';
+        var fc,fb,bc,nc,lc;
+        if(pct>40){fc='rgba(5,150,105,.72)';fb='rgba(5,150,105,.3)';bc='rgba(5,150,105,.3)';nc='rgba(5,150,105,.45)';lc='var(--accent-text)';}
+        else if(pct>12){fc='rgba(217,119,6,.78)';fb='rgba(217,119,6,.32)';bc='rgba(217,119,6,.4)';nc='rgba(217,119,6,.5)';lc='#d97706';}
+        else{fc='rgba(244,63,94,.82)';fb='rgba(244,63,94,.36)';bc='rgba(244,63,94,.4)';nc='rgba(244,63,94,.5)';lc='#f43f5e';}
+        document.getElementById('ctx-fill').style.background='linear-gradient(to top,'+fc+','+fb+')';
+        document.getElementById('ctx-body').style.borderColor=bc;
+        document.getElementById('ctx-label').style.color=lc;
+        document.getElementById('slider-val').textContent=pct+'%  —  0.'+('00'+Math.round(pct*2)).slice(-2)+' CELO';
+      ">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3)">
+        <span>Empty</span>
+        <span id="slider-val" style="font-weight:700;color:var(--text)">60%  —  0.12 CELO</span>
+        <span>Full (0.20)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── All states ── -->
+  <div style="margin:0 18px 18px">
+    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);margin-bottom:10px">All states</div>
+    <div style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:14px;padding:18px 12px">
+      <div style="display:flex;justify-content:space-around;align-items:flex-end;gap:6px">
+
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="width:6px;height:3px;background:rgba(5,150,105,.45);border-radius:1.5px 1.5px 0 0"></div>
+          <div style="width:16px;height:26px;border-radius:3px;border:1.5px solid rgba(5,150,105,.3);background:rgba(255,255,255,.04);overflow:hidden;position:relative">
+            <div class="fuel-wave" style="position:absolute;bottom:0;left:0;right:0;height:100%;background:linear-gradient(to top,rgba(5,150,105,.72),rgba(5,150,105,.3));border-radius:50% 50% 0 0/3px 3px 0 0"></div>
+            <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.14) 0%,transparent 60%)"></div>
+          </div>
+          <div style="font-size:7px;font-weight:700;color:var(--accent-text)">0.20</div>
+          <div style="font-size:8px;color:var(--text3)">Full</div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="width:6px;height:3px;background:rgba(5,150,105,.45);border-radius:1.5px 1.5px 0 0"></div>
+          <div style="width:16px;height:26px;border-radius:3px;border:1.5px solid rgba(5,150,105,.3);background:rgba(255,255,255,.04);overflow:hidden;position:relative">
+            <div class="fuel-wave" style="position:absolute;bottom:0;left:0;right:0;height:60%;background:linear-gradient(to top,rgba(5,150,105,.72),rgba(5,150,105,.3));border-radius:50% 50% 0 0/3px 3px 0 0;animation-delay:-.7s"></div>
+            <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.14) 0%,transparent 60%)"></div>
+          </div>
+          <div style="font-size:7px;font-weight:700;color:var(--accent-text)">0.12</div>
+          <div style="font-size:8px;color:var(--text3)">Good</div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="width:6px;height:3px;background:rgba(217,119,6,.5);border-radius:1.5px 1.5px 0 0"></div>
+          <div style="width:16px;height:26px;border-radius:3px;border:1.5px solid rgba(217,119,6,.4);background:rgba(217,119,6,.04);overflow:hidden;position:relative">
+            <div class="fuel-wave" style="position:absolute;bottom:0;left:0;right:0;height:30%;background:linear-gradient(to top,rgba(217,119,6,.8),rgba(217,119,6,.32));border-radius:50% 50% 0 0/3px 3px 0 0;animation-delay:-1.4s"></div>
+            <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.1) 0%,transparent 60%)"></div>
+          </div>
+          <div style="font-size:7px;font-weight:700;color:#d97706">0.06</div>
+          <div style="font-size:8px;color:var(--text3)">Low</div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="width:6px;height:3px;background:rgba(244,63,94,.5);border-radius:1.5px 1.5px 0 0"></div>
+          <div style="width:16px;height:26px;border-radius:3px;border:1.5px solid rgba(244,63,94,.4);background:rgba(244,63,94,.04);overflow:hidden;position:relative">
+            <div class="fuel-wave" style="position:absolute;bottom:0;left:0;right:0;height:8%;background:linear-gradient(to top,rgba(244,63,94,.88),rgba(244,63,94,.42));border-radius:50% 50% 0 0/3px 3px 0 0;animation-delay:-2s"></div>
+            <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.1) 0%,transparent 60%)"></div>
+          </div>
+          <div style="font-size:7px;font-weight:700;color:#f43f5e">0.01</div>
+          <div style="font-size:8px;color:var(--text3)">Critical</div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="width:6px;height:3px;background:rgba(244,63,94,.3);border-radius:1.5px 1.5px 0 0"></div>
+          <div style="width:16px;height:26px;border-radius:3px;border:1.5px solid rgba(244,63,94,.25);background:rgba(255,255,255,.03);overflow:hidden;position:relative">
+            <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.07) 0%,transparent 60%)"></div>
+          </div>
+          <div style="font-size:7px;font-weight:700;color:rgba(244,63,94,.45)">0.00</div>
+          <div style="font-size:8px;color:var(--text3)">Empty</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Before vs After ── -->
+  <div style="margin:0 18px">
+    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);margin-bottom:10px">Before vs After</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:12px;padding:14px;display:flex;flex-direction:column;align-items:center;gap:10px">
+        <div style="font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase">Before</div>
+        <div style="padding:5px 10px;border-radius:20px;background:var(--bg2);border:1px solid var(--border);font-size:11px;color:var(--accent-text);display:flex;align-items:center;gap:4px;font-weight:600"><i class="ti ti-bolt" style="font-size:12px"></i>0.12 Fuel</div>
+        <div style="font-size:9px;color:var(--text3);text-align:center;line-height:1.5">Text pill — you have to read a number to know how worried to be.</div>
+      </div>
+      <div style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:12px;padding:14px;display:flex;flex-direction:column;align-items:center;gap:10px">
+        <div style="font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase">After</div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
+          <div style="width:6px;height:3px;background:rgba(5,150,105,.45);border-radius:1.5px 1.5px 0 0"></div>
+          <div style="width:16px;height:26px;border-radius:3px;border:1.5px solid rgba(5,150,105,.3);background:rgba(255,255,255,.04);overflow:hidden;position:relative">
+            <div class="fuel-wave" style="position:absolute;bottom:0;left:0;right:0;height:60%;background:linear-gradient(to top,rgba(5,150,105,.72),rgba(5,150,105,.3));border-radius:50% 50% 0 0/3px 3px 0 0;animation-delay:-.4s"></div>
+            <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.14) 0%,transparent 60%)"></div>
+            <div style="position:absolute;right:2px;top:33%;width:2px;height:1px;background:rgba(255,255,255,.25)"></div>
+            <div style="position:absolute;right:2px;top:66%;width:2px;height:1px;background:rgba(255,255,255,.25)"></div>
+          </div>
+          <div style="font-size:7px;font-weight:700;color:var(--accent-text);margin-top:1px">0.12</div>
+        </div>
+        <div style="font-size:9px;color:var(--text3);text-align:center;line-height:1.5">Glanceable. Color + fill tells you urgency at a glance.</div>
+      </div>
+    </div>
+  </div>
+
+</div>`},
+
 logo:{title:'Logo — Proov Fingerprint P',nav:false,notes:[
 {t:'new',s:'Official Proov logo — fingerprint-style P mark'},
 {t:'new',s:'Green gradient: bright top-right, dark forest bottom-left'},
@@ -840,7 +1001,7 @@ logo:{title:'Logo — Proov Fingerprint P',nav:false,notes:[
 
 };
 
-const navMap={dashboard:'home',habits:'habit',discover:'habit',habit_detail:'habit',create_habit:'habit',timer_pick:'timer',timer_running:'timer',timer_done:'timer',circle:'circle',settings:'settings',leaderboard:'settings',profile:'settings',landing:'',signin:'',onboarding:'',walkthrough:'',walkthrough_last:'',proofsheet:'',proofsheet_ready:'',proofsheet_approved:'',logo:''};
+const navMap={dashboard:'home',habits:'habit',discover:'habit',habit_detail:'habit',create_habit:'habit',timer_pick:'timer',timer_running:'timer',timer_done:'timer',circle:'circle',settings:'settings',leaderboard:'settings',profile:'settings',landing:'',signin:'',onboarding:'',walkthrough:'',walkthrough_last:'',proofsheet:'',proofsheet_ready:'',proofsheet_approved:'',logo:'',fuel_tank:''};
 
 function authTab(t){
   const isJoin=t==='join';
