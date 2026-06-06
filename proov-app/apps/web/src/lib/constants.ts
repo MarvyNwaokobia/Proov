@@ -1,10 +1,14 @@
 // Fee currency for all Celo transactions — native CELO
-export const FEE_CURRENCY_USDM = "0x471EcE3750Da237f93B8E339c536989b8978a438" as `0x${string}`;
+export const FEE_CURRENCY_CELO = "0x471EcE3750Da237f93B8E339c536989b8978a438" as `0x${string}`;
 
-// Injects feeCurrency into a writeContract call.
+// Injects feeCurrency into a writeContract call, unless running inside MiniPay.
+// MiniPay manages its own fee currency — passing feeCurrency confuses its decoder.
 // feeCurrency is a Celo-specific extension not in standard wagmi types.
-export const withCeloFee = <T extends object>(args: T): T & { feeCurrency: `0x${string}` } =>
-  ({ ...args, feeCurrency: FEE_CURRENCY_USDM } as T & { feeCurrency: `0x${string}` });
+export const withCeloFee = <T extends object>(args: T): T & { feeCurrency?: `0x${string}` } => {
+  const isMiniPay = typeof window !== "undefined" && !!(window as any).ethereum?.isMiniPay;
+  if (isMiniPay) return args as T & { feeCurrency?: `0x${string}` };
+  return { ...args, feeCurrency: FEE_CURRENCY_CELO } as T & { feeCurrency: `0x${string}` };
+};
 
 export const CONTRACT_ADDRESSES = {
   ProovCore: (process.env.NEXT_PUBLIC_PROOV_CORE_ADDRESS || "") as `0x${string}`,
