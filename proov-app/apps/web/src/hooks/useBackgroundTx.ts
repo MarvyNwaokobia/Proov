@@ -55,9 +55,15 @@ function parseError(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
   if (/user rejected|rejected by user/i.test(msg)) return 'Cancelled';
   if (isInsufficientFunds(err)) {
-    return isMiniPay()
-      ? '⚡ Low cUSD balance — top up via MiniPay to continue'
-      : "⚡ Tank's empty — head to Settings to claim more fuel";
+    // Some RPC nodes return "insufficient funds" when gas estimation fails due to
+    // a contract revert, even with a full tank. Guard against false positives by
+    // checking the cached balance before blaming fuel.
+    const cachedBal = Math.round(parseFloat(localStorage.getItem('proov_fuel_balance') || '0') * 100) / 100;
+    if (cachedBal <= 0.01) {
+      return isMiniPay()
+        ? '⚡ Low cUSD balance — top up via MiniPay to continue'
+        : "⚡ Tank's empty — head to Settings to claim more fuel";
+    }
   }
   if (/network changed|chain.*mismatch/i.test(msg)) return 'Wrong network — please refresh.';
   if (/nonce/i.test(msg)) return 'Action conflict — please try again.';

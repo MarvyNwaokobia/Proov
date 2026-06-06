@@ -258,6 +258,7 @@ export default function SettingsPage() {
       const addr = localStorage.getItem('proov_address') || '';
       const newBalance = await getUserCeloBalance(addr);
       setCeloBalance(newBalance);
+      localStorage.setItem('proov_fuel_balance', String(newBalance));
       setTankIsLow(false);
     } else {
       showToast(result.error || 'Faucet unavailable — try again later');
