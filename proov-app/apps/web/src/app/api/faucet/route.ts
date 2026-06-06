@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createWalletClient, createPublicClient, http, parseEther, isAddress } from 'viem';
+import { createWalletClient, createPublicClient, http, parseEther, formatEther, isAddress } from 'viem';
 import { celo } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 import { createClient } from '@supabase/supabase-js';
 
-// Tank is "low" when balance drops below this — matches LOW_FUEL_THRESHOLD in fuel.ts.
-const MIN_BALANCE = parseEther('0.01');
-// Each drip gives ~20 transactions worth of gas.
+// Must match LOW_FUEL_THRESHOLD in fuel.ts — compared after rounding to 2dp,
+// same as the client, so both sides agree on what "low" means.
+const LOW_FUEL_THRESHOLD = 0.01;
+// Each drip tops the tank back up to ~0.2 CELO.
 const DRIP = parseEther('0.2');
 
 function getSupabase() {
@@ -36,9 +37,13 @@ export async function POST(req: NextRequest) {
     const rpc = process.env.NEXT_PUBLIC_CELO_RPC_URL || 'https://forno.celo.org';
     const publicClient = createPublicClient({ chain: celo, transport: http(rpc) });
 
-    // Gate 1: tank must be low (strict greater-than matches client-side <= threshold)
-    const balance = await publicClient.getBalance({ address });
-    if (balance > MIN_BALANCE) {
+    // Gate 1: tank must be low — round to 2dp before comparing, exactly mirroring
+    // the client-side check so both sides agree on what "low" means. Raw bigint
+    // comparison (e.g. balance > parseEther('0.01')) diverges from the client
+    // for balances like 0.0101 CELO which the client displays as "0.01".
+    const rawBalance = await publicClient.getBalance({ address });
+    const displayedBalance = Math.round(parseFloat(formatEther(rawBalance)) * 100) / 100;
+    if (displayedBalance > LOW_FUEL_THRESHOLD) {
       return NextResponse.json({ ok: true, skipped: 'sufficient' });
     }
 
