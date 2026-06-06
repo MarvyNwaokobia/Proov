@@ -5,31 +5,7 @@ import type { Web3Auth } from '@web3auth/modal';
 import { createConnector } from 'wagmi';
 import { getAddress } from 'viem';
 import { celo } from 'viem/chains';
-
-// Hide everything except Google from the Web3Auth modal.
-// Users have our own UI for email/SMS; showing Facebook/Discord/Reddit
-// in the modal contradicts the "Google only" auth design.
-const MODAL_CONFIG = {
-  [WALLET_ADAPTERS.AUTH]: {
-    label: 'openlogin',
-    loginMethods: {
-      facebook:          { showOnModal: false },
-      discord:           { showOnModal: false },
-      reddit:            { showOnModal: false },
-      twitter:           { showOnModal: false },
-      twitch:            { showOnModal: false },
-      github:            { showOnModal: false },
-      wechat:            { showOnModal: false },
-      kakao:             { showOnModal: false },
-      linkedin:          { showOnModal: false },
-      weibo:             { showOnModal: false },
-      apple:             { showOnModal: false },
-      line:              { showOnModal: false },
-      email_passwordless:{ showOnModal: false },
-      sms_passwordless:  { showOnModal: false },
-    },
-  },
-};
+import { initWeb3Auth } from './wagmi-config';
 
 export function createAAConnector({ web3AuthInstance }: { web3AuthInstance: Web3Auth }) {
   return createConnector<any>(config => ({
@@ -40,12 +16,9 @@ export function createAAConnector({ web3AuthInstance }: { web3AuthInstance: Web3
     async connect() {
       config.emitter.emit('message', { type: 'connecting' });
 
-      if (web3AuthInstance.status === ADAPTER_STATUS.NOT_READY) {
-        await web3AuthInstance.initModal({ modalConfig: MODAL_CONFIG as any });
-      }
+      await initWeb3Auth();
+
       if (!web3AuthInstance.connected) {
-        // Use connectTo (direct provider) instead of connect() (shows modal picker)
-        // so re-auth after sign-out never surfaces the Web3Auth UI a second time.
         await web3AuthInstance.connectTo(WALLET_ADAPTERS.AUTH, { loginProvider: 'google' });
       }
 
@@ -73,9 +46,7 @@ export function createAAConnector({ web3AuthInstance }: { web3AuthInstance: Web3
 
     async getProvider() {
       try {
-        if (web3AuthInstance.status === ADAPTER_STATUS.NOT_READY) {
-          await web3AuthInstance.initModal();
-        }
+        await initWeb3Auth();
         return web3AuthInstance.provider ?? null;
       } catch {
         return null;

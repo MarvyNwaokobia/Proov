@@ -1,7 +1,7 @@
 "use client";
 
 import { Web3Auth } from "@web3auth/modal";
-import { CHAIN_NAMESPACES, WEB3AUTH_NETWORK } from "@web3auth/base";
+import { CHAIN_NAMESPACES, WEB3AUTH_NETWORK, WALLET_ADAPTERS } from "@web3auth/base";
 import { EthereumPrivateKeyProvider } from "@web3auth/ethereum-provider";
 import { createConfig, http, mock } from "wagmi";
 import { celo, celoSepolia } from "viem/chains";
@@ -21,8 +21,32 @@ const chainConfig = {
   tickerName: "Celo",
 };
 
+// All non-Google providers hidden — users go through our own UI for email/SMS.
+export const MODAL_CONFIG = {
+  [WALLET_ADAPTERS.AUTH]: {
+    label: 'openlogin',
+    loginMethods: {
+      facebook:          { showOnModal: false },
+      discord:           { showOnModal: false },
+      reddit:            { showOnModal: false },
+      twitter:           { showOnModal: false },
+      twitch:            { showOnModal: false },
+      github:            { showOnModal: false },
+      wechat:            { showOnModal: false },
+      kakao:             { showOnModal: false },
+      linkedin:          { showOnModal: false },
+      weibo:             { showOnModal: false },
+      apple:             { showOnModal: false },
+      line:              { showOnModal: false },
+      email_passwordless:{ showOnModal: false },
+      sms_passwordless:  { showOnModal: false },
+    },
+  },
+};
+
 // Lazy — only constructed in browser on first call
 let _web3auth: Web3Auth | null = null;
+let _initPromise: Promise<void> | null = null;
 
 export function getWeb3Auth(): Web3Auth {
   if (_web3auth) return _web3auth;
@@ -41,6 +65,16 @@ export function getWeb3Auth(): Web3Auth {
   });
 
   return _web3auth;
+}
+
+// Shared init promise — concurrent callers get the same promise, preventing
+// double-initModal races between the mount effect and button clicks.
+export function initWeb3Auth(): Promise<void> {
+  if (_initPromise) return _initPromise;
+  const w = getWeb3Auth();
+  _initPromise = w.initModal({ modalConfig: MODAL_CONFIG as any })
+    .catch((e) => { _initPromise = null; throw e; });
+  return _initPromise;
 }
 
 function buildConnectors() {

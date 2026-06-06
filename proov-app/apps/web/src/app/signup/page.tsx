@@ -6,8 +6,8 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { getPostLoginRoute, resolveIdentity } from '@/lib/auth';
 import { isMiniPay, connectMiniPay } from '@/lib/minipay';
-import { getWeb3Auth } from '@/lib/wagmi-config';
-import { ADAPTER_STATUS, WALLET_ADAPTERS } from '@web3auth/base';
+import { getWeb3Auth, initWeb3Auth } from '@/lib/wagmi-config';
+import { WALLET_ADAPTERS } from '@web3auth/base';
 
 import { IconMail, IconHash, IconDeviceMobile, IconMessage, IconMailOpened, type Icon as TablerIcon } from '@tabler/icons-react';
 
@@ -28,55 +28,67 @@ export default function SignUpPage() {
   const { connect, connectors, isPending, reset } = useConnect();
 
   const [connecting, setConnecting] = useState(false);
+  const [slowWarning, setSlowWarning] = useState(false);
+  const [authError, setAuthError] = useState('');
   const [altMethod, setAltMethod] = useState<AltMethod>('magic');
   const [input, setInput] = useState('');
   const [sent, setSent] = useState(false);
 
-  // Only clear the loading screen if wagmi finished AND we did NOT get a connection.
   useEffect(() => { if (!isPending && !isConnected) setConnecting(false); }, [isPending, isConnected]);
 
-  // On mount: clear stale state, then let initModal() auto-detect any pending
-  // OAuth callback from redirect mode. Web3Auth processes its own token format
-  // internally — we never need to detect ?code= ourselves.
+  // Mount: handle OAuth callback or pre-warm Web3Auth. Skip entirely for MiniPay.
   useEffect(() => {
-    reset(); // clear any stale wagmi mutation state
+    if (isMiniPay()) return;
 
-    // OAuth error (e.g. user cancelled Google picker) — clear URL and show the form.
-    if (window.location.hash.startsWith('#error=') || new URLSearchParams(window.location.search).has('error')) {
+    reset();
+
+    const params = new URLSearchParams(window.location.search);
+    if (window.location.hash.startsWith('#error=') || params.has('error')) {
+      const msg = params.get('error_description') || 'Sign-in was cancelled.';
+      setAuthError(msg.replace(/\+/g, ' '));
       window.history.replaceState(null, '', window.location.pathname);
       return;
     }
 
     localStorage.removeItem('wagmi.store');
 
-    const w = getWeb3Auth();
-    (w as any).initModal().then(() => {
+    initWeb3Auth().then(() => {
+      const w = getWeb3Auth();
       if (!w.connected) return;
       setConnecting(true);
-      const c = connectors[0];
+      const c = connectors.find(c => c.id === 'web3auth-aa') ?? connectors[0];
       if (c) connect({ connector: c });
       else setConnecting(false);
     }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Slow warning at 10s, hard reset at 20s
   useEffect(() => {
-    if (!connecting && !isPending) return;
+    if (!connecting && !isPending) { setSlowWarning(false); return; }
     if (isConnected) return;
-    const t = setTimeout(() => { reset(); setConnecting(false); }, 20_000);
-    return () => clearTimeout(t);
+    const warn = setTimeout(() => setSlowWarning(true), 10_000);
+    const bail = setTimeout(() => { reset(); setConnecting(false); setSlowWarning(false); }, 20_000);
+    return () => { clearTimeout(warn); clearTimeout(bail); };
   }, [connecting, isPending, isConnected, reset]);
 
+  // MiniPay: resolve identity first, then connect wagmi, then navigate
   useEffect(() => {
-    if (isMiniPay()) {
-      connectMiniPay().then(async addr => {
-        if (addr) { await resolveIdentity(addr, '', 'wallet', 'injected'); router.push(await getPostLoginRoute()); }
-      });
-    }
-  }, [router]);
+    if (!isMiniPay()) return;
+    setConnecting(true);
+    connectMiniPay().then(async addr => {
+      if (!addr) { setConnecting(false); return; }
+      await resolveIdentity(addr, '', 'wallet', 'injected');
+      const c = connectors.find(c => c.id === 'injected') ?? connectors[0];
+      if (c) connect({ connector: c });
+      router.push(await getPostLoginRoute());
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!isConnected || !connectedAddress) return;
+    if (isMiniPay()) return;
     let cancelled = false;
     const resolve = async () => {
       let route = '/onboarding';
@@ -106,9 +118,10 @@ export default function SignUpPage() {
 
   const triggerConnect = async (loginProvider = 'google') => {
     setConnecting(true);
+    setAuthError('');
     const web3auth = getWeb3Auth();
     try {
-      if (web3auth.status === ADAPTER_STATUS.NOT_READY) await (web3auth as any).initModal();
+      await initWeb3Auth();
       await (web3auth as any).connectTo(WALLET_ADAPTERS.AUTH, {
         loginProvider,
         redirectUrl: window.location.origin + window.location.pathname,
@@ -117,7 +130,7 @@ export default function SignUpPage() {
       setConnecting(false);
       return;
     }
-    const c = connectors[0];
+    const c = connectors.find(c => c.id === 'web3auth-aa') ?? connectors[0];
     if (c) connect({ connector: c });
     else setConnecting(false);
   };
@@ -168,6 +181,13 @@ export default function SignUpPage() {
           <div style={{ textAlign: 'center' }}>
             <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>Setting up your account</p>
             <p style={{ fontSize: 13, color: 'var(--text2)' }}>This takes a moment on first sign-in</p>
+            {slowWarning && (
+              <button
+                onClick={() => { reset(); setConnecting(false); setSlowWarning(false); }}
+                style={{ marginTop: 12, background: 'none', border: 'none', fontSize: 12, color: 'var(--accent-text)', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline' }}>
+                Taking too long? Try again
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -194,6 +214,14 @@ export default function SignUpPage() {
               Join free
             </button>
           </div>
+
+          {/* OAuth error banner */}
+          {authError && (
+            <div style={{ marginBottom: 14, padding: '10px 14px', borderRadius: 10, background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+              <span style={{ fontSize: 12, color: '#f43f5e', lineHeight: 1.4 }}>{authError}</span>
+              <button onClick={() => setAuthError('')} style={{ background: 'none', border: 'none', fontSize: 14, color: '#f43f5e', cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}>✕</button>
+            </div>
+          )}
 
           {/* Google */}
           <button
