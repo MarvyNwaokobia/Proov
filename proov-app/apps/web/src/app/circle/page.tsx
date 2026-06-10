@@ -8,6 +8,7 @@ import {
 } from "@tabler/icons-react";
 import {
   getAddressForUsername,
+  searchUsernames,
   sendCircleRequest,
   getCircleRequests,
   respondToCircleRequest,
@@ -85,6 +86,9 @@ export default function CirclePage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [resolvedAddress, setResolvedAddress] = useState('');
   const [resolvedUsername, setResolvedUsername] = useState('');
+
+  const [suggestions, setSuggestions] = useState<{ address: string; username: string }[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const [toast, setToast] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
@@ -200,10 +204,32 @@ export default function CirclePage() {
     setInviteError(''); setResolvedAddress(''); setResolvedUsername('');
   }, [inviteInput]);
 
+  // ── Username autocomplete ─────────────────────────────────────────────────
+  useEffect(() => {
+    const query = inviteInput.trim().replace(/^@/, '');
+    if (!query) {
+      setSuggestions([]);
+      return;
+    }
+    const handle = setTimeout(async () => {
+      const results = await searchUsernames(query).catch(() => []);
+      const excluded = new Set([
+        myAddress,
+        ...sent.map(r => r.to_address.toLowerCase()),
+        ...received.map(r => r.from_address.toLowerCase()),
+        ...accepted.flatMap(r => [r.to_address.toLowerCase(), r.from_address.toLowerCase()]),
+      ]);
+      setSuggestions(results.filter(s => !excluded.has(s.address.toLowerCase())));
+    }, 250);
+    return () => clearTimeout(handle);
+  }, [inviteInput, myAddress, sent, received, accepted]);
+
   // ── Invite ────────────────────────────────────────────────────────────────
-  const handleInviteSubmit = async () => {
-    const raw = inviteInput.trim();
+  const handleInviteSubmit = async (usernameOverride?: string) => {
+    const raw = (usernameOverride ?? inviteInput).trim();
     if (!raw) return;
+    setShowSuggestions(false);
+    setSuggestions([]);
     setInviteLoading(true);
     setInviteError('');
     const clean = raw.replace(/^@/, '').toLowerCase();
@@ -231,6 +257,13 @@ export default function CirclePage() {
     setResolvedUsername(clean);
     setInviteLoading(false);
     setShowConfirm(true);
+  };
+
+  const handleSelectSuggestion = (s: { address: string; username: string }) => {
+    setInviteInput(s.username);
+    setShowSuggestions(false);
+    setSuggestions([]);
+    handleInviteSubmit(s.username);
   };
 
   const handleConfirmInvite = async () => {
@@ -617,15 +650,40 @@ export default function CirclePage() {
             <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, padding: '1rem', marginTop: accepted.length > 0 ? 8 : 0 }}>
               <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10 }}>Invite Someone</p>
               <div style={{ display: 'flex', gap: 8 }}>
-                <input
-                  value={inviteInput}
-                  onChange={e => setInviteInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleInviteSubmit()}
-                  placeholder="@username"
-                  style={{ flex: 1 }}
-                />
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <input
+                    value={inviteInput}
+                    onChange={e => setInviteInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleInviteSubmit()}
+                    onFocus={() => setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                    placeholder="@username"
+                  />
+                  {showSuggestions && suggestions.length > 0 && (
+                    <div style={{
+                      position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+                      background: 'var(--card-bg)', border: '1px solid var(--card-border)',
+                      borderRadius: 12, overflow: 'hidden', zIndex: 20,
+                      boxShadow: '0 4px 16px rgba(0,0,0,.15)',
+                    }}>
+                      {suggestions.map(s => (
+                        <button
+                          key={s.address}
+                          onMouseDown={e => e.preventDefault()}
+                          onClick={() => handleSelectSuggestion(s)}
+                          style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg2)'; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                        >
+                          <Avatar name={s.username} size={26} />
+                          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>@{s.username}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <button
-                  onClick={handleInviteSubmit}
+                  onClick={() => handleInviteSubmit()}
                   disabled={inviteLoading || !inviteInput.trim()}
                   style={{ padding: '0 16px', borderRadius: 12, border: 'none', background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: (inviteLoading || !inviteInput.trim()) ? 0.4 : 1, display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}
                 >
