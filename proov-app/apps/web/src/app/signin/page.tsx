@@ -25,7 +25,7 @@ type AltMethod = 'magic' | 'code' | 'sms';
 export default function SignInPage() {
   const router = useRouter();
   const { isConnected, address: connectedAddress } = useAccount();
-  const { connect, connectors, isPending, reset } = useConnect();
+  const { connect, connectors, isPending, error: connectError, reset } = useConnect();
 
   const [connecting, setConnecting] = useState(() =>
     typeof window !== 'undefined' && !!sessionStorage.getItem('proov_oauth_pending')
@@ -71,27 +71,53 @@ export default function SignInPage() {
       return;
     }
 
+    const wasOAuthPending = !!sessionStorage.getItem('proov_oauth_pending');
     localStorage.removeItem('wagmi.store');
 
     initWeb3Auth().then(() => {
       sessionStorage.removeItem('proov_oauth_pending');
       const w = getWeb3Auth();
-      if (!w.connected) { setConnecting(false); setAuthChecking(false); return; }
+      if (!w.connected) {
+        setConnecting(false);
+        setAuthChecking(false);
+        if (wasOAuthPending) setAuthError("Sign-in didn't complete. Please try again.");
+        return;
+      }
       setConnecting(true);
       const c = connectors.find(c => c.id === 'web3auth-aa') ?? connectors[0];
       if (c) connect({ connector: c });
       else setConnecting(false);
       setAuthChecking(false);
-    }).catch(() => { sessionStorage.removeItem('proov_oauth_pending'); setConnecting(false); setAuthChecking(false); });
+    }).catch(() => {
+      sessionStorage.removeItem('proov_oauth_pending');
+      setConnecting(false);
+      setAuthChecking(false);
+      if (wasOAuthPending) setAuthError("Sign-in didn't complete. Please try again.");
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // A connect() attempt (post-redirect or otherwise) rejected — drop the
+  // overlay and tell the user instead of silently falling back to the form.
+  useEffect(() => {
+    if (connectError && !isConnected) {
+      setConnecting(false);
+      setAuthError("Sign-in didn't complete. Please try again.");
+    }
+  }, [connectError, isConnected]);
 
   // Slow warning at 10s, hard reset at 20s
   useEffect(() => {
     if (!connecting && !isPending) { setSlowWarning(false); return; }
     if (isConnected) return;
     const warn = setTimeout(() => setSlowWarning(true), 10_000);
-    const bail = setTimeout(() => { reset(); setConnecting(false); setSlowWarning(false); }, 20_000);
+    const bail = setTimeout(() => {
+      reset();
+      setConnecting(false);
+      setAuthChecking(false);
+      setSlowWarning(false);
+      setAuthError("Sign-in didn't complete. Please try again.");
+    }, 20_000);
     return () => { clearTimeout(warn); clearTimeout(bail); };
   }, [connecting, isPending, isConnected, reset]);
 
@@ -257,7 +283,13 @@ export default function SignInPage() {
             )}
             {slowWarning && phase === 'connecting' && (
               <button
-                onClick={() => { reset(); setConnecting(false); setAuthChecking(false); setSlowWarning(false); }}
+                onClick={() => {
+                  reset();
+                  setConnecting(false);
+                  setAuthChecking(false);
+                  setSlowWarning(false);
+                  setAuthError("Sign-in didn't complete. Please try again.");
+                }}
                 style={{ marginTop: 12, background: 'none', border: 'none', fontSize: 12, color: 'var(--accent-text)', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline' }}>
                 Taking too long? Try again
               </button>
