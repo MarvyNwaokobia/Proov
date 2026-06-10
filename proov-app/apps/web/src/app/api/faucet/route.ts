@@ -35,15 +35,16 @@ export async function POST(req: NextRequest) {
     const rpc = process.env.NEXT_PUBLIC_CELO_RPC_URL || 'https://forno.celo.org';
     const publicClient = createPublicClient({ chain: celo, transport: http(rpc) });
 
-    // Gate 1: tank must not be 'healthy' — uses the same gas-price-aware
-    // thresholds as the client, so both sides agree on what "low" means.
+    // Gate 1: tank must be 'critical' — the highest-gas action (selfCompleteHabit)
+    // would no longer go through. Uses the same gas-price-aware thresholds as the
+    // client, so both sides agree on what "critical" means.
     const [rawBalance, gasPriceWei] = await Promise.all([
       publicClient.getBalance({ address }),
       publicClient.getGasPrice(),
     ]);
     const balance = parseFloat(formatEther(rawBalance));
-    const { low } = getTankThresholds(gasPriceWei);
-    if (balance > low) {
+    const { critical } = getTankThresholds(gasPriceWei);
+    if (balance >= critical) {
       return NextResponse.json({ ok: true, skipped: 'sufficient' });
     }
 
