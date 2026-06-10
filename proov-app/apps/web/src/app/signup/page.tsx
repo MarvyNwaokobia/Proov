@@ -9,7 +9,7 @@ import { isMiniPay, connectMiniPay } from '@/lib/minipay';
 import { getWeb3Auth, initWeb3Auth } from '@/lib/wagmi-config';
 import { WALLET_ADAPTERS } from '@web3auth/base';
 
-import { IconMail, IconHash, IconDeviceMobile, IconMessage, IconMailOpened, type Icon as TablerIcon } from '@tabler/icons-react';
+import { IconMail, IconHash, IconDeviceMobile, IconMessage, IconMailOpened, IconCheck, type Icon as TablerIcon } from '@tabler/icons-react';
 
 const GoogleIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
@@ -30,13 +30,25 @@ export default function SignUpPage() {
   const [connecting, setConnecting] = useState(() =>
     typeof window !== 'undefined' && !!sessionStorage.getItem('proov_oauth_pending')
   );
+  // True while we're still checking for an in-progress OAuth redirect on mount.
+  // Keeps the connecting overlay up so the sign-up form never flashes underneath it.
+  const [authChecking, setAuthChecking] = useState(() =>
+    typeof window !== 'undefined' && !!sessionStorage.getItem('proov_oauth_pending')
+  );
+  const [phase, setPhase] = useState<'connecting' | 'profile' | 'welcome-back' | 'new-user'>('connecting');
   const [slowWarning, setSlowWarning] = useState(false);
   const [authError, setAuthError] = useState('');
   const [altMethod, setAltMethod] = useState<AltMethod>('magic');
   const [input, setInput] = useState('');
   const [sent, setSent] = useState(false);
 
-  useEffect(() => { if (!isPending && !isConnected) setConnecting(false); }, [isPending, isConnected]);
+  // Don't drop the connecting overlay until the OAuth-redirect check on mount
+  // has finished — otherwise isPending/isConnected are still false on first
+  // render and this would flash the sign-up form before initWeb3Auth() resolves.
+  useEffect(() => {
+    if (authChecking) return;
+    if (!isPending && !isConnected) setConnecting(false);
+  }, [isPending, isConnected, authChecking]);
 
   // Mount: handle OAuth callback or pre-warm Web3Auth. Skip entirely for MiniPay.
   useEffect(() => {
@@ -49,6 +61,9 @@ export default function SignUpPage() {
       const msg = params.get('error_description') || 'Sign-in was cancelled.';
       setAuthError(msg.replace(/\+/g, ' '));
       window.history.replaceState(null, '', window.location.pathname);
+      sessionStorage.removeItem('proov_oauth_pending');
+      setConnecting(false);
+      setAuthChecking(false);
       return;
     }
 
@@ -57,12 +72,13 @@ export default function SignUpPage() {
     initWeb3Auth().then(() => {
       sessionStorage.removeItem('proov_oauth_pending');
       const w = getWeb3Auth();
-      if (!w.connected) { setConnecting(false); return; }
+      if (!w.connected) { setConnecting(false); setAuthChecking(false); return; }
       setConnecting(true);
       const c = connectors.find(c => c.id === 'web3auth-aa') ?? connectors[0];
       if (c) connect({ connector: c });
       else setConnecting(false);
-    }).catch(() => { sessionStorage.removeItem('proov_oauth_pending'); setConnecting(false); });
+      setAuthChecking(false);
+    }).catch(() => { sessionStorage.removeItem('proov_oauth_pending'); setConnecting(false); setAuthChecking(false); });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -93,8 +109,11 @@ export default function SignUpPage() {
     if (!isConnected || !connectedAddress) return;
     if (isMiniPay()) return;
     let cancelled = false;
+    setConnecting(true);
+    setPhase('profile');
     const resolve = async () => {
       let route = '/onboarding';
+      let returningUser = false;
       try {
         route = await Promise.race([
           (async () => {
@@ -103,7 +122,11 @@ export default function SignUpPage() {
             if ((info as any)?.email) localStorage.setItem('proov_email', (info as any).email);
             const emailVal = localStorage.getItem('proov_email') || '';
             const identity = await resolveIdentity(connectedAddress, emailVal, 'google', 'web3auth');
-            if (identity.username) { localStorage.setItem('proov_tutorial_done', '1'); return '/dashboard'; }
+            if (identity.username) {
+              localStorage.setItem('proov_tutorial_done', '1');
+              returningUser = true;
+              return '/dashboard';
+            }
             return '/onboarding';
           })(),
           new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
@@ -111,9 +134,12 @@ export default function SignUpPage() {
       } catch {
         const username = localStorage.getItem('proov_username');
         const onboardingDone = localStorage.getItem('proov_onboarding_done');
-        route = (username && onboardingDone) ? '/dashboard' : '/onboarding';
+        returningUser = !!(username && onboardingDone);
+        route = returningUser ? '/dashboard' : '/onboarding';
       }
-      if (!cancelled) router.push(route);
+      if (cancelled) return;
+      setPhase(returningUser ? 'welcome-back' : 'new-user');
+      setTimeout(() => { if (!cancelled) router.push(route); }, 600);
     };
     resolve();
     return () => { cancelled = true; };
@@ -181,14 +207,27 @@ export default function SignUpPage() {
       {(connecting || isPending) && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24 }}>
           <img src="/logo.png" style={{ width: 60, height: 60, objectFit: 'contain' }} alt="Proov" />
-          <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.1, repeat: Infinity, ease: 'linear' }}
-            style={{ width: 36, height: 36, borderRadius: '50%', border: '3px solid var(--border2)', borderTopColor: 'var(--accent)' }} />
+          {phase === 'welcome-back' || phase === 'new-user' ? (
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <IconCheck size={20} stroke={2.5} color="var(--accent-text)" />
+            </div>
+          ) : (
+            <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.1, repeat: Infinity, ease: 'linear' }}
+              style={{ width: 36, height: 36, borderRadius: '50%', border: '3px solid var(--border2)', borderTopColor: 'var(--accent)' }} />
+          )}
           <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>Setting up your account</p>
-            <p style={{ fontSize: 13, color: 'var(--text2)' }}>This takes a moment on first sign-in</p>
-            {slowWarning && (
+            <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
+              {phase === 'connecting' && 'Setting up your account…'}
+              {phase === 'profile' && 'Loading your profile…'}
+              {phase === 'welcome-back' && 'Welcome back!'}
+              {phase === 'new-user' && "You're connected to your account!"}
+            </p>
+            {phase === 'connecting' && (
+              <p style={{ fontSize: 13, color: 'var(--text2)' }}>This takes a moment on first sign-in</p>
+            )}
+            {slowWarning && phase === 'connecting' && (
               <button
-                onClick={() => { reset(); setConnecting(false); setSlowWarning(false); }}
+                onClick={() => { reset(); setConnecting(false); setAuthChecking(false); setSlowWarning(false); }}
                 style={{ marginTop: 12, background: 'none', border: 'none', fontSize: 12, color: 'var(--accent-text)', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline' }}>
                 Taking too long? Try again
               </button>
