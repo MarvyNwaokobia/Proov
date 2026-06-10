@@ -19,6 +19,7 @@ import {
   type Habit,
 } from '@/lib/supabase';
 import { ProofSheet } from '@/components/shared/ProofSheet';
+import { DurationPicker } from '@/components/shared/DurationPicker';
 import { useProovTx } from '@/hooks/useProovTx';
 
 function fmtDur(mins: number) {
@@ -371,23 +372,13 @@ export default function HabitDetailPage() {
           />
 
           {habit.type === 'timed' && (
-            <>
+            <div style={{ marginBottom: 14 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)',
                 textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
-                Duration — {fmtDur(editDuration)}
+                Duration
               </div>
-              <input
-                type="range" min={1} max={240} step={1}
-                value={editDuration}
-                onChange={e => {
-                  const v = parseInt(e.target.value);
-                  const stops = [5,10,15,20,25,30,45,60,90,120,180,240];
-                  const snapped = stops.reduce((p,c) => Math.abs(c-v)<Math.abs(p-v)?c:p);
-                  setEditDuration(snapped);
-                }}
-                style={{ width: '100%', marginBottom: 14, accentColor: 'var(--accent)' }}
-              />
-            </>
+              <DurationPicker value={editDuration} onChange={setEditDuration} />
+            </div>
           )}
 
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)',
