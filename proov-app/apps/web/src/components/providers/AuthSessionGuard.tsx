@@ -1,11 +1,18 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAccount, useReconnect } from 'wagmi';
 import { runMigrations } from '@/lib/auth';
 import { syncProfileToSupabase } from '@/lib/supabase';
 import { isMiniPay } from '@/lib/minipay';
+import { getWalletRestoreState } from '@/lib/wallet-status';
+
+// Delay before each reconnect attempt (first one fires immediately). Bounded
+// by aa-provider's RESTORE_TIMEOUT_MS (7s) per attempt, so this gives a slow
+// but eventually-successful restoration (e.g. after a network blip) several
+// chances to land without the user ever seeing an error.
+const RECONNECT_DELAYS_MS = [0, 2000, 5000, 10000];
 
 const PROTECTED_PREFIXES = [
   '/dashboard',
@@ -31,9 +38,7 @@ export function AuthSessionGuard() {
   const pathname = usePathname();
   const router = useRouter();
   const { address, isConnected } = useAccount();
-  const { reconnect } = useReconnect();
-
-  const reconnectAttemptedRef = useRef(false);
+  const { reconnectAsync } = useReconnect();
 
   useEffect(() => {
     runMigrations().then(wiped => {
@@ -62,16 +67,33 @@ export function AuthSessionGuard() {
 
     if (hasRealWalletConnection && address) {
       localStorage.setItem('proov_address', address.toLowerCase());
-      reconnectAttemptedRef.current = false;
       syncProfileToSupabase(address).catch(() => {});
       return;
     }
 
-    if (!reconnectAttemptedRef.current) {
-      reconnectAttemptedRef.current = true;
-      try { reconnect(); } catch {}
-    }
-  }, [address, hasRealWalletConnection, pathname, reconnect, router]);
+    // Wallet isn't connected yet — retry with backoff. A failed attempt
+    // settles wallet-status to 'restored' (address/isConnected will update
+    // and re-run this effect via the deps below), 'expired' (session is
+    // genuinely gone — stop; useBackgroundTx will redirect at tx-time with
+    // the right message), or 'restore-failed'/'account-error'/'pending'
+    // (transient — keep retrying).
+    let cancelled = false;
+    (async () => {
+      for (let attempt = 0; attempt < RECONNECT_DELAYS_MS.length; attempt++) {
+        if (attempt > 0) {
+          await new Promise((r) => setTimeout(r, RECONNECT_DELAYS_MS[attempt]));
+          if (cancelled) return;
+        }
+        try { await reconnectAsync(); } catch {}
+        if (cancelled) return;
+
+        const { state } = getWalletRestoreState();
+        if (state === 'restored' || state === 'expired') return;
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [address, hasRealWalletConnection, pathname, reconnectAsync, router]);
 
   return null;
 }
