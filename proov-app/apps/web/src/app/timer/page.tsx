@@ -157,29 +157,36 @@ function GrindTimerPageContent() {
       });
     }
 
-    // Restore active timer if still running
+    // Restore active timer — whether still running or completed while the app was closed
     const saved = localStorage.getItem('proov_active_timer');
     if (saved) {
       try {
         const { habitId: hId, startedAt, duration: d, isCustom: ic, customLabel: cl, sessionId: sid, onChainSessionId: ociStr } = JSON.parse(saved);
         const elapsed = Math.floor((Date.now() - startedAt) / 1000);
         const total = d * 60;
+
+        setDuration(d);
+        setIsCustom(ic || false);
+        setCustomLabel(cl || '');
+        setSessionDuration(d);
+        if (sid) setSessionId(sid);
+        if (ociStr) setOnChainSessionId(BigInt(ociStr));
+        if (hId) {
+          const cached = JSON.parse(localStorage.getItem('proov_habits_cache') || '[]');
+          const found = (cached as Habit[]).find(h => h.id === hId);
+          if (found) { setSelectedHabit(found); setSessionHabitName(found.name); }
+        }
+
         if (elapsed < total) {
           setSecondsLeft(total - elapsed);
-          setDuration(d);
-          setIsCustom(ic || false);
-          setCustomLabel(cl || '');
-          setSessionDuration(d);
-          if (sid) setSessionId(sid);
-          if (ociStr) setOnChainSessionId(BigInt(ociStr));
           setView('running');
-          if (hId) {
-            const cached = JSON.parse(localStorage.getItem('proov_habits_cache') || '[]');
-            const found = (cached as Habit[]).find(h => h.id === hId);
-            if (found) { setSelectedHabit(found); setSessionHabitName(found.name); }
-          }
         } else {
+          // Timer finished while the app was closed/backgrounded — go straight to
+          // the completion screen with the right habit/duration so "Mark complete"
+          // still credits the habit and ends the on-chain session.
           localStorage.removeItem('proov_active_timer');
+          setSecondsLeft(0);
+          justCompletedRef.current = true;
           setView('done');
         }
       } catch {}
@@ -308,14 +315,13 @@ function GrindTimerPageContent() {
   const confirmDone = async () => {
     const address = userAddress || localStorage.getItem('proov_address') || '';
     const streak = parseInt(localStorage.getItem('proov_streak_count') || '0');
-    const sessionOCId = onChainSessionId ?? 0n;
 
     setTxPending('ending');
 
     if (!isCustom && selectedHabit) {
       // One tx: endSession proves the session happened — no separate completeHabit needed.
       // Firing two txs back-to-back causes nonce conflicts before the first is mined.
-      const endOk = await proovTx.endSession(sessionOCId, sessionDuration * 60);
+      const endOk = await proovTx.endSession((selectedHabit as any)?.on_chain_id || 0, sessionDuration * 60);
       if (!endOk) { setTxPending(null); return; }
 
       await saveHabitCompletion(selectedHabit.id, address, streak).catch(() => {});
@@ -323,7 +329,7 @@ function GrindTimerPageContent() {
     }
 
     if (isCustom) {
-      const endOk = await proovTx.endCustomSession(sessionOCId, true);
+      const endOk = await proovTx.endCustomSession(onChainSessionId ?? 0n, true);
       if (!endOk) { setTxPending(null); return; }
     }
 
@@ -353,11 +359,10 @@ function GrindTimerPageContent() {
     if (intervalRef.current) clearInterval(intervalRef.current);
     localStorage.removeItem('proov_active_timer');
 
-    const sessionOCId = onChainSessionId ?? 0n;
     const elapsed = totalSeconds - secondsLeft;
 
     // Fire abandon tx in background — user not blocked
-    if (!isCustom) proovTx.cancelSession(sessionOCId);
+    if (!isCustom) proovTx.abandonSession((selectedHabit as any)?.on_chain_id || 0, elapsed);
 
     // Mark session as not completed in Supabase
     if (sessionId) {

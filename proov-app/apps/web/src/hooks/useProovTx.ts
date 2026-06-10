@@ -124,30 +124,19 @@ export function useProovTx() {
       } as any).then(hash => ({ ok: !!hash, result: undefined as bigint | undefined }));
     },
 
-    endSession: (habitIdOrLegacyId: bigint | number | undefined, durationOrCompleted: number | boolean) => {
-      const habitId = typeof habitIdOrLegacyId === 'bigint' ? 0n : BigInt(habitIdOrLegacyId ?? 0);
-      const secs = typeof durationOrCompleted === 'number' ? BigInt(Math.round(durationOrCompleted)) : 0n;
-      return sendTx({
+    endSession: (onChainHabitId: number | undefined, durationSeconds: number) =>
+      sendTx({
         address: CONTRACTS.SESSION_MANAGER, abi: SESSION_MANAGER_ABI,
         functionName: 'endSession',
-        args: [habitId, secs],
+        args: [safeId(onChainHabitId) ?? 0n, BigInt(Math.round(durationSeconds))],
         _successMessage: null, // timer page handles completion UI
-      } as any);
-    },
+      } as any),
 
     abandonSession: (onChainHabitId: number | undefined, durationSeconds: number) =>
       sendTx({
         address: CONTRACTS.SESSION_MANAGER, abi: SESSION_MANAGER_ABI,
         functionName: 'abandonSession',
         args: [safeId(onChainHabitId) ?? 0n, BigInt(Math.round(durationSeconds))],
-        _successMessage: null,
-      } as any),
-
-    cancelSession: (_legacySessionId: bigint) =>
-      sendTx({
-        address: CONTRACTS.SESSION_MANAGER, abi: SESSION_MANAGER_ABI,
-        functionName: 'abandonSession',
-        args: [0n, 0n],
         _successMessage: null, // timer shows "Session cancelled"
       } as any),
 
