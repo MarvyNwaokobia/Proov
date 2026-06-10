@@ -7,6 +7,7 @@ import { formatEther } from 'viem';
 import { useTxToast } from '@/components/shared/TxToast';
 import { isMiniPay } from '@/lib/minipay';
 import { getGasPriceWei, getActionCostCelo, getTankStatus, getTankStatusSync } from '@/lib/fuel';
+import { getWalletRestoreState, setWalletRestoreState } from '@/lib/wallet-status';
 
 interface QueuedTx {
   id: string;
@@ -84,6 +85,28 @@ function isSessionExpired(err: unknown): boolean {
   return /session expired|please sign in again/i.test(err.message);
 }
 
+// Turns a "wallet isn't ready" failure into the message that matches what
+// actually went wrong, using the outcome of the most recent session-restore
+// attempt (set by the web3auth-aa connector) rather than always blaming the
+// wallet. Checked first: if the device is offline, that's the real cause
+// regardless of how restoration left things.
+function classifyWalletFailure(): { message: string; redirectToSignIn?: boolean } {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return { message: 'Connection issue detected. Please try again.' };
+  }
+  const { state } = getWalletRestoreState();
+  switch (state) {
+    case 'expired':
+      return { message: 'Your session has expired. Please sign in again.', redirectToSignIn: true };
+    case 'account-error':
+      return { message: "We're having trouble loading your account." };
+    case 'restore-failed':
+    case 'pending':
+    default:
+      return { message: "We couldn't reconnect your wallet. Tap Retry." };
+  }
+}
+
 export function useBackgroundTx() {
   const { writeContract } = useWriteContract();
   const { showError, showSuccess, showWarning } = useTxToast();
@@ -120,15 +143,37 @@ export function useBackgroundTx() {
   const waitForConnected = useCallback((): Promise<void> => {
     return new Promise((resolve, reject) => {
       if (wagmiConfig.state.status === 'connected') { resolve(); return; }
-      const timeout = setTimeout(() => { unsub(); reject(new Error('timeout')); }, 5000);
+      // Slightly longer than aa-provider's RESTORE_TIMEOUT_MS (7s) so a
+      // reconnect attempt that's genuinely in flight has time to settle
+      // before we give up.
+      const timeout = setTimeout(() => { unsub(); reject(new Error('timeout')); }, 9000);
       const unsub = wagmiConfig.subscribe(
         (state) => state.status,
         (status) => {
           if (status === 'connected') { clearTimeout(timeout); unsub(); resolve(); }
+          // Only treat 'disconnected' as final once a restore attempt has
+          // actually concluded — wagmi's initial state before reconnect()
+          // runs is also 'disconnected', and we don't want to bail before
+          // restoration even starts.
+          else if (status === 'disconnected' && getWalletRestoreState().state !== 'pending') {
+            clearTimeout(timeout); unsub(); reject(new Error('disconnected'));
+          }
         }
       );
     });
   }, [wagmiConfig]);
+
+  // Shows the message that matches the actual restoration outcome (instead
+  // of a generic "wallet not connected"), redirecting to /signin if the
+  // session itself has expired.
+  const failWalletNotReady = useCallback((): null => {
+    const { message, redirectToSignIn } = classifyWalletFailure();
+    showError(message);
+    if (redirectToSignIn) {
+      setTimeout(() => { window.location.href = '/signin'; }, 1500);
+    }
+    return null;
+  }, [showError]);
 
   const sendTx = useCallback(
     async (
@@ -142,8 +187,7 @@ export function useBackgroundTx() {
         try {
           await waitForConnected();
         } catch {
-          showError('Wallet not connected — please refresh the page.');
-          return null;
+          return failWalletNotReady();
         }
       }
 
@@ -153,8 +197,7 @@ export function useBackgroundTx() {
       const liveAddress = liveConnections.values().next().value?.accounts?.[0] ?? connectedAddress;
 
       if (!liveAddress) {
-        showError('Wallet not connected. Please try again.');
-        return null;
+        return failWalletNotReady();
       }
 
       const isOffline = typeof window !== 'undefined' ? !navigator.onLine : false;
@@ -213,12 +256,19 @@ export function useBackgroundTx() {
               onError: (err) => {
                 console.error('[tx] failed:', err);
                 if (isSessionExpired(err)) {
-                  showError('Session expired — signing you out.');
-                  setTimeout(() => { window.location.href = '/signin'; }, 1500);
+                  setWalletRestoreState('expired', 'session expired during transaction');
+                  failWalletNotReady();
                   resolve(null);
                   return;
                 }
-                if (isConnectorNotConnected(err)) { showError('Wallet disconnected — please refresh the page.'); resolve(null); return; }
+                if (isConnectorNotConnected(err)) {
+                  if (getWalletRestoreState().state === 'restored') {
+                    setWalletRestoreState('restore-failed', 'connector reported not connected during transaction');
+                  }
+                  failWalletNotReady();
+                  resolve(null);
+                  return;
+                }
                 // Nonce error → reset chain so next tx re-fetches from chain
                 if (/nonce/i.test((err as Error).message ?? '')) {
                   nonceChainRef.current = Promise.resolve(-1);
@@ -241,7 +291,7 @@ export function useBackgroundTx() {
         }
       });
     },
-    [connectedAddress, wagmiConfig, waitForConnected, writeContract, showSuccess, showError, showWarning, getNextNonce, publicClient]
+    [connectedAddress, wagmiConfig, waitForConnected, failWalletNotReady, writeContract, showSuccess, showError, showWarning, getNextNonce, publicClient]
   );
 
   const sendTxWithResult = useCallback(
