@@ -6,8 +6,8 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { getPostLoginRoute, resolveIdentity } from '@/lib/auth';
 import { isMiniPay, connectMiniPay } from '@/lib/minipay';
-import { getWeb3Auth, initWeb3Auth } from '@/lib/wagmi-config';
-import { WALLET_ADAPTERS } from '@web3auth/base';
+import { getWeb3Auth, initWeb3Auth, getLastAdapterError } from '@/lib/wagmi-config';
+import { WALLET_ADAPTERS, ADAPTER_STATUS } from '@web3auth/base';
 
 import { IconMail, IconHash, IconDeviceMobile, IconMessage, IconMailOpened, IconCheck, type Icon as TablerIcon } from '@tabler/icons-react';
 
@@ -21,6 +21,13 @@ const GoogleIcon = () => (
 );
 
 type AltMethod = 'magic' | 'code' | 'sms';
+
+// Appends the underlying error message (if any) so users/devs can see *why*
+// sign-in didn't complete instead of just that it didn't.
+function describeError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : '';
+  return msg ? ` (${msg})` : '';
+}
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -76,7 +83,11 @@ export default function SignUpPage() {
       if (!w.connected) {
         setConnecting(false);
         setAuthChecking(false);
-        if (wasOAuthPending) setAuthError("Sign-in didn't complete. Please try again.");
+        if (wasOAuthPending) {
+          const err = getLastAdapterError();
+          console.error('[signup] OAuth redirect did not complete', err);
+          setAuthError(`Sign-in didn't complete${describeError(err)}. Please try again.`);
+        }
         return;
       }
       setConnecting(true);
@@ -84,11 +95,14 @@ export default function SignUpPage() {
       if (c) connect({ connector: c });
       else setConnecting(false);
       setAuthChecking(false);
-    }).catch(() => {
+    }).catch((err) => {
       sessionStorage.removeItem('proov_oauth_pending');
       setConnecting(false);
       setAuthChecking(false);
-      if (wasOAuthPending) setAuthError("Sign-in didn't complete. Please try again.");
+      if (wasOAuthPending) {
+        console.error('[signup] initWeb3Auth failed', err);
+        setAuthError(`Sign-in didn't complete${describeError(err)}. Please try again.`);
+      }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -98,7 +112,8 @@ export default function SignUpPage() {
   useEffect(() => {
     if (connectError && !isConnected) {
       setConnecting(false);
-      setAuthError("Sign-in didn't complete. Please try again.");
+      console.error('[signup] connect() failed', connectError);
+      setAuthError(`Sign-in didn't complete${describeError(connectError)}. Please try again.`);
     }
   }, [connectError, isConnected]);
 
@@ -178,13 +193,25 @@ export default function SignUpPage() {
     const web3auth = getWeb3Auth();
     try {
       await initWeb3Auth();
+      // connectTo() fires adapter.connect() without awaiting or catching it.
+      // If the adapter is already CONNECTING (e.g. a previous attempt is
+      // still in flight after "Taking too long? Try again"), that call
+      // throws "Already connecting" as an unhandled rejection and the
+      // connectTo() promise never settles — the page would hang forever
+      // with no feedback. Bail out early with a clear message instead.
+      const authAdapter = (web3auth as any).walletAdapters?.[WALLET_ADAPTERS.AUTH];
+      if (authAdapter?.status === ADAPTER_STATUS.CONNECTING) {
+        throw new Error('A previous sign-in attempt is still in progress — please wait or refresh the page');
+      }
       await (web3auth as any).connectTo(WALLET_ADAPTERS.AUTH, {
         loginProvider,
         redirectUrl: window.location.origin + window.location.pathname,
       });
-    } catch {
+    } catch (err) {
       sessionStorage.removeItem('proov_oauth_pending');
       setConnecting(false);
+      console.error('[signup] connectTo failed', err);
+      setAuthError(`Sign-in didn't complete${describeError(err)}. Please try again.`);
       return;
     }
     const c = connectors.find(c => c.id === 'web3auth-aa') ?? connectors[0];

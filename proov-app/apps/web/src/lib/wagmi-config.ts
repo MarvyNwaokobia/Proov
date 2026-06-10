@@ -1,7 +1,7 @@
 "use client";
 
 import { Web3Auth } from "@web3auth/modal";
-import { CHAIN_NAMESPACES, WEB3AUTH_NETWORK, WALLET_ADAPTERS } from "@web3auth/base";
+import { CHAIN_NAMESPACES, WEB3AUTH_NETWORK, WALLET_ADAPTERS, ADAPTER_EVENTS } from "@web3auth/base";
 import { EthereumPrivateKeyProvider } from "@web3auth/ethereum-provider";
 import { createConfig, http, mock } from "wagmi";
 import { celo, celoSepolia } from "viem/chains";
@@ -48,6 +48,16 @@ export const MODAL_CONFIG = {
 let _web3auth: Web3Auth | null = null;
 let _initPromise: Promise<void> | null = null;
 
+// The auth-adapter swallows errors from the post-redirect rehydration
+// connect() — it emits ADAPTER_EVENTS.ERRORED instead of rejecting init(),
+// so `web3AuthInstance.connected` just silently stays false. Capture that
+// error here so callers (e.g. signin/signup) can show *why* it failed.
+let _lastAdapterError: Error | null = null;
+
+export function getLastAdapterError(): Error | null {
+  return _lastAdapterError;
+}
+
 export function getWeb3Auth(): Web3Auth {
   if (_web3auth) return _web3auth;
   if (typeof window === "undefined") throw new Error("getWeb3Auth: browser only");
@@ -62,6 +72,10 @@ export function getWeb3Auth(): Web3Auth {
     web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_MAINNET,
     privateKeyProvider,
     uiConfig: { uxMode: 'redirect' },
+  });
+
+  _web3auth.on(ADAPTER_EVENTS.ERRORED, (err: Error) => {
+    _lastAdapterError = err;
   });
 
   return _web3auth;
