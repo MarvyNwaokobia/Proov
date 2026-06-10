@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import { getPostLoginRoute, resolveIdentity } from '@/lib/auth';
 import { isMiniPay, connectMiniPay } from '@/lib/minipay';
 import { getWeb3Auth, initWeb3Auth, getLastAdapterError } from '@/lib/wagmi-config';
-import { WALLET_ADAPTERS } from '@web3auth/base';
+import { WALLET_ADAPTERS, ADAPTER_STATUS } from '@web3auth/base';
 
 import { IconMail, IconHash, IconDeviceMobile, IconMessage, IconMailOpened, IconCheck, type Icon as TablerIcon } from '@tabler/icons-react';
 
@@ -197,6 +197,16 @@ export default function SignInPage() {
     const web3auth = getWeb3Auth();
     try {
       await initWeb3Auth();
+      // connectTo() fires adapter.connect() without awaiting or catching it.
+      // If the adapter is already CONNECTING (e.g. a previous attempt is
+      // still in flight after "Taking too long? Try again"), that call
+      // throws "Already connecting" as an unhandled rejection and the
+      // connectTo() promise never settles — the page would hang forever
+      // with no feedback. Bail out early with a clear message instead.
+      const authAdapter = (web3auth as any).walletAdapters?.[WALLET_ADAPTERS.AUTH];
+      if (authAdapter?.status === ADAPTER_STATUS.CONNECTING) {
+        throw new Error('A previous sign-in attempt is still in progress — please wait or refresh the page');
+      }
       await (web3auth as any).connectTo(WALLET_ADAPTERS.AUTH, {
         loginProvider,
         redirectUrl: window.location.origin + window.location.pathname,

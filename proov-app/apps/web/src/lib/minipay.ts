@@ -9,8 +9,9 @@ export function isMiniPay(): boolean {
 
 export async function connectMiniPay(): Promise<string | null> {
   if (!isMiniPay()) return null;
+  const provider = (window as any).ethereum;
+  if (!provider?.request) return null;
   try {
-    const provider = (window as any).ethereum;
     const accounts: string[] = await provider.request({ method: 'eth_requestAccounts' });
     return accounts[0] || null;
   } catch (e) {
