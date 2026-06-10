@@ -3,8 +3,10 @@
 import { useWriteContract, usePublicClient, useAccount, useConfig } from 'wagmi';
 import { useCallback, useEffect, useRef } from 'react';
 import { celo } from 'viem/chains';
+import { formatEther } from 'viem';
 import { useTxToast } from '@/components/shared/TxToast';
 import { isMiniPay } from '@/lib/minipay';
+import { getGasPriceWei, getActionCostCelo, getTankStatus, getTankStatusSync } from '@/lib/fuel';
 
 interface QueuedTx {
   id: string;
@@ -58,11 +60,11 @@ function parseError(err: unknown): string {
     // Some RPC nodes return "insufficient funds" when gas estimation fails due to
     // a contract revert, even with a full tank. Guard against false positives by
     // checking the cached balance before blaming fuel.
-    const cachedBal = Math.round(parseFloat(localStorage.getItem('proov_fuel_balance') || '0') * 100) / 100;
-    if (cachedBal <= 0.01) {
+    const cachedBal = parseFloat(localStorage.getItem('proov_fuel_balance') || '0');
+    if (getTankStatusSync(cachedBal) !== 'healthy') {
       return isMiniPay()
         ? '⚡ Low cUSD balance — top up via MiniPay to continue'
-        : "⚡ Tank's empty — head to Settings to claim more fuel";
+        : '⚡ Tank too low. Please refill to continue.';
     }
   }
   if (/network changed|chain.*mismatch/i.test(msg)) return 'Wrong network — please refresh.';
@@ -155,21 +157,38 @@ export function useBackgroundTx() {
         return null;
       }
 
-      // Non-blocking low-balance warning — once per session, not shown in MiniPay
-      // (MiniPay pays network fees in cUSD, CELO balance is irrelevant)
-      if (typeof window !== 'undefined' && !isMiniPay() && !sessionStorage.getItem('proov_low_gas_warned')) {
-        const cachedBal = Math.round(parseFloat(localStorage.getItem('proov_fuel_balance') || '0') * 100) / 100;
-        if (cachedBal > 0 && cachedBal <= 0.01) {
-          sessionStorage.setItem('proov_low_gas_warned', '1');
-          showWarning('⛽ Tank is low — claim fuel in Settings.');
-        }
-      }
-
       const isOffline = typeof window !== 'undefined' ? !navigator.onLine : false;
       if (isOffline && !config._fromQueue) {
         addToOfflineQueue(config);
         showSuccess('Offline: Action saved locally and will sync when online');
         return `0xoffline-${Date.now()}-${Math.random().toString(36).slice(2, 9)}` as `0x${string}`;
+      }
+
+      // Pre-flight gas-tank check — block this specific action if the wallet can't
+      // cover its gas, and warn (without blocking) when the tank is running low.
+      // Skipped for MiniPay, which pays gas in cUSD rather than CELO.
+      if (typeof window !== 'undefined' && !isMiniPay() && publicClient) {
+        try {
+          const [balanceWei, gasPriceWei] = await Promise.all([
+            publicClient.getBalance({ address: liveAddress as `0x${string}` }),
+            getGasPriceWei(),
+          ]);
+          const balance = parseFloat(formatEther(balanceWei));
+          localStorage.setItem('proov_fuel_balance', String(balance));
+
+          if (balance < getActionCostCelo(config.functionName as string, gasPriceWei)) {
+            showError('⛽ Tank too low. Please refill to continue.');
+            return null;
+          }
+
+          if (getTankStatus(balance, gasPriceWei) === 'low' && !sessionStorage.getItem('proov_low_gas_warned')) {
+            sessionStorage.setItem('proov_low_gas_warned', '1');
+            showWarning('⛽ Tank running low. Refill soon.');
+          }
+        } catch {
+          // RPC issue — don't block the tx; let the wallet surface a real error if
+          // funds are genuinely insufficient.
+        }
       }
 
       // Allocate a unique nonce before submitting — prevents conflicts when
@@ -222,7 +241,7 @@ export function useBackgroundTx() {
         }
       });
     },
-    [connectedAddress, wagmiConfig, waitForConnected, writeContract, showSuccess, showError, showWarning, getNextNonce]
+    [connectedAddress, wagmiConfig, waitForConnected, writeContract, showSuccess, showError, showWarning, getNextNonce, publicClient]
   );
 
   const sendTxWithResult = useCallback(

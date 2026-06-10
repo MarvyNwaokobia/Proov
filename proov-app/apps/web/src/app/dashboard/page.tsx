@@ -12,6 +12,7 @@ import {
 } from '@/lib/supabase';
 import { useProovTx } from '@/hooks/useProovTx';
 import { isMiniPay } from '@/lib/minipay';
+import type { TankStatus } from '@/lib/fuel';
 import { Walkthrough } from '@/components/shared/Walkthrough';
 import { ProofSheet } from '@/components/shared/ProofSheet';
 import {
@@ -81,6 +82,7 @@ export default function DashboardPage() {
   const [streakFlipped, setStreakFlipped] = useState(false);
   const [habitStreaks, setHabitStreaks] = useState<Record<string, number>>({});
   const [fuelBalance, setFuelBalance] = useState(0);
+  const [tankStatus, setTankStatus] = useState<TankStatus>('healthy');
   const [verifiedHabits, setVerifiedHabits] = useState<string[]>([]);
   const [proofSheet, setProofSheet] = useState<{ habitId: string; habitName: string; habitCategory?: string } | null>(null);
   const [avatarUrl, setAvatarUrl] = useState('');
@@ -247,8 +249,12 @@ export default function DashboardPage() {
     const bal = parseFloat(localStorage.getItem('proov_fuel_balance') || '0');
     if (bal > 0) setFuelBalance(bal);
     // Try to load it fresh
-    import('@/lib/fuel').then(({ getUserCeloBalance }) => {
-      getUserCeloBalance(addr).then(b => { setFuelBalance(b); localStorage.setItem('proov_fuel_balance', String(b)); }).catch(() => {});
+    import('@/lib/fuel').then(({ getUserCeloBalance, getGasPriceWei, getTankStatus }) => {
+      Promise.all([getUserCeloBalance(addr), getGasPriceWei()]).then(([b, gasPriceWei]) => {
+        setFuelBalance(b);
+        localStorage.setItem('proov_fuel_balance', String(b));
+        setTankStatus(getTankStatus(b, gasPriceWei));
+      }).catch(() => {});
     }).catch(() => {});
   }, []);
 
@@ -374,8 +380,8 @@ export default function DashboardPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             {fuelBalance > 0 && !isMiniPay() && (() => {
               const fillPct = Math.min(100, Math.max(3, (fuelBalance / 0.2) * 100));
-              const isLow = fuelBalance < 0.02;
-              const isAmber = !isLow && fuelBalance < 0.08;
+              const isLow = tankStatus === 'critical';
+              const isAmber = tankStatus === 'low';
               const borderCol = isLow ? 'rgba(244,63,94,.4)' : isAmber ? 'rgba(217,119,6,.4)' : 'rgba(5,150,105,.3)';
               const nozzleCol = isLow ? 'rgba(244,63,94,.5)' : isAmber ? 'rgba(217,119,6,.5)' : 'rgba(5,150,105,.45)';
               const fillGrad = isLow

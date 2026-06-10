@@ -9,6 +9,7 @@ import { validateUsername, isUsernameTaken, registerUsername } from '@/lib/usern
 import { setIdentityUsername } from '@/lib/auth';
 import { updateUsername as updateSupabaseUsername, isUsernameAvailable, getAiVerificationUsage, updateAvatarUrl, getAvatarUrl } from '@/lib/supabase';
 import { useProovTx } from '@/hooks/useProovTx';
+import type { TankStatus } from '@/lib/fuel';
 import {
   IconTrophy,
   IconChevronRight,
@@ -50,7 +51,7 @@ export default function SettingsPage() {
   const [miniPayUser, setMiniPayUser] = useState(false);
   const [celoBalance, setCeloBalance] = useState(0);
   const [canClaimFuel, setCanClaimFuel] = useState(false);
-  const [tankIsLow, setTankIsLow] = useState(false);
+  const [tankStatus, setTankStatus] = useState<TankStatus>('healthy');
   const [claimedToday, setClaimedToday] = useState(false);
   const [secondsUntilClaim, setSecondsUntilClaim] = useState(0);
   const [claimingFuel, setClaimingFuel] = useState(false);
@@ -130,7 +131,7 @@ export default function SettingsPage() {
         getUserCeloBalance(addr),
       ]);
       setCanClaimFuel(claimStatus.canClaim);
-      setTankIsLow(claimStatus.tankIsLow);
+      setTankStatus(claimStatus.tankStatus);
       setClaimedToday(claimStatus.claimedToday);
       setSecondsUntilClaim(claimStatus.secondsLeft);
       setCeloBalance(balance);
@@ -259,7 +260,7 @@ export default function SettingsPage() {
       const newBalance = await getUserCeloBalance(addr);
       setCeloBalance(newBalance);
       localStorage.setItem('proov_fuel_balance', String(newBalance));
-      setTankIsLow(false);
+      setTankStatus('healthy');
     } else {
       showToast(result.error || 'Faucet unavailable — try again later');
     }
@@ -534,14 +535,17 @@ export default function SettingsPage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <span style={{ fontSize: 13, color: 'var(--text2)' }}>Tank</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: canClaimFuel ? 'var(--accent-text)' : 'var(--text3)' }}>
-                  {canClaimFuel
-                    ? 'Low — claim now'
+                <span style={{
+                  fontSize: 13, fontWeight: 700,
+                  color: tankStatus === 'critical' ? '#f43f5e' : tankStatus === 'low' ? '#d97706' : 'var(--accent-text)',
+                }}>
+                  {tankStatus === 'healthy'
+                    ? 'Healthy'
                     : claimedToday
                       ? fmtCountdown(secondsUntilClaim)
-                      : tankIsLow
-                        ? 'Low'
-                        : 'OK'}
+                      : tankStatus === 'critical'
+                        ? 'Critical — claim now'
+                        : 'Running low'}
                 </span>
               </div>
               <button
@@ -560,12 +564,22 @@ export default function SettingsPage() {
                 <IconBolt size={14} stroke={2} />
                 {claimingFuel
                   ? 'Claiming…'
-                  : !tankIsLow
-                    ? 'Tank is fine'
+                  : tankStatus === 'healthy'
+                    ? 'Tank is healthy'
                     : claimedToday
                       ? 'Claimed today'
                       : 'Claim Fuel'}
               </button>
+              {tankStatus !== 'healthy' && (
+                <p style={{
+                  fontSize: 11, marginTop: 8, marginBottom: 0, lineHeight: 1.4,
+                  color: tankStatus === 'critical' ? '#f43f5e' : '#d97706',
+                }}>
+                  {tankStatus === 'critical'
+                    ? 'Tank too low. Please refill to continue.'
+                    : 'Tank running low. Refill soon.'}
+                </p>
+              )}
             </div>
           </>
         )}
