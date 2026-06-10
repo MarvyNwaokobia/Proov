@@ -96,6 +96,23 @@ export async function getAddressForUsername(username: string): Promise<string | 
   return data?.address || null;
 }
 
+/**
+ * Find usernames starting with the given prefix (case-insensitive).
+ * Used for the circle invite autocomplete dropdown.
+ */
+export async function searchUsernames(prefix: string, limit = 5): Promise<{ address: string; username: string }[]> {
+  if (!supabase) return [];
+  const clean = prefix.toLowerCase().replace(/^@/, '').trim();
+  if (!clean) return [];
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('address, username')
+    .ilike('username', `${clean}%`)
+    .limit(limit);
+  if (error || !data) return [];
+  return data as { address: string; username: string }[];
+}
+
 // ── HABIT FUNCTIONS ──────────────────────────────────────────────────────────
 
 export interface Habit {
