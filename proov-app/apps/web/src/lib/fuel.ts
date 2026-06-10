@@ -180,12 +180,14 @@ function secsUntilMidnightUtc(): number {
 
 /**
  * Check if the user can claim fuel.
- * Rules: tank must not be 'healthy' AND they must not have claimed today (UTC).
+ * Rules: tank must be 'critical' (the highest-gas action would no longer go
+ * through) AND they must not have claimed today (UTC). 'low' is informational
+ * only — it doesn't unlock a claim.
  */
 export async function checkCanClaim(userAddress: string): Promise<{
   canClaim: boolean;
   tankStatus: TankStatus;
-  tankIsLow: boolean;
+  tankIsCritical: boolean;
   claimedToday: boolean;
   secondsLeft: number;
   nextClaimTime: Date | null;
@@ -205,20 +207,20 @@ export async function checkCanClaim(userAddress: string): Promise<{
 
     const balance = parseFloat(formatEther(rawBalance));
     const tankStatus = getTankStatus(balance, gasPriceWei);
-    const tankIsLow = tankStatus !== 'healthy';
+    const tankIsCritical = tankStatus === 'critical';
     const claimedToday = lastClaim === todayUtc;
-    const canClaim = tankIsLow && !claimedToday;
+    const canClaim = tankIsCritical && !claimedToday;
     const secondsLeft = claimedToday ? secsUntilMidnightUtc() : 0;
 
     return {
       canClaim,
       tankStatus,
-      tankIsLow,
+      tankIsCritical,
       claimedToday,
       secondsLeft,
       nextClaimTime: claimedToday ? new Date(Date.now() + secondsLeft * 1000) : null,
     };
   } catch {
-    return { canClaim: false, tankStatus: 'healthy', tankIsLow: false, claimedToday: false, secondsLeft: 0, nextClaimTime: null };
+    return { canClaim: false, tankStatus: 'healthy', tankIsCritical: false, claimedToday: false, secondsLeft: 0, nextClaimTime: null };
   }
 }

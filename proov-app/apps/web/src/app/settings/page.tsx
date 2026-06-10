@@ -537,15 +537,13 @@ export default function SettingsPage() {
                 <span style={{ fontSize: 13, color: 'var(--text2)' }}>Tank</span>
                 <span style={{
                   fontSize: 13, fontWeight: 700,
-                  color: tankStatus === 'critical' ? '#f43f5e' : tankStatus === 'low' ? '#d97706' : 'var(--accent-text)',
+                  color: tankStatus === 'critical' ? '#f43f5e' : 'var(--accent-text)',
                 }}>
-                  {tankStatus === 'healthy'
+                  {tankStatus !== 'critical'
                     ? 'Healthy'
                     : claimedToday
                       ? fmtCountdown(secondsUntilClaim)
-                      : tankStatus === 'critical'
-                        ? 'Critical — claim now'
-                        : 'Running low'}
+                      : 'Critical — claim now'}
                 </span>
               </div>
               <button
@@ -564,20 +562,18 @@ export default function SettingsPage() {
                 <IconBolt size={14} stroke={2} />
                 {claimingFuel
                   ? 'Claiming…'
-                  : tankStatus === 'healthy'
+                  : tankStatus !== 'critical'
                     ? 'Tank is healthy'
                     : claimedToday
                       ? 'Claimed today'
                       : 'Claim Fuel'}
               </button>
-              {tankStatus !== 'healthy' && (
+              {tankStatus === 'critical' && (
                 <p style={{
                   fontSize: 11, marginTop: 8, marginBottom: 0, lineHeight: 1.4,
-                  color: tankStatus === 'critical' ? '#f43f5e' : '#d97706',
+                  color: '#f43f5e',
                 }}>
-                  {tankStatus === 'critical'
-                    ? 'Tank too low. Please refill to continue.'
-                    : 'Tank running low. Refill soon.'}
+                  Tank too low. Please refill to continue.
                 </p>
               )}
             </div>

@@ -6,7 +6,7 @@ import { celo } from 'viem/chains';
 import { formatEther } from 'viem';
 import { useTxToast } from '@/components/shared/TxToast';
 import { isMiniPay } from '@/lib/minipay';
-import { getGasPriceWei, getActionCostCelo, getTankStatus, getTankStatusSync } from '@/lib/fuel';
+import { getGasPriceWei, getActionCostCelo, getTankStatusSync } from '@/lib/fuel';
 import { getWalletRestoreState, setWalletRestoreState } from '@/lib/wallet-status';
 
 interface QueuedTx {
@@ -62,7 +62,7 @@ function parseError(err: unknown): string {
     // a contract revert, even with a full tank. Guard against false positives by
     // checking the cached balance before blaming fuel.
     const cachedBal = parseFloat(localStorage.getItem('proov_fuel_balance') || '0');
-    if (getTankStatusSync(cachedBal) !== 'healthy') {
+    if (getTankStatusSync(cachedBal) === 'critical') {
       return isMiniPay()
         ? '⚡ Low cUSD balance — top up via MiniPay to continue'
         : '⚡ Tank too low. Please refill to continue.';
@@ -109,7 +109,7 @@ function classifyWalletFailure(): { message: string; redirectToSignIn?: boolean 
 
 export function useBackgroundTx() {
   const { writeContract } = useWriteContract();
-  const { showError, showSuccess, showWarning } = useTxToast();
+  const { showError, showSuccess } = useTxToast();
   const publicClient = usePublicClient();
   const { address: connectedAddress } = useAccount();
   const wagmiConfig = useConfig();
@@ -208,8 +208,7 @@ export function useBackgroundTx() {
       }
 
       // Pre-flight gas-tank check — block this specific action if the wallet can't
-      // cover its gas, and warn (without blocking) when the tank is running low.
-      // Skipped for MiniPay, which pays gas in cUSD rather than CELO.
+      // cover its gas. Skipped for MiniPay, which pays gas in cUSD rather than CELO.
       if (typeof window !== 'undefined' && !isMiniPay() && publicClient) {
         try {
           const [balanceWei, gasPriceWei] = await Promise.all([
@@ -222,11 +221,6 @@ export function useBackgroundTx() {
           if (balance < getActionCostCelo(config.functionName as string, gasPriceWei)) {
             showError('⛽ Tank too low. Please refill to continue.');
             return null;
-          }
-
-          if (getTankStatus(balance, gasPriceWei) === 'low' && !sessionStorage.getItem('proov_low_gas_warned')) {
-            sessionStorage.setItem('proov_low_gas_warned', '1');
-            showWarning('⛽ Tank running low. Refill soon.');
           }
         } catch {
           // RPC issue — don't block the tx; let the wallet surface a real error if
@@ -291,7 +285,7 @@ export function useBackgroundTx() {
         }
       });
     },
-    [connectedAddress, wagmiConfig, waitForConnected, failWalletNotReady, writeContract, showSuccess, showError, showWarning, getNextNonce, publicClient]
+    [connectedAddress, wagmiConfig, waitForConnected, failWalletNotReady, writeContract, showSuccess, showError, getNextNonce, publicClient]
   );
 
   const sendTxWithResult = useCallback(
