@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { getPostLoginRoute, resolveIdentity } from '@/lib/auth';
 import { isMiniPay, connectMiniPay } from '@/lib/minipay';
-import { getWeb3Auth, initWeb3Auth } from '@/lib/wagmi-config';
+import { getWeb3Auth, initWeb3Auth, getLastAdapterError } from '@/lib/wagmi-config';
 import { WALLET_ADAPTERS } from '@web3auth/base';
 
 import { IconMail, IconHash, IconDeviceMobile, IconMessage, IconMailOpened, IconCheck, type Icon as TablerIcon } from '@tabler/icons-react';
@@ -21,6 +21,13 @@ const GoogleIcon = () => (
 );
 
 type AltMethod = 'magic' | 'code' | 'sms';
+
+// Appends the underlying error message (if any) so users/devs can see *why*
+// sign-in didn't complete instead of just that it didn't.
+function describeError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : '';
+  return msg ? ` (${msg})` : '';
+}
 
 export default function SignInPage() {
   const router = useRouter();
@@ -80,7 +87,11 @@ export default function SignInPage() {
       if (!w.connected) {
         setConnecting(false);
         setAuthChecking(false);
-        if (wasOAuthPending) setAuthError("Sign-in didn't complete. Please try again.");
+        if (wasOAuthPending) {
+          const err = getLastAdapterError();
+          console.error('[signin] OAuth redirect did not complete', err);
+          setAuthError(`Sign-in didn't complete${describeError(err)}. Please try again.`);
+        }
         return;
       }
       setConnecting(true);
@@ -88,11 +99,14 @@ export default function SignInPage() {
       if (c) connect({ connector: c });
       else setConnecting(false);
       setAuthChecking(false);
-    }).catch(() => {
+    }).catch((err) => {
       sessionStorage.removeItem('proov_oauth_pending');
       setConnecting(false);
       setAuthChecking(false);
-      if (wasOAuthPending) setAuthError("Sign-in didn't complete. Please try again.");
+      if (wasOAuthPending) {
+        console.error('[signin] initWeb3Auth failed', err);
+        setAuthError(`Sign-in didn't complete${describeError(err)}. Please try again.`);
+      }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -102,7 +116,8 @@ export default function SignInPage() {
   useEffect(() => {
     if (connectError && !isConnected) {
       setConnecting(false);
-      setAuthError("Sign-in didn't complete. Please try again.");
+      console.error('[signin] connect() failed', connectError);
+      setAuthError(`Sign-in didn't complete${describeError(connectError)}. Please try again.`);
     }
   }, [connectError, isConnected]);
 
@@ -186,9 +201,11 @@ export default function SignInPage() {
         loginProvider,
         redirectUrl: window.location.origin + window.location.pathname,
       });
-    } catch {
+    } catch (err) {
       sessionStorage.removeItem('proov_oauth_pending');
       setConnecting(false);
+      console.error('[signin] connectTo failed', err);
+      setAuthError(`Sign-in didn't complete${describeError(err)}. Please try again.`);
       return;
     }
     const c = connectors.find(c => c.id === 'web3auth-aa') ?? connectors[0];
