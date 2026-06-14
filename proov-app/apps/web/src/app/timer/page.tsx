@@ -205,12 +205,24 @@ function GrindTimerPageContent() {
       justCompletedRef.current = false;
 
       if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-        new Notification('Session complete', {
+        const title = 'Session complete';
+        const options = {
           body: selectedHabit
             ? `${selectedHabit.name} — ${fmtDur(duration)} done`
             : `${fmtDur(duration)} session complete`,
           icon: '/icon-192.png',
-        });
+        };
+        // Pages controlled by a service worker can't use `new Notification()` —
+        // Chrome throws "Illegal constructor" there, which crashes this effect
+        // and (since the restored-timer logic re-arms justCompletedRef on every
+        // reload) traps the user in the error boundary's "Reload app" screen.
+        if (navigator.serviceWorker?.controller) {
+          navigator.serviceWorker.ready
+            .then(reg => reg.showNotification(title, options))
+            .catch(() => {});
+        } else {
+          try { new Notification(title, options); } catch {}
+        }
       }
 
       try {
