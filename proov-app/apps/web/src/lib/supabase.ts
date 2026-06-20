@@ -844,6 +844,45 @@ export async function markWelcomeDripSent(address: string): Promise<void> {
   } catch {}
 }
 
+// ── MOOD TRACKING ──────────────────────────────────────────
+
+export type MoodValue = 1 | 2 | 3 | 4 | 5;
+
+export async function saveMood(userAddress: string, mood: MoodValue): Promise<boolean> {
+  if (!supabase || !userAddress) return false;
+  const today = new Date().toISOString().split('T')[0];
+  const addr = userAddress.toLowerCase();
+  const { error } = await supabase
+    .from('mood_entries')
+    .upsert({ user_address: addr, date: today, mood }, { onConflict: 'user_address,date' });
+  return !error;
+}
+
+export async function getTodayMood(userAddress: string): Promise<MoodValue | null> {
+  if (!supabase || !userAddress) return null;
+  const today = new Date().toISOString().split('T')[0];
+  const { data } = await supabase
+    .from('mood_entries')
+    .select('mood')
+    .eq('user_address', userAddress.toLowerCase())
+    .eq('date', today)
+    .maybeSingle();
+  return (data as any)?.mood ?? null;
+}
+
+export async function getMoodHistory(userAddress: string, days = 30): Promise<{ date: string; mood: MoodValue }[]> {
+  if (!supabase || !userAddress) return [];
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+  const { data } = await supabase
+    .from('mood_entries')
+    .select('date, mood')
+    .eq('user_address', userAddress.toLowerCase())
+    .gte('date', since.toISOString().split('T')[0])
+    .order('date', { ascending: true });
+  return (data as any[]) ?? [];
+}
+
 export async function getLastFuelClaim(address: string): Promise<string | null> {
   if (!supabase || !address) return null;
   try {
