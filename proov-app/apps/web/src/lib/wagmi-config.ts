@@ -103,14 +103,21 @@ function buildConnectors() {
   if (!clientId) {
     return [mock({ accounts: ["0x0000000000000000000000000000000000000001"] as const })];
   }
-  const { injected } = require("wagmi/connectors");
+  const { metaMask, coinbaseWallet, walletConnect, injected } = require("wagmi/connectors");
+  const walletConnectors = [
+    metaMask(),
+    coinbaseWallet({ appName: 'Proov' }),
+  ];
+  const wcProjectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
+  if (wcProjectId && wcProjectId !== 'your_project_id_here') {
+    walletConnectors.push(walletConnect({ projectId: wcProjectId }));
+  }
+  walletConnectors.push(injected());
   try {
-    // Lazy import to avoid SSR issues
     const { createAAConnector } = require("./aa-provider");
-    return [createAAConnector({ web3AuthInstance: getWeb3Auth() }), injected()];
+    return [createAAConnector({ web3AuthInstance: getWeb3Auth() }), ...walletConnectors];
   } catch {
-    // AA connector failed to initialise — still offer injected so wallet connect works
-    return [injected()];
+    return walletConnectors;
   }
 }
 

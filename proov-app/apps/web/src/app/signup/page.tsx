@@ -48,6 +48,7 @@ export default function SignUpPage() {
   const [altMethod, setAltMethod] = useState<AltMethod>('magic');
   const [input, setInput] = useState('');
   const [sent, setSent] = useState(false);
+  const [showWalletPicker, setShowWalletPicker] = useState(false);
   const walletConnectRef = useRef(false);
 
   // Don't drop the connecting overlay until the OAuth-redirect check on mount
@@ -232,17 +233,22 @@ export default function SignUpPage() {
     else setConnecting(false);
   };
 
-  const handleConnectWallet = () => {
+  const connectWithWallet = (connectorId: string) => {
     setAuthError('');
     walletConnectRef.current = true;
-    const c = connectors.find(c => c.id === 'injected');
+    const c = connectors.find(c => c.id === connectorId);
     if (c) {
+      setShowWalletPicker(false);
       setConnecting(true);
       connect({ connector: c });
     } else {
-      setAuthError('No wallet detected. Please install MetaMask or another wallet extension.');
+      setAuthError('Wallet not available. Please install it and try again.');
     }
   };
+
+  const walletOptions = connectors
+    .filter(c => c.id !== 'web3auth-aa' && c.id !== 'mock')
+    .map(c => ({ id: c.id, name: c.name }));
 
   const handleSend = () => {
     if (!input.trim()) return;
@@ -363,15 +369,38 @@ export default function SignUpPage() {
           </button>
 
           {/* Connect Wallet */}
-          <button
-            onClick={handleConnectWallet}
-            disabled={isPending}
-            style={{ width: '100%', padding: '13px 16px', borderRadius: 13, border: '1.5px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,.06)', transition: 'all .15s' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg3)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'var(--card-bg)')}>
-            <IconWallet size={20} stroke={1.8} />
-            Connect Wallet
-          </button>
+          <div style={{ marginBottom: 16 }}>
+            <button
+              onClick={() => setShowWalletPicker(v => !v)}
+              disabled={isPending}
+              style={{ width: '100%', padding: '13px 16px', borderRadius: 13, border: `1.5px solid ${showWalletPicker ? 'var(--accent-border)' : 'var(--border)'}`, background: showWalletPicker ? 'var(--accent-bg)' : 'var(--card-bg)', color: 'var(--text)', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 1px 3px rgba(0,0,0,.06)', transition: 'all .15s' }}>
+              <IconWallet size={20} stroke={1.8} />
+              Connect Wallet
+              <span style={{ fontSize: 10, opacity: 0.5, display: 'inline-block', transform: showWalletPicker ? 'rotate(180deg)' : 'none', transition: 'transform .2s', marginLeft: 'auto' }}>▾</span>
+            </button>
+            <div style={{ overflow: 'hidden', maxHeight: showWalletPicker ? 300 : 0, transition: 'max-height .25s ease' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 8 }}>
+                {walletOptions.map(w => (
+                  <button
+                    key={w.id}
+                    onClick={() => connectWithWallet(w.id)}
+                    style={{
+                      width: '100%', padding: '11px 14px', borderRadius: 11,
+                      border: '1px solid var(--border)', background: 'var(--bg2)',
+                      color: 'var(--text)', fontSize: 13, fontWeight: 600,
+                      cursor: 'pointer', fontFamily: 'inherit',
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      transition: 'all .15s',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg3)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg2)')}
+                  >
+                    {w.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
 
           {/* Divider */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
