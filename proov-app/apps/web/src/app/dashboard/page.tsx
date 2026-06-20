@@ -8,6 +8,7 @@ import {
   getCircleRequests, getUsernamesForAddresses, getLatestActivityForAddress,
   sendNudge, getTodayNudgesSent, getGlobalLeaderboard,
   getVerifiedHabitsToday, getAvatarUrl, getNotifications,
+  getDailyCompletionCounts,
   type Habit,
 } from '@/lib/supabase';
 import { useProovTx } from '@/hooks/useProovTx';
@@ -25,6 +26,7 @@ import {
   IconBell,
   IconCheck,
   IconShieldCheck,
+  IconTrendingUp,
 } from '@tabler/icons-react';
 
 const STREAK_MILESTONES = [7, 14, 21, 30, 60, 90];
@@ -88,6 +90,7 @@ export default function DashboardPage() {
   const [proofSheet, setProofSheet] = useState<{ habitId: string; habitName: string; habitCategory?: string } | null>(null);
   const [avatarUrl, setAvatarUrl] = useState('');
   const [pendingHabits, setPendingHabits] = useState<Set<string>>(new Set());
+  const [weeklyData, setWeeklyData] = useState<{ day: string; count: number }[]>([]);
   const proovTx = useProovTx();
 
   useEffect(() => {
@@ -186,6 +189,22 @@ export default function DashboardPage() {
     if (!addr || habits.length === 0) return;
     getAllHabitStreaks(habits.map(h => h.id), addr).then(setHabitStreaks).catch(() => {});
   }, [habits]);
+
+  useEffect(() => {
+    const addr = localStorage.getItem('proov_address') || '';
+    if (!addr) return;
+    getDailyCompletionCounts(addr).then(counts => {
+      const days: { day: string; count: number }[] = [];
+      const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const iso = d.toISOString().split('T')[0];
+        days.push({ day: dayLabels[d.getDay()], count: counts[iso] || 0 });
+      }
+      setWeeklyData(days);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const addr = localStorage.getItem('proov_address') || '';
@@ -649,6 +668,57 @@ export default function DashboardPage() {
             </button>
           </div>
         )}
+
+        {/* ── WEEKLY SUMMARY ── */}
+        {weeklyData.length > 0 && habits.length > 0 && (() => {
+          const weekTotal = weeklyData.reduce((s, d) => s + d.count, 0);
+          const weekTarget = habits.length * 7;
+          const weekPct = weekTarget > 0 ? Math.round((weekTotal / weekTarget) * 100) : 0;
+          const maxCount = Math.max(...weeklyData.map(d => d.count), 1);
+          return (
+            <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14, padding: '14px 16px', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <IconTrendingUp size={14} stroke={2} color="var(--accent-text)" />
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text)' }}>This week</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                  <span style={{ fontSize: 18, fontWeight: 900, color: 'var(--accent-text)', lineHeight: 1 }}>{weekPct}%</span>
+                  <span style={{ fontSize: 9, color: 'var(--text3)' }}>completed</span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 40 }}>
+                {weeklyData.map((d, i) => {
+                  const h = maxCount > 0 ? (d.count / maxCount) * 100 : 0;
+                  const isToday = i === weeklyData.length - 1;
+                  return (
+                    <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                      <div style={{
+                        width: '100%', borderRadius: 4, minHeight: 3,
+                        height: `${Math.max(h, 8)}%`,
+                        background: d.count > 0
+                          ? isToday ? 'var(--accent)' : 'var(--accent-bg)'
+                          : 'var(--bg3)',
+                        border: d.count > 0 ? '1px solid var(--accent-border)' : 'none',
+                        transition: 'height 0.4s ease',
+                      }} />
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                {weeklyData.map((d, i) => (
+                  <div key={i} style={{ flex: 1, textAlign: 'center', fontSize: 8, fontWeight: 600, color: i === weeklyData.length - 1 ? 'var(--accent-text)' : 'var(--text3)' }}>
+                    {d.day}
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontSize: 9, color: 'var(--text3)', marginTop: 8, textAlign: 'center' }}>
+                {weekTotal} of {weekTarget} habits this week
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ── CIRCLE ── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
