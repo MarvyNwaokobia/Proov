@@ -125,8 +125,22 @@ export function getTankStatusSync(balance: number): TankStatus {
   return getTankStatus(balance, getCachedGasPriceWei());
 }
 
+function getWalletType(): 'web3auth' | 'injected' {
+  if (typeof window === 'undefined') return 'web3auth';
+  try {
+    const addr = localStorage.getItem('proov_address') || '';
+    const raw = localStorage.getItem(`proov_identity_${addr.toLowerCase()}`);
+    if (raw) {
+      const identity = JSON.parse(raw);
+      if (identity.walletType === 'injected') return 'injected';
+    }
+  } catch {}
+  return 'web3auth';
+}
+
 /**
- * Server-side faucet: pushes 0.2 CELO to the user from a funded server wallet.
+ * Server-side faucet: pushes CELO to the user from a funded server wallet.
+ * Web3Auth users get 0.2 CELO daily; external wallets get 0.1 CELO once.
  * Returns true if CELO was actually sent (not skipped).
  */
 export async function requestServerFaucet(address: string): Promise<boolean> {
@@ -134,7 +148,7 @@ export async function requestServerFaucet(address: string): Promise<boolean> {
     const res = await fetch('/api/faucet', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ address }),
+      body: JSON.stringify({ address, walletType: getWalletType() }),
     });
     if (!res.ok) return false;
     const data = await res.json();
@@ -146,17 +160,20 @@ export async function requestServerFaucet(address: string): Promise<boolean> {
 
 /**
  * Manual "Claim Fuel" from settings — delegates to the server faucet.
+ * Web3Auth users get daily claims; external wallets get a one-time welcome drip.
  */
-export async function claimFuel(): Promise<{ success: boolean; error?: string }> {
+export async function claimFuel(): Promise<{ success: boolean; error?: string; welcomeDrip?: boolean }> {
   const address = typeof window !== 'undefined'
     ? localStorage.getItem('proov_address') || ''
     : '';
   if (!address) return { success: false, error: 'Not connected' };
 
+  const walletType = getWalletType();
+
   const res = await fetch('/api/faucet', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ address }),
+    body: JSON.stringify({ address, walletType }),
   });
 
   if (!res.ok) return { success: false, error: 'Faucet unavailable — try again later' };
@@ -165,9 +182,10 @@ export async function claimFuel(): Promise<{ success: boolean; error?: string }>
   if (!data.ok) return { success: false, error: data.error || 'Faucet error' };
   if (data.skipped === 'sufficient') return { success: false, error: 'Tank is healthy — no top-up needed' };
   if (data.skipped === 'daily_limit') return { success: false, error: 'Already claimed today — come back tomorrow' };
+  if (data.skipped === 'welcome_drip_used') return { success: false, error: 'Welcome fuel already claimed. Add CELO to your wallet to continue.' };
   if (data.skipped) return { success: false, error: 'Faucet unavailable — try again later' };
 
-  return { success: true };
+  return { success: true, welcomeDrip: data.welcomeDrip === true };
 }
 
 /** Seconds until midnight UTC — how long until the daily gate resets. */
@@ -180,9 +198,9 @@ function secsUntilMidnightUtc(): number {
 
 /**
  * Check if the user can claim fuel.
- * Rules: tank must be 'critical' (the highest-gas action would no longer go
- * through) AND they must not have claimed today (UTC). 'low' is informational
- * only — it doesn't unlock a claim.
+ *
+ * Web3Auth users: tank must be critical AND not claimed today.
+ * External wallets: tank must be critical AND welcome drip not yet sent.
  */
 export async function checkCanClaim(userAddress: string): Promise<{
   canClaim: boolean;
@@ -191,25 +209,37 @@ export async function checkCanClaim(userAddress: string): Promise<{
   claimedToday: boolean;
   secondsLeft: number;
   nextClaimTime: Date | null;
+  isExternalWallet: boolean;
+  welcomeDripUsed: boolean;
 }> {
+  const walletType = getWalletType();
+  const isExternal = walletType === 'injected';
+
   try {
     const todayUtc = new Date().toISOString().split('T')[0];
 
-    // Fetch balance directly — no inner catch — so network failures propagate to
-    // the outer catch and return a 'healthy' default instead of treating a
-    // failed fetch (which returns 0) as "empty tank".
     const client = getPublicClient();
-    const [rawBalance, gasPriceWei, lastClaim] = await Promise.all([
+    const [rawBalance, gasPriceWei, lastClaim, welcomeDripUsed] = await Promise.all([
       client.getBalance({ address: userAddress as Address }),
       getGasPriceWei(),
       import('@/lib/supabase').then(m => m.getLastFuelClaim(userAddress)).catch(() => null),
+      isExternal
+        ? import('@/lib/supabase').then(m => m.hasReceivedWelcomeDrip(userAddress)).catch(() => false)
+        : Promise.resolve(false),
     ]);
 
     const balance = parseFloat(formatEther(rawBalance));
     const tankStatus = getTankStatus(balance, gasPriceWei);
     const tankIsCritical = tankStatus === 'critical';
     const claimedToday = lastClaim === todayUtc;
-    const canClaim = tankIsCritical && !claimedToday;
+
+    let canClaim: boolean;
+    if (isExternal) {
+      canClaim = tankIsCritical && !welcomeDripUsed;
+    } else {
+      canClaim = tankIsCritical && !claimedToday;
+    }
+
     const secondsLeft = claimedToday ? secsUntilMidnightUtc() : 0;
 
     return {
@@ -219,8 +249,10 @@ export async function checkCanClaim(userAddress: string): Promise<{
       claimedToday,
       secondsLeft,
       nextClaimTime: claimedToday ? new Date(Date.now() + secondsLeft * 1000) : null,
+      isExternalWallet: isExternal,
+      welcomeDripUsed,
     };
   } catch {
-    return { canClaim: false, tankStatus: 'healthy', tankIsCritical: false, claimedToday: false, secondsLeft: 0, nextClaimTime: null };
+    return { canClaim: false, tankStatus: 'healthy', tankIsCritical: false, claimedToday: false, secondsLeft: 0, nextClaimTime: null, isExternalWallet: isExternal, welcomeDripUsed: false };
   }
 }

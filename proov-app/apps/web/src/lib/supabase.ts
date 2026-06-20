@@ -818,6 +818,32 @@ export async function setOnboardingComplete(address: string): Promise<void> {
   } catch {}
 }
 
+export async function hasReceivedWelcomeDrip(address: string): Promise<boolean> {
+  if (!supabase || !address) return false;
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('welcome_drip_sent')
+      .eq('address', address.toLowerCase())
+      .maybeSingle();
+    return (data as any)?.welcome_drip_sent === true;
+  } catch {
+    return false;
+  }
+}
+
+export async function markWelcomeDripSent(address: string): Promise<void> {
+  if (!supabase || !address) return;
+  try {
+    await supabase
+      .from('profiles')
+      .upsert(
+        { address: address.toLowerCase(), welcome_drip_sent: true },
+        { onConflict: 'address' }
+      );
+  } catch {}
+}
+
 export async function getLastFuelClaim(address: string): Promise<string | null> {
   if (!supabase || !address) return null;
   try {

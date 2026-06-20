@@ -5,8 +5,10 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { createClient } from '@supabase/supabase-js';
 import { getTankThresholds } from '@/lib/fuel';
 
-// Each drip tops the tank back up to ~0.2 CELO.
+// Web3Auth (platform-managed) wallets get the full daily drip.
 const DRIP = parseEther('0.2');
+// External wallets get a smaller one-time welcome drip — enough for ~20-30 actions.
+const WELCOME_DRIP = parseEther('0.1');
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -21,7 +23,7 @@ function todayUtc(): string {
 
 export async function POST(req: NextRequest) {
   try {
-    const { address } = await req.json();
+    const { address, walletType } = await req.json();
 
     if (!address || !isAddress(address)) {
       return NextResponse.json({ error: 'Invalid address' }, { status: 400 });
@@ -34,10 +36,10 @@ export async function POST(req: NextRequest) {
 
     const rpc = process.env.NEXT_PUBLIC_CELO_RPC_URL || 'https://forno.celo.org';
     const publicClient = createPublicClient({ chain: celo, transport: http(rpc) });
+    const addrLower = address.toLowerCase();
+    const isExternal = walletType === 'injected';
 
-    // Gate 1: tank must be 'critical' — the highest-gas action (selfCompleteHabit)
-    // would no longer go through. Uses the same gas-price-aware thresholds as the
-    // client, so both sides agree on what "critical" means.
+    // Gate 1: tank must be critical
     const [rawBalance, gasPriceWei] = await Promise.all([
       publicClient.getBalance({ address }),
       publicClient.getGasPrice(),
@@ -48,13 +50,44 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, skipped: 'sufficient' });
     }
 
-    // Gate 2: once per day (UTC)
     const supabase = getSupabase();
+
+    // ── External wallets: one-time welcome drip only ──
+    if (isExternal) {
+      if (supabase) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('welcome_drip_sent')
+          .eq('address', addrLower)
+          .maybeSingle();
+
+        if ((data as any)?.welcome_drip_sent === true) {
+          return NextResponse.json({ ok: true, skipped: 'welcome_drip_used' });
+        }
+      }
+
+      const account = privateKeyToAccount(pk);
+      const wallet = createWalletClient({ account, chain: celo, transport: http(rpc) });
+      const hash = await wallet.sendTransaction({ to: address, value: WELCOME_DRIP });
+
+      if (supabase) {
+        await supabase
+          .from('profiles')
+          .upsert(
+            { address: addrLower, welcome_drip_sent: true },
+            { onConflict: 'address' }
+          );
+      }
+
+      return NextResponse.json({ ok: true, hash, welcomeDrip: true });
+    }
+
+    // ── Platform wallets (web3auth): daily claims ──
     if (supabase) {
       const { data } = await supabase
         .from('profiles')
         .select('last_fuel_claim')
-        .eq('address', address.toLowerCase())
+        .eq('address', addrLower)
         .maybeSingle();
 
       if ((data as any)?.last_fuel_claim === todayUtc()) {
@@ -62,17 +95,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Send fuel
     const account = privateKeyToAccount(pk);
     const wallet = createWalletClient({ account, chain: celo, transport: http(rpc) });
     const hash = await wallet.sendTransaction({ to: address, value: DRIP });
 
-    // Record the claim date so the daily gate works next time
     if (supabase) {
       await supabase
         .from('profiles')
         .upsert(
-          { address: address.toLowerCase(), last_fuel_claim: todayUtc() },
+          { address: addrLower, last_fuel_claim: todayUtc() },
           { onConflict: 'address' }
         );
     }

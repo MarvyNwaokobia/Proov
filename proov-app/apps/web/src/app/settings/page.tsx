@@ -55,6 +55,8 @@ export default function SettingsPage() {
   const [claimedToday, setClaimedToday] = useState(false);
   const [secondsUntilClaim, setSecondsUntilClaim] = useState(0);
   const [claimingFuel, setClaimingFuel] = useState(false);
+  const [externalWallet, setExternalWallet] = useState(false);
+  const [welcomeDripUsed, setWelcomeDripUsed] = useState(false);
   const [verificationUsed, setVerificationUsed] = useState(0);
   const [avatarUrl, setAvatarUrl] = useState('');
 
@@ -135,6 +137,8 @@ export default function SettingsPage() {
       setClaimedToday(claimStatus.claimedToday);
       setSecondsUntilClaim(claimStatus.secondsLeft);
       setCeloBalance(balance);
+      setExternalWallet(claimStatus.isExternalWallet);
+      setWelcomeDripUsed(claimStatus.welcomeDripUsed);
     };
     checkFuel();
     const interval = setInterval(checkFuel, 60000);
@@ -248,14 +252,20 @@ export default function SettingsPage() {
     const { claimFuel, getUserCeloBalance } = await import('@/lib/fuel');
     const result = await claimFuel();
     if (result.success) {
-      showToast('✓ Fuel claimed! Balance updates in a moment.');
+      showToast(result.welcomeDrip
+        ? '✓ Welcome fuel added! This covers your first few actions.'
+        : '✓ Fuel claimed! Balance updates in a moment.'
+      );
       setCanClaimFuel(false);
-      setClaimedToday(true);
-      // Seconds until midnight UTC
-      const now = new Date();
-      const midnight = new Date(now);
-      midnight.setUTCHours(24, 0, 0, 0);
-      setSecondsUntilClaim(Math.floor((midnight.getTime() - now.getTime()) / 1000));
+      if (result.welcomeDrip) {
+        setWelcomeDripUsed(true);
+      } else {
+        setClaimedToday(true);
+        const now = new Date();
+        const midnight = new Date(now);
+        midnight.setUTCHours(24, 0, 0, 0);
+        setSecondsUntilClaim(Math.floor((midnight.getTime() - now.getTime()) / 1000));
+      }
       const addr = localStorage.getItem('proov_address') || '';
       const newBalance = await getUserCeloBalance(addr);
       setCeloBalance(newBalance);
@@ -524,57 +534,130 @@ export default function SettingsPage() {
         {/* ── Fuel — hidden in MiniPay (gas paid in cUSD, no CELO faucet needed) ── */}
         {!miniPayUser && (
           <>
-            <p style={{ ...sectionLabel, marginTop: 16 }}>Fuel</p>
+            <p style={{ ...sectionLabel, marginTop: 16 }}>
+              {externalWallet ? 'Wallet Gas' : 'Fuel'}
+            </p>
             <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14, padding: 14, marginBottom: 0 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <span style={{ fontSize: 13, color: 'var(--text2)' }}>Balance</span>
                 <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 4 }}>
                   <IconBolt size={14} stroke={2} color="var(--accent-text)" />
-                  {celoBalance >= 0.01 ? celoBalance.toFixed(2) : '0.00'} Fuel
+                  {celoBalance >= 0.01 ? celoBalance.toFixed(2) : '0.00'} {externalWallet ? 'CELO' : 'Fuel'}
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <span style={{ fontSize: 13, color: 'var(--text2)' }}>Tank</span>
+                <span style={{ fontSize: 13, color: 'var(--text2)' }}>
+                  {externalWallet ? 'Status' : 'Tank'}
+                </span>
                 <span style={{
                   fontSize: 13, fontWeight: 700,
                   color: tankStatus === 'critical' ? '#f43f5e' : 'var(--accent-text)',
                 }}>
                   {tankStatus !== 'critical'
                     ? 'Healthy'
-                    : claimedToday
-                      ? fmtCountdown(secondsUntilClaim)
-                      : 'Critical — claim now'}
+                    : externalWallet
+                      ? (welcomeDripUsed ? 'Low — add CELO' : 'Low — claim starter fuel')
+                      : claimedToday
+                        ? fmtCountdown(secondsUntilClaim)
+                        : 'Critical — claim now'}
                 </span>
               </div>
-              <button
-                onClick={handleClaimFuel}
-                disabled={!canClaimFuel || claimingFuel}
-                style={{
-                  width: '100%', padding: 12, borderRadius: 12, border: 'none',
-                  background: canClaimFuel ? 'var(--btn-primary-bg)' : 'var(--bg3)',
-                  color: canClaimFuel ? 'var(--btn-primary-text)' : 'var(--text3)',
-                  fontSize: 13, fontWeight: 700,
-                  cursor: canClaimFuel && !claimingFuel ? 'pointer' : 'not-allowed',
-                  fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  opacity: claimingFuel ? 0.7 : 1,
-                }}
-              >
-                <IconBolt size={14} stroke={2} />
-                {claimingFuel
-                  ? 'Claiming…'
-                  : tankStatus !== 'critical'
-                    ? 'Tank is healthy'
-                    : claimedToday
-                      ? 'Claimed today'
-                      : 'Claim Fuel'}
-              </button>
-              {tankStatus === 'critical' && (
-                <p style={{
-                  fontSize: 11, marginTop: 8, marginBottom: 0, lineHeight: 1.4,
-                  color: '#f43f5e',
-                }}>
-                  Tank too low. Please refill to continue.
-                </p>
+
+              {/* ── External wallet: Telegram guidance when low ── */}
+              {externalWallet ? (
+                <>
+                  {tankStatus === 'critical' && (
+                    <div style={{
+                      padding: 12, borderRadius: 10,
+                      background: 'rgba(244,63,94,0.06)', border: '1px solid rgba(244,63,94,0.15)',
+                    }}>
+                      <p style={{
+                        fontSize: 12, marginTop: 0, marginBottom: 8, lineHeight: 1.5,
+                        color: '#f43f5e', fontWeight: 600,
+                      }}>
+                        Your wallet is out of gas.
+                      </p>
+                      <p style={{
+                        fontSize: 12, marginTop: 0, marginBottom: 10, lineHeight: 1.5,
+                        color: 'var(--text2)',
+                      }}>
+                        Send your wallet address to our Telegram group to receive CELO for gas.
+                      </p>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(address).catch(() => {});
+                            setCopied(true);
+                            setTimeout(() => setCopied(false), 2000);
+                          }}
+                          style={{
+                            flex: 1, padding: '10px 0', borderRadius: 10, border: '1px solid var(--border)',
+                            background: 'var(--bg2)', color: 'var(--text)', fontSize: 12, fontWeight: 600,
+                            cursor: 'pointer', fontFamily: 'inherit',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                          }}
+                        >
+                          {copied ? <><IconCheck size={13} stroke={2} /> Copied</> : <><IconCopy size={13} stroke={2} /> Copy Address</>}
+                        </button>
+                        <a
+                          href="https://t.me/Proovhq"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            flex: 1, padding: '10px 0', borderRadius: 10, border: 'none',
+                            background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)',
+                            fontSize: 12, fontWeight: 700, textDecoration: 'none', textAlign: 'center',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                          }}
+                        >
+                          Open Telegram
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                  {tankStatus !== 'critical' && (
+                    <p style={{
+                      fontSize: 11, marginTop: 4, marginBottom: 0, lineHeight: 1.4,
+                      color: 'var(--text3)',
+                    }}>
+                      Gas is paid from your wallet&apos;s CELO balance.
+                    </p>
+                  )}
+                </>
+              ) : (
+                /* ── Platform wallet: daily claim ── */
+                <>
+                  <button
+                    onClick={handleClaimFuel}
+                    disabled={!canClaimFuel || claimingFuel}
+                    style={{
+                      width: '100%', padding: 12, borderRadius: 12, border: 'none',
+                      background: canClaimFuel ? 'var(--btn-primary-bg)' : 'var(--bg3)',
+                      color: canClaimFuel ? 'var(--btn-primary-text)' : 'var(--text3)',
+                      fontSize: 13, fontWeight: 700,
+                      cursor: canClaimFuel && !claimingFuel ? 'pointer' : 'not-allowed',
+                      fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      opacity: claimingFuel ? 0.7 : 1,
+                    }}
+                  >
+                    <IconBolt size={14} stroke={2} />
+                    {claimingFuel
+                      ? 'Claiming…'
+                      : tankStatus !== 'critical'
+                        ? 'Tank is healthy'
+                        : claimedToday
+                          ? 'Claimed today'
+                          : 'Claim Fuel'}
+                  </button>
+                  {tankStatus === 'critical' && (
+                    <p style={{
+                      fontSize: 11, marginTop: 8, marginBottom: 0, lineHeight: 1.4,
+                      color: '#f43f5e',
+                    }}>
+                      Tank too low. Please refill to continue.
+                    </p>
+                  )}
+                </>
               )}
             </div>
           </>

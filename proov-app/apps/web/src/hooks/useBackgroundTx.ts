@@ -8,6 +8,7 @@ import { useTxToast } from '@/components/shared/TxToast';
 import { isMiniPay } from '@/lib/minipay';
 import { getGasPriceWei, getActionCostCelo, getTankStatusSync } from '@/lib/fuel';
 import { getWalletRestoreState, setWalletRestoreState } from '@/lib/wallet-status';
+import { isExternalWallet } from '@/lib/auth';
 
 interface QueuedTx {
   id: string;
@@ -63,9 +64,9 @@ function parseError(err: unknown): string {
     // checking the cached balance before blaming fuel.
     const cachedBal = parseFloat(localStorage.getItem('proov_fuel_balance') || '0');
     if (getTankStatusSync(cachedBal) === 'critical') {
-      return isMiniPay()
-        ? '⚡ Low cUSD balance — top up via MiniPay to continue'
-        : '⚡ Tank too low. Please refill to continue.';
+      if (isMiniPay()) return '⚡ Low cUSD balance — top up via MiniPay to continue';
+      if (isExternalWallet()) return '⚡ Out of gas. Send your address to our Telegram group for CELO.';
+      return '⚡ Tank too low. Please refill to continue.';
     }
   }
   if (/network changed|chain.*mismatch/i.test(msg)) return 'Wrong network — please refresh.';
@@ -219,7 +220,11 @@ export function useBackgroundTx() {
           localStorage.setItem('proov_fuel_balance', String(balance));
 
           if (balance < getActionCostCelo(config.functionName as string, gasPriceWei)) {
-            showError('⛽ Tank too low. Please refill to continue.');
+            showError(
+              isExternalWallet()
+                ? '⛽ Out of gas. Send your address to our Telegram group for CELO.'
+                : '⛽ Tank too low. Please refill to continue.'
+            );
             return null;
           }
         } catch {

@@ -83,6 +83,7 @@ export default function DashboardPage() {
   const [habitStreaks, setHabitStreaks] = useState<Record<string, number>>({});
   const [fuelBalance, setFuelBalance] = useState(0);
   const [tankStatus, setTankStatus] = useState<TankStatus>('healthy');
+  const [isExtWallet, setIsExtWallet] = useState(false);
   const [verifiedHabits, setVerifiedHabits] = useState<string[]>([]);
   const [proofSheet, setProofSheet] = useState<{ habitId: string; habitName: string; habitCategory?: string } | null>(null);
   const [avatarUrl, setAvatarUrl] = useState('');
@@ -248,6 +249,14 @@ export default function DashboardPage() {
     // Load fuel balance (cached from settings page visits)
     const bal = parseFloat(localStorage.getItem('proov_fuel_balance') || '0');
     if (bal > 0) setFuelBalance(bal);
+    // Detect external wallet
+    try {
+      const raw = localStorage.getItem(`proov_identity_${addr.toLowerCase()}`);
+      if (raw) {
+        const identity = JSON.parse(raw);
+        if (identity.walletType === 'injected') setIsExtWallet(true);
+      }
+    } catch {}
     // Try to load it fresh
     import('@/lib/fuel').then(({ getUserCeloBalance, getGasPriceWei, getTankStatus }) => {
       Promise.all([getUserCeloBalance(addr), getGasPriceWei()]).then(([b, gasPriceWei]) => {
@@ -402,7 +411,7 @@ export default function DashboardPage() {
                     <div style={{ position: 'absolute', right: 1, top: '33%', width: 2, height: 1, background: 'rgba(255,255,255,.22)' }} />
                     <div style={{ position: 'absolute', right: 1, top: '66%', width: 2, height: 1, background: 'rgba(255,255,255,.22)' }} />
                   </div>
-                  <div style={{ fontSize: 7, fontWeight: 700, color: labelCol, letterSpacing: '.1px', marginTop: 1 }}>{fuelBalance.toFixed(2)}</div>
+                  <div style={{ fontSize: 7, fontWeight: 700, color: labelCol, letterSpacing: '.1px', marginTop: 1 }}>{fuelBalance.toFixed(2)}{isExtWallet ? '' : ''}</div>
                 </div>
               );
             })()}

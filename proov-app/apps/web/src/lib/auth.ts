@@ -99,6 +99,11 @@ export function getCurrentIdentity(): ProovIdentity | null {
   try { return JSON.parse(raw); } catch { return null; }
 }
 
+export function isExternalWallet(): boolean {
+  const identity = getCurrentIdentity();
+  return identity?.walletType === 'injected';
+}
+
 export function getAddressByEmail(email: string): string | null {
   if (typeof window === 'undefined') return null;
   const emailKey = email.toLowerCase().replace(/[^a-z0-9]/g, '_');
