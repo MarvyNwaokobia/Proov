@@ -9,7 +9,8 @@ import {
   sendNudge, getTodayNudgesSent, getGlobalLeaderboard,
   getVerifiedHabitsToday, getAvatarUrl, getNotifications,
   getDailyCompletionCounts,
-  type Habit,
+  saveMood, getTodayMood,
+  type Habit, type MoodValue,
 } from '@/lib/supabase';
 import { useProovTx } from '@/hooks/useProovTx';
 import { isMiniPay } from '@/lib/minipay';
@@ -98,6 +99,7 @@ export default function DashboardPage() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [justCompleted, setJustCompleted] = useState<Set<string>>(new Set());
   const [quote, setQuote] = useState(getDailyQuote);
+  const [todayMood, setTodayMood] = useState<MoodValue | null>(null);
   const proovTx = useProovTx();
 
   useEffect(() => {
@@ -219,6 +221,12 @@ export default function DashboardPage() {
     const onVisible = () => { if (!document.hidden) getTodayCompletions(addr).then(setCompletedToday).catch(() => {}); };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+
+  useEffect(() => {
+    const addr = localStorage.getItem('proov_address') || '';
+    if (!addr) return;
+    getTodayMood(addr).then(m => { if (m) setTodayMood(m); }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -454,6 +462,44 @@ export default function DashboardPage() {
               }
             </button>
           </div>
+        </div>
+
+        {/* ── Mood check-in ── */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          background: 'var(--card-bg)', border: '1px solid var(--card-border)',
+          borderRadius: 12, padding: '8px 12px', marginBottom: 12,
+        }}>
+          <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', marginRight: 'auto', whiteSpace: 'nowrap' }}>
+            {todayMood ? 'Feeling' : 'How are you?'}
+          </span>
+          {([
+            { value: 1 as MoodValue, emoji: '😣', label: 'Rough' },
+            { value: 2 as MoodValue, emoji: '😕', label: 'Meh' },
+            { value: 3 as MoodValue, emoji: '😐', label: 'Okay' },
+            { value: 4 as MoodValue, emoji: '🙂', label: 'Good' },
+            { value: 5 as MoodValue, emoji: '😄', label: 'Great' },
+          ]).map(m => (
+            <button
+              key={m.value}
+              onClick={() => {
+                setTodayMood(m.value);
+                const addr = localStorage.getItem('proov_address') || '';
+                saveMood(addr, m.value).catch(() => {});
+                showToast(`Mood logged: ${m.label}`);
+              }}
+              style={{
+                background: todayMood === m.value ? 'var(--accent-bg)' : 'transparent',
+                border: todayMood === m.value ? '1.5px solid var(--accent-border)' : '1.5px solid transparent',
+                borderRadius: 10, padding: '4px 6px', cursor: 'pointer',
+                fontSize: 20, lineHeight: 1, transition: 'all .2s ease',
+                transform: todayMood === m.value ? 'scale(1.15)' : 'scale(1)',
+              }}
+              title={m.label}
+            >
+              {m.emoji}
+            </button>
+          ))}
         </div>
 
         {/* ── Streak flip card ── */}
