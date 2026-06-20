@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAccount, useConnect } from 'wagmi';
 import Link from 'next/link';
@@ -9,7 +9,7 @@ import { isMiniPay, connectMiniPay } from '@/lib/minipay';
 import { getWeb3Auth, initWeb3Auth, getLastAdapterError } from '@/lib/wagmi-config';
 import { WALLET_ADAPTERS, ADAPTER_STATUS } from '@web3auth/base';
 
-import { IconMail, IconHash, IconDeviceMobile, IconMessage, IconMailOpened, IconCheck, type Icon as TablerIcon } from '@tabler/icons-react';
+import { IconMail, IconHash, IconDeviceMobile, IconMessage, IconMailOpened, IconCheck, IconWallet, type Icon as TablerIcon } from '@tabler/icons-react';
 
 const GoogleIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
@@ -52,6 +52,7 @@ export default function SignInPage() {
   const [usernameSearching, setUsernameSearching] = useState(false);
   const [usernameError, setUsernameError] = useState('');
   const [showUsername, setShowUsername] = useState(false);
+  const walletConnectRef = useRef(false);
 
   // Don't drop the connecting overlay until the OAuth-redirect check on mount
   // has finished — otherwise isPending/isConnected are still false on first
@@ -160,22 +161,33 @@ export default function SignInPage() {
       let route = '/onboarding';
       let returningUser = false;
       try {
-        route = await Promise.race([
-          (async () => {
-            const { getWeb3Auth } = await import('@/lib/wagmi-config');
-            const info = await getWeb3Auth().getUserInfo().catch(() => null);
-            if ((info as any)?.email) localStorage.setItem('proov_email', (info as any).email);
-            const emailVal = localStorage.getItem('proov_email') || '';
-            const identity = await resolveIdentity(connectedAddress, emailVal, 'google', 'web3auth');
-            if (identity.username) {
-              localStorage.setItem('proov_tutorial_done', '1');
-              returningUser = true;
-              return '/dashboard';
-            }
-            return '/onboarding';
-          })(),
-          new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
-        ]);
+        if (walletConnectRef.current) {
+          const identity = await resolveIdentity(connectedAddress, '', 'wallet', 'injected');
+          if (identity.username) {
+            localStorage.setItem('proov_tutorial_done', '1');
+            returningUser = true;
+            route = '/dashboard';
+          } else {
+            route = await getPostLoginRoute();
+          }
+        } else {
+          route = await Promise.race([
+            (async () => {
+              const { getWeb3Auth } = await import('@/lib/wagmi-config');
+              const info = await getWeb3Auth().getUserInfo().catch(() => null);
+              if ((info as any)?.email) localStorage.setItem('proov_email', (info as any).email);
+              const emailVal = localStorage.getItem('proov_email') || '';
+              const identity = await resolveIdentity(connectedAddress, emailVal, 'google', 'web3auth');
+              if (identity.username) {
+                localStorage.setItem('proov_tutorial_done', '1');
+                returningUser = true;
+                return '/dashboard';
+              }
+              return '/onboarding';
+            })(),
+            new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
+          ]);
+        }
       } catch {
         const username = localStorage.getItem('proov_username');
         const onboardingDone = localStorage.getItem('proov_onboarding_done');
@@ -221,6 +233,18 @@ export default function SignInPage() {
     const c = connectors.find(c => c.id === 'web3auth-aa') ?? connectors[0];
     if (c) connect({ connector: c });
     else setConnecting(false);
+  };
+
+  const handleConnectWallet = () => {
+    setAuthError('');
+    walletConnectRef.current = true;
+    const c = connectors.find(c => c.id === 'injected');
+    if (c) {
+      setConnecting(true);
+      connect({ connector: c });
+    } else {
+      setAuthError('No wallet detected. Please install MetaMask or another wallet extension.');
+    }
   };
 
   const handleUsernameLookup = async () => {
@@ -393,11 +417,22 @@ export default function SignInPage() {
           <button
             onClick={() => triggerConnect('google')}
             disabled={isPending}
-            style={{ width: '100%', padding: '13px 16px', borderRadius: 13, border: '1.5px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,.06)', transition: 'all .15s' }}
+            style={{ width: '100%', padding: '13px 16px', borderRadius: 13, border: '1.5px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 10, boxShadow: '0 1px 3px rgba(0,0,0,.06)', transition: 'all .15s' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg3)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'var(--card-bg)')}>
             <GoogleIcon />
             Continue with Google
+          </button>
+
+          {/* Connect Wallet */}
+          <button
+            onClick={handleConnectWallet}
+            disabled={isPending}
+            style={{ width: '100%', padding: '13px 16px', borderRadius: 13, border: '1.5px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,.06)', transition: 'all .15s' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg3)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'var(--card-bg)')}>
+            <IconWallet size={20} stroke={1.8} />
+            Connect Wallet
           </button>
 
           {/* Divider */}

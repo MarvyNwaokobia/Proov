@@ -103,13 +103,14 @@ function buildConnectors() {
   if (!clientId) {
     return [mock({ accounts: ["0x0000000000000000000000000000000000000001"] as const })];
   }
+  const { injected } = require("wagmi/connectors");
   try {
     // Lazy import to avoid SSR issues
     const { createAAConnector } = require("./aa-provider");
-    return [createAAConnector({ web3AuthInstance: getWeb3Auth() })];
+    return [createAAConnector({ web3AuthInstance: getWeb3Auth() }), injected()];
   } catch {
-    // AA connector failed to initialise — fall back to mock so the app still loads
-    return [mock({ accounts: ["0x0000000000000000000000000000000000000001"] as const })];
+    // AA connector failed to initialise — still offer injected so wallet connect works
+    return [injected()];
   }
 }
 
