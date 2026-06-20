@@ -15,6 +15,7 @@ import { isMiniPay } from '@/lib/minipay';
 import type { TankStatus } from '@/lib/fuel';
 import { Walkthrough } from '@/components/shared/Walkthrough';
 import { ProofSheet } from '@/components/shared/ProofSheet';
+import { ConfettiBurst } from '@/components/shared/ConfettiBurst';
 import {
   IconFlame,
   IconUsers,
@@ -91,6 +92,8 @@ export default function DashboardPage() {
   const [proofSheet, setProofSheet] = useState<{ habitId: string; habitName: string; habitCategory?: string } | null>(null);
   const [avatarUrl, setAvatarUrl] = useState('');
   const [pendingHabits, setPendingHabits] = useState<Set<string>>(new Set());
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [justCompleted, setJustCompleted] = useState<Set<string>>(new Set());
   const [quote, setQuote] = useState(getDailyQuote);
   const proovTx = useProovTx();
 
@@ -322,11 +325,14 @@ export default function DashboardPage() {
     const newCompleted = [...completedToday, habitId];
     setCompletedToday(newCompleted);
     setHabitStreaks(prev => ({ ...prev, [habitId]: (prev[habitId] || 0) + 1 }));
+    setJustCompleted(prev => new Set(prev).add(habitId));
+    setTimeout(() => setJustCompleted(prev => { const s = new Set(prev); s.delete(habitId); return s; }), 800);
     showToast('Habit done ✓');
     await saveHabitCompletion(habitId, addr, currentStreak).catch(() => {});
 
     const allDone = habits.every(h => newCompleted.includes(h.id));
     if (allDone && habits.length > 0) {
+      setShowConfetti(true);
       const todayStr = new Date().toISOString().split('T')[0];
       const newStreak = await updateDailyStreak(addr).catch(() => currentStreak + 1);
       setCurrentStreak(newStreak);
@@ -604,6 +610,7 @@ export default function DashboardPage() {
                 const isPending = pendingHabits.has(habit.id);
                 const isVerified = verifiedHabits.includes(habit.id);
                 const habitStreak = habitStreaks[habit.id] || 0;
+                const isCelebrating = justCompleted.has(habit.id);
                 return (
                   <div
                     key={habit.id}
@@ -618,6 +625,8 @@ export default function DashboardPage() {
                       cursor: (isDone || isPending) && habit.type === 'checkbox' ? 'default' : 'pointer',
                       opacity: isDone ? 0.78 : 1,
                       display: 'flex', flexDirection: 'column',
+                      transform: isCelebrating ? 'scale(1.04)' : 'scale(1)',
+                      transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease',
                     }}>
                     {/* Emoji + verified badge row */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
@@ -811,6 +820,9 @@ export default function DashboardPage() {
         </div>
 
       </div>
+
+      {/* Confetti on all habits done */}
+      <ConfettiBurst active={showConfetti} onDone={() => setShowConfetti(false)} />
 
       {/* Toast */}
       <div className={`toast ${toastVisible ? 'show' : ''}`}>{toast}</div>
