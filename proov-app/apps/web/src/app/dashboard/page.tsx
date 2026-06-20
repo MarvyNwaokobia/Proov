@@ -27,7 +27,10 @@ import {
   IconCheck,
   IconShieldCheck,
   IconTrendingUp,
+  IconRefresh,
+  IconQuote,
 } from '@tabler/icons-react';
+import { getDailyQuote, getRandomQuote } from '@/lib/quotes';
 
 const STREAK_MILESTONES = [7, 14, 21, 30, 60, 90];
 function getNextGoal(s: number) {
@@ -91,6 +94,7 @@ export default function DashboardPage() {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [pendingHabits, setPendingHabits] = useState<Set<string>>(new Set());
   const [weeklyData, setWeeklyData] = useState<{ day: string; count: number }[]>([]);
+  const [quote, setQuote] = useState(getDailyQuote);
   const proovTx = useProovTx();
 
   useEffect(() => {
@@ -461,22 +465,38 @@ export default function DashboardPage() {
                     </span>
                   </div>
                 </div>
-                <div style={{ textAlign: 'right', background: 'rgba(255,255,255,0.12)', borderRadius: 10, padding: '7px 10px' }}>
-                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', marginBottom: 1 }}>Goal</div>
-                  <div style={{ fontSize: 18, fontWeight: 900, lineHeight: 1 }}>{getNextGoal(currentStreak)}d</div>
-                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', marginTop: 1 }}>
-                    {Math.max(0, getNextGoal(currentStreak) - currentStreak)} to go
-                  </div>
-                </div>
+                {/* Daily progress ring */}
+                {(() => {
+                  const size = 56;
+                  const sw = 4.5;
+                  const r = (size - sw) / 2;
+                  const circ = 2 * Math.PI * r;
+                  const pct = totalHabits > 0 ? completedCount / totalHabits : 0;
+                  const offset = circ * (1 - pct);
+                  const allDone = totalHabits > 0 && completedCount >= totalHabits;
+                  return (
+                    <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
+                      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+                        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth={sw} />
+                        <circle cx={size / 2} cy={size / 2} r={r} fill="none"
+                          stroke={allDone ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.75)'}
+                          strokeWidth={sw} strokeLinecap="round"
+                          strokeDasharray={circ} strokeDashoffset={offset}
+                          style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+                        />
+                      </svg>
+                      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: 16, fontWeight: 900, lineHeight: 1 }}>{completedCount}/{totalHabits}</span>
+                        <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>today</span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
-              {/* Progress bar */}
+              {/* Thin progress bar (mirrors ring below text) */}
               <div style={{ marginBottom: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>
-                  <span>Today</span>
-                  <span>{completedCount} of {totalHabits} done</span>
-                </div>
-                <div style={{ height: 4, background: 'rgba(255,255,255,0.2)', borderRadius: 2 }}>
-                  <div style={{ height: '100%', width: `${progressPercent}%`, background: 'rgba(255,255,255,0.85)', borderRadius: 2, transition: 'width .4s ease' }} />
+                <div style={{ height: 3, background: 'rgba(255,255,255,0.12)', borderRadius: 2 }}>
+                  <div style={{ height: '100%', width: `${progressPercent}%`, background: 'rgba(255,255,255,0.7)', borderRadius: 2, transition: 'width .5s ease' }} />
                 </div>
               </div>
               {/* 7-day week dots */}
@@ -554,6 +574,30 @@ export default function DashboardPage() {
           )}
         </div>
 
+        {/* ── Motivational quote ── */}
+        <div style={{
+          background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14,
+          padding: '14px 16px', marginBottom: 16, position: 'relative',
+        }}>
+          <IconQuote size={14} stroke={1.5} color="var(--accent)" style={{ opacity: 0.5, marginBottom: 4 }} />
+          <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', lineHeight: 1.6, margin: 0, fontStyle: 'italic' }}>
+            &ldquo;{quote.text}&rdquo;
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+            <span style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600 }}>— {quote.author}</span>
+            <button
+              onClick={(e) => { e.stopPropagation(); setQuote(getRandomQuote()); }}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer', padding: 4,
+                color: 'var(--text3)', display: 'flex', alignItems: 'center',
+              }}
+              aria-label="New quote"
+            >
+              <IconRefresh size={13} stroke={2} />
+            </button>
+          </div>
+        </div>
+
         {/* ── TODAY habits 2-col grid ── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.2px', color: 'var(--text3)' }}>TODAY</span>
@@ -561,11 +605,14 @@ export default function DashboardPage() {
         </div>
 
         {habits.length === 0 ? (
-          <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14, padding: '1.5rem', textAlign: 'center', marginBottom: 14 }}>
-            <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', marginBottom: 4 }}>No habits yet</p>
-            <p style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 12, lineHeight: 1.6 }}>Add a habit to start your streak</p>
-            <Link href="/habits" style={{ padding: '9px 18px', borderRadius: 20, background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 11, fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-              <IconPlus size={13} stroke={2} /> Create first habit
+          <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, padding: '28px 20px', textAlign: 'center', marginBottom: 14 }}>
+            <div style={{ fontSize: 36, marginBottom: 10, lineHeight: 1 }}>🌱</div>
+            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>Every journey starts with one step</p>
+            <p style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 16, lineHeight: 1.7, maxWidth: 220, margin: '0 auto 16px' }}>
+              Create your first habit and watch your streak grow day by day.
+            </p>
+            <Link href="/habits" style={{ padding: '10px 22px', borderRadius: 22, background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 12, fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 8px var(--btn-primary-shadow, rgba(0,0,0,0.1))' }}>
+              <IconPlus size={14} stroke={2.5} /> Create first habit
             </Link>
           </div>
         ) : (
@@ -727,14 +774,14 @@ export default function DashboardPage() {
         </div>
 
         {circleMembers.length === 0 ? (
-          <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14, padding: '1.25rem', textAlign: 'center', marginBottom: 14 }}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>
-              <IconUsers size={28} stroke={1.5} color="var(--accent)" />
-            </div>
-            <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', marginBottom: 4 }}>No circle yet</p>
-            <p style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 12, lineHeight: 1.6 }}>Add friends to cheer each other on</p>
-            <Link href="/circle" style={{ padding: '8px 16px', borderRadius: 20, background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 11, fontWeight: 600, textDecoration: 'none', display: 'inline-block' }}>
-              Invite someone →
+          <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, padding: '28px 20px', textAlign: 'center', marginBottom: 14 }}>
+            <div style={{ fontSize: 36, marginBottom: 10, lineHeight: 1 }}>🤝</div>
+            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>Accountability is a superpower</p>
+            <p style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 16, lineHeight: 1.7, maxWidth: 220, margin: '0 auto 16px' }}>
+              Invite a friend to your circle. Cheer each other on and stay consistent together.
+            </p>
+            <Link href="/circle" style={{ padding: '10px 22px', borderRadius: 22, background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 12, fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 8px var(--btn-primary-shadow, rgba(0,0,0,0.1))' }}>
+              <IconUsers size={14} stroke={2} /> Invite someone
             </Link>
           </div>
         ) : (
