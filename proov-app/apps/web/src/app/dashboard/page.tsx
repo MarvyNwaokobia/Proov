@@ -25,7 +25,10 @@ import {
   IconBell,
   IconCheck,
   IconShieldCheck,
+  IconRefresh,
+  IconQuote,
 } from '@tabler/icons-react';
+import { getDailyQuote, getRandomQuote } from '@/lib/quotes';
 
 const STREAK_MILESTONES = [7, 14, 21, 30, 60, 90];
 function getNextGoal(s: number) {
@@ -88,6 +91,7 @@ export default function DashboardPage() {
   const [proofSheet, setProofSheet] = useState<{ habitId: string; habitName: string; habitCategory?: string } | null>(null);
   const [avatarUrl, setAvatarUrl] = useState('');
   const [pendingHabits, setPendingHabits] = useState<Set<string>>(new Set());
+  const [quote, setQuote] = useState(getDailyQuote);
   const proovTx = useProovTx();
 
   useEffect(() => {
@@ -549,6 +553,30 @@ export default function DashboardPage() {
               })()}
             </div>
           )}
+        </div>
+
+        {/* ── Motivational quote ── */}
+        <div style={{
+          background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14,
+          padding: '14px 16px', marginBottom: 16, position: 'relative',
+        }}>
+          <IconQuote size={14} stroke={1.5} color="var(--accent)" style={{ opacity: 0.5, marginBottom: 4 }} />
+          <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', lineHeight: 1.6, margin: 0, fontStyle: 'italic' }}>
+            &ldquo;{quote.text}&rdquo;
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+            <span style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600 }}>— {quote.author}</span>
+            <button
+              onClick={(e) => { e.stopPropagation(); setQuote(getRandomQuote()); }}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer', padding: 4,
+                color: 'var(--text3)', display: 'flex', alignItems: 'center',
+              }}
+              aria-label="New quote"
+            >
+              <IconRefresh size={13} stroke={2} />
+            </button>
+          </div>
         </div>
 
         {/* ── TODAY habits 2-col grid ── */}
