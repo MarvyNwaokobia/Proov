@@ -194,7 +194,11 @@ export default function SignUpPage() {
       }
       if (cancelled) return;
       setPhase(returningUser ? 'welcome-back' : 'new-user');
-      setTimeout(() => { if (!cancelled) router.push(route); }, 600);
+      if (walletConnectRef.current) {
+        router.push(route);
+      } else {
+        setTimeout(() => { if (!cancelled) router.push(route); }, 600);
+      }
     };
     resolve();
     return () => { cancelled = true; };
