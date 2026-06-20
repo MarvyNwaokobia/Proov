@@ -542,11 +542,14 @@ export default function DashboardPage() {
         </div>
 
         {habits.length === 0 ? (
-          <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14, padding: '1.5rem', textAlign: 'center', marginBottom: 14 }}>
-            <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', marginBottom: 4 }}>No habits yet</p>
-            <p style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 12, lineHeight: 1.6 }}>Add a habit to start your streak</p>
-            <Link href="/habits" style={{ padding: '9px 18px', borderRadius: 20, background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 11, fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-              <IconPlus size={13} stroke={2} /> Create first habit
+          <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, padding: '28px 20px', textAlign: 'center', marginBottom: 14 }}>
+            <div style={{ fontSize: 36, marginBottom: 10, lineHeight: 1 }}>🌱</div>
+            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>Every journey starts with one step</p>
+            <p style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 16, lineHeight: 1.7, maxWidth: 220, margin: '0 auto 16px' }}>
+              Create your first habit and watch your streak grow day by day.
+            </p>
+            <Link href="/habits" style={{ padding: '10px 22px', borderRadius: 22, background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 12, fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 8px var(--btn-primary-shadow, rgba(0,0,0,0.1))' }}>
+              <IconPlus size={14} stroke={2.5} /> Create first habit
             </Link>
           </div>
         ) : (
@@ -657,14 +660,14 @@ export default function DashboardPage() {
         </div>
 
         {circleMembers.length === 0 ? (
-          <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14, padding: '1.25rem', textAlign: 'center', marginBottom: 14 }}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>
-              <IconUsers size={28} stroke={1.5} color="var(--accent)" />
-            </div>
-            <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', marginBottom: 4 }}>No circle yet</p>
-            <p style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 12, lineHeight: 1.6 }}>Add friends to cheer each other on</p>
-            <Link href="/circle" style={{ padding: '8px 16px', borderRadius: 20, background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 11, fontWeight: 600, textDecoration: 'none', display: 'inline-block' }}>
-              Invite someone →
+          <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 16, padding: '28px 20px', textAlign: 'center', marginBottom: 14 }}>
+            <div style={{ fontSize: 36, marginBottom: 10, lineHeight: 1 }}>🤝</div>
+            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>Accountability is a superpower</p>
+            <p style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 16, lineHeight: 1.7, maxWidth: 220, margin: '0 auto 16px' }}>
+              Invite a friend to your circle. Cheer each other on and stay consistent together.
+            </p>
+            <Link href="/circle" style={{ padding: '10px 22px', borderRadius: 22, background: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)', fontSize: 12, fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 8px var(--btn-primary-shadow, rgba(0,0,0,0.1))' }}>
+              <IconUsers size={14} stroke={2} /> Invite someone
             </Link>
           </div>
         ) : (
