@@ -5,9 +5,10 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   getUserHabits, getUsernameForAddress, getStreakData, getTodayCompletions,
   getGlobalLeaderboard, getAllHabitStreaks, getTotalCompletions,
-  getDailyCompletionCounts, getProfileCreatedAt, getCircleRequests, type Habit,
+  getDailyCompletionCounts, getProfileCreatedAt, getCircleRequests,
+  getMoodHistory, type Habit, type MoodValue,
 } from '@/lib/supabase';
-import { IconArrowLeft, IconFlame, IconSettings2 } from '@tabler/icons-react';
+import { IconArrowLeft, IconFlame, IconSettings2, IconMoodSmile } from '@tabler/icons-react';
 
 function glowStyle(count: number, total: number): React.CSSProperties {
   // Future day — dim outline, no colour
@@ -49,6 +50,7 @@ export default function ProfilePage() {
   const [circleCount, setCircleCount] = useState(0);
   const [habitStreaks, setHabitStreaks] = useState<Record<string, number>>({});
   const [dailyCounts, setDailyCounts] = useState<Record<string, number>>({});
+  const [moodHistory, setMoodHistory] = useState<{ date: string; mood: MoodValue }[]>([]);
   const [memberSince, setMemberSince] = useState('');
   const [joinedDate, setJoinedDate] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
@@ -96,6 +98,11 @@ export default function ProfilePage() {
     if (!address || habits.length === 0) return;
     getAllHabitStreaks(habits.map(h => h.id), address).then(setHabitStreaks).catch(() => {});
   }, [habits, address]);
+
+  useEffect(() => {
+    if (!address) return;
+    getMoodHistory(address, 30).then(setMoodHistory).catch(() => {});
+  }, [address]);
 
   useEffect(() => {
     if (!address) return;
@@ -250,6 +257,84 @@ export default function ProfilePage() {
             })}
           </div>
         )}
+
+        {/* Mood trend */}
+        {moodHistory.length > 0 && (() => {
+          const MOOD_EMOJI: Record<number, string> = { 1: '😣', 2: '😕', 3: '😐', 4: '🙂', 5: '😄' };
+          const avgMood = moodHistory.reduce((s, m) => s + m.mood, 0) / moodHistory.length;
+          const avgLabel = avgMood >= 4.5 ? 'Great' : avgMood >= 3.5 ? 'Good' : avgMood >= 2.5 ? 'Okay' : avgMood >= 1.5 ? 'Meh' : 'Rough';
+
+          const moodByDate = Object.fromEntries(moodHistory.map(m => [m.date, m.mood]));
+          const completionsByMood: Record<number, number[]> = {};
+          for (const m of moodHistory) {
+            const count = dailyCounts[m.date] || 0;
+            if (!completionsByMood[m.mood]) completionsByMood[m.mood] = [];
+            completionsByMood[m.mood].push(count);
+          }
+          const moodAvgCompletions = Object.entries(completionsByMood).map(([mood, counts]) => ({
+            mood: Number(mood),
+            avg: counts.reduce((s, c) => s + c, 0) / counts.length,
+          })).sort((a, b) => b.avg - a.avg);
+          const bestMood = moodAvgCompletions[0];
+
+          const chartH = 48;
+          const last14 = moodHistory.slice(-14);
+
+          return (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.2px', color: 'var(--text3)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <IconMoodSmile size={12} stroke={2} /> Mood
+              </div>
+              <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14, padding: '14px 16px' }}>
+                {/* Average + streak */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                  <span style={{ fontSize: 28 }}>{MOOD_EMOJI[Math.round(avgMood)] || '😐'}</span>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Average: {avgLabel}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text3)' }}>{moodHistory.length} entries in the last 30 days</div>
+                  </div>
+                </div>
+
+                {/* Mini dot chart — last 14 mood entries */}
+                {last14.length > 1 && (
+                  <div style={{ marginBottom: 12 }}>
+                    <svg width="100%" height={chartH + 16} viewBox={`0 0 ${last14.length * 20} ${chartH + 16}`} style={{ display: 'block' }}>
+                      {/* connecting line */}
+                      <polyline
+                        fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round"
+                        style={{ opacity: 0.3 }}
+                        points={last14.map((m, i) => `${i * 20 + 10},${chartH - ((m.mood - 1) / 4) * chartH + 8}`).join(' ')}
+                      />
+                      {/* dots */}
+                      {last14.map((m, i) => {
+                        const y = chartH - ((m.mood - 1) / 4) * chartH + 8;
+                        return (
+                          <g key={m.date}>
+                            <circle cx={i * 20 + 10} cy={y} r={4} fill="var(--accent)" style={{ opacity: 0.8 }} />
+                            <text x={i * 20 + 10} y={y - 7} textAnchor="middle" fontSize={8} fill="var(--text3)">
+                              {MOOD_EMOJI[m.mood]}
+                            </text>
+                          </g>
+                        );
+                      })}
+                    </svg>
+                  </div>
+                )}
+
+                {/* Correlation insight */}
+                {bestMood && habits.length > 0 && (
+                  <div style={{
+                    background: 'var(--accent-bg)', border: '1px solid var(--accent-border)',
+                    borderRadius: 10, padding: '8px 12px', fontSize: 11, color: 'var(--text2)', lineHeight: 1.5,
+                  }}>
+                    You feel <strong style={{ color: 'var(--accent-text)' }}>{MOOD_EMOJI[bestMood.mood]} {bestMood.mood >= 4 ? 'best' : 'better'}</strong> on days
+                    you complete <strong style={{ color: 'var(--accent-text)' }}>{bestMood.avg.toFixed(1)} habits</strong> on average
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* 30-day glow heatmap */}
         <div style={{ marginBottom: 16 }}>
