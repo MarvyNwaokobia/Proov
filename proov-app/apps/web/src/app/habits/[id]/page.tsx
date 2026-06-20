@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import {
   IconArrowLeft, IconPencil, IconArchive,
   IconPlayerPlay, IconCheck, IconLock, IconUsers, IconWorld, IconFlame, IconShieldCheck,
+  IconChevronLeft, IconChevronRight,
 } from '@tabler/icons-react';
 import {
   getUserHabits,
@@ -16,6 +17,7 @@ import {
   getCircleRequests,
   getUsernamesForAddresses,
   getVerifiedHabitsToday,
+  getHabitCompletionDates,
   type Habit,
 } from '@/lib/supabase';
 import { ProofSheet } from '@/components/shared/ProofSheet';
@@ -45,6 +47,8 @@ export default function HabitDetailPage() {
   const [editVisibleTo, setEditVisibleTo] = useState<string[]>([]);
   const [circleMembers, setCircleMembers] = useState<{ address: string; username: string }[]>([]);
   const [saving, setSaving] = useState(false);
+  const [completionDates, setCompletionDates] = useState<Set<string>>(new Set());
+  const [calMonth, setCalMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
 
   useEffect(() => {
     const address = localStorage.getItem('proov_address') || '';
@@ -78,6 +82,8 @@ export default function HabitDetailPage() {
           username: usernameMap[addr] || addr.slice(0, 6) + '…' + addr.slice(-4),
         })));
       }
+
+      getHabitCompletionDates(id, address).then(dates => setCompletionDates(new Set(dates))).catch(() => {});
     });
   }, [id, router]);
 
@@ -234,6 +240,68 @@ export default function HabitDetailPage() {
           })}
         </div>
       </div>
+
+      {/* Month calendar */}
+      {completionDates.size > 0 && (() => {
+        const year = calMonth.getFullYear();
+        const month = calMonth.getMonth();
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const todayStr = new Date().toISOString().split('T')[0];
+        const monthLabel = calMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
+        const isCurrentMonth = new Date().getFullYear() === year && new Date().getMonth() === month;
+
+        const cells: { day: number; dateStr: string; done: boolean; isToday: boolean; isFuture: boolean }[] = [];
+        for (let d = 1; d <= daysInMonth; d++) {
+          const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          const dt = new Date(year, month, d);
+          cells.push({ day: d, dateStr, done: completionDates.has(dateStr), isToday: dateStr === todayStr, isFuture: dt > new Date() });
+        }
+
+        const completedInMonth = cells.filter(c => c.done).length;
+
+        return (
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <button onClick={() => setCalMonth(new Date(year, month - 1, 1))}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 4, display: 'flex' }}>
+                <IconChevronLeft size={16} stroke={2} />
+              </button>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{monthLabel}</div>
+              <button onClick={() => { if (!isCurrentMonth) setCalMonth(new Date(year, month + 1, 1)); }}
+                style={{ background: 'none', border: 'none', cursor: isCurrentMonth ? 'default' : 'pointer', color: isCurrentMonth ? 'var(--border)' : 'var(--text3)', padding: 4, display: 'flex' }}>
+                <IconChevronRight size={16} stroke={2} />
+              </button>
+            </div>
+            {/* Day headers */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3, marginBottom: 3 }}>
+              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                <div key={i} style={{ textAlign: 'center', fontSize: 8, fontWeight: 600, color: 'var(--text3)', padding: '2px 0' }}>{d}</div>
+              ))}
+            </div>
+            {/* Calendar grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
+              {Array.from({ length: firstDay }).map((_, i) => <div key={`e${i}`} />)}
+              {cells.map(c => (
+                <div key={c.dateStr} style={{
+                  aspectRatio: '1', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 9, fontWeight: c.done ? 700 : 500,
+                  background: c.done ? 'var(--accent)' : c.isToday ? 'var(--accent-bg)' : 'var(--bg2)',
+                  border: c.isToday && !c.done ? '1.5px solid var(--accent-border)' : '1px solid var(--border)',
+                  color: c.done ? '#fff' : c.isFuture ? 'var(--border)' : 'var(--text3)',
+                  opacity: c.isFuture ? 0.4 : 1,
+                }}>
+                  {c.day}
+                </div>
+              ))}
+            </div>
+            {/* Month summary */}
+            <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 6, textAlign: 'center' }}>
+              {completedInMonth} day{completedInMonth !== 1 ? 's' : ''} completed in {calMonth.toLocaleString('default', { month: 'long' })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Primary CTA */}
       {habit.type === 'timed' ? (

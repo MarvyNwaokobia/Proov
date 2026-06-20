@@ -641,6 +641,19 @@ export async function getTotalCompletions(userAddress: string): Promise<number> 
   return count || 0;
 }
 
+export async function getHabitCompletionDates(habitId: string, userAddress: string): Promise<string[]> {
+  if (!supabase || !habitId) return [];
+  const { data } = await supabase
+    .from('habit_completions')
+    .select('completed_at')
+    .eq('habit_id', habitId)
+    .eq('user_address', userAddress.toLowerCase())
+    .order('completed_at', { ascending: true });
+  const dateSet = new Set<string>();
+  (data || []).forEach((c: any) => dateSet.add(c.completed_at.split('T')[0]));
+  return Array.from(dateSet);
+}
+
 export async function getCompletionDates(userAddress: string): Promise<string[]> {
   if (!supabase) return [];
   const cutoff = new Date();
