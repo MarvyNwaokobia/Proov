@@ -5,10 +5,8 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { createClient } from '@supabase/supabase-js';
 import { getTankThresholds } from '@/lib/fuel';
 
-// Web3Auth (platform-managed) wallets get the full daily drip.
 const DRIP = parseEther('0.2');
-// External wallets get a smaller one-time welcome drip — enough for ~20-30 actions.
-const WELCOME_DRIP = parseEther('0.1');
+const WELCOME_DRIP = parseEther('0.2');
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
