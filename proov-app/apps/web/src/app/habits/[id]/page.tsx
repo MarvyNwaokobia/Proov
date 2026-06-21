@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import {
   IconArrowLeft, IconPencil, IconArchive,
   IconPlayerPlay, IconCheck, IconLock, IconUsers, IconWorld, IconFlame, IconShieldCheck,
-  IconChevronLeft, IconChevronRight, IconNotes,
+  IconChevronLeft, IconChevronRight, IconNotes, IconBell, IconBellOff,
 } from '@tabler/icons-react';
 import {
   getUserHabits,
@@ -26,6 +26,7 @@ import {
 import { ProofSheet } from '@/components/shared/ProofSheet';
 import { DurationPicker } from '@/components/shared/DurationPicker';
 import { useProovTx } from '@/hooks/useProovTx';
+import { getHabitReminder, setHabitReminder, clearHabitReminder } from '@/lib/habitReminders';
 
 function fmtDur(mins: number) {
   if (mins < 60) return `${mins} min`;
@@ -58,6 +59,7 @@ export default function HabitDetailPage() {
   const [noteSaved, setNoteSaved] = useState(false);
   const [notes, setNotes] = useState<{ date: string; note: string }[]>([]);
   const [calMonth, setCalMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
+  const [reminderTime, setReminderTime] = useState<string | null>(null);
 
   useEffect(() => {
     const address = localStorage.getItem('proov_address') || '';
@@ -92,6 +94,7 @@ export default function HabitDetailPage() {
         })));
       }
 
+      setReminderTime(getHabitReminder(id));
       getHabitCompletionDates(id, address).then(dates => setCompletionDates(new Set(dates))).catch(() => {});
       getHabitStats(id, address).then(stats => {
         setBestStreak(stats.bestStreak);
@@ -207,6 +210,50 @@ export default function HabitDetailPage() {
             <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>{visibilityIcon} {visibilityLabel}</span>
           </div>
         </div>
+      </div>
+
+      {/* Reminder */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        marginBottom: 14, padding: '8px 12px',
+        background: 'var(--bg2)', border: '1px solid var(--border)',
+        borderRadius: 10,
+      }}>
+        {reminderTime ? (
+          <>
+            <IconBell size={14} stroke={2} color="var(--accent-text)" />
+            <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>
+              Reminder at {reminderTime}
+            </span>
+            <button
+              onClick={() => { clearHabitReminder(id); setReminderTime(null); showToast('Reminder removed'); }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', display: 'flex', padding: 2 }}
+            >
+              <IconBellOff size={14} stroke={2} />
+            </button>
+          </>
+        ) : (
+          <>
+            <IconBell size={14} stroke={2} color="var(--text3)" />
+            <span style={{ flex: 1, fontSize: 12, color: 'var(--text3)' }}>No reminder set</span>
+            <input
+              type="time"
+              onChange={e => {
+                if (e.target.value) {
+                  setHabitReminder(id, e.target.value);
+                  setReminderTime(e.target.value);
+                  showToast(`Reminder set for ${e.target.value}`);
+                }
+              }}
+              style={{
+                border: '1px solid var(--accent-border)', borderRadius: 8,
+                background: 'var(--accent-bg)', color: 'var(--accent-text)',
+                fontSize: 11, fontWeight: 700, padding: '3px 8px',
+                fontFamily: 'inherit', outline: 'none', cursor: 'pointer',
+              }}
+            />
+          </>
+        )}
       </div>
 
       {/* Stats row */}
