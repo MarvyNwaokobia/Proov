@@ -498,6 +498,48 @@ export async function getHabitStreak(habitId: string, userAddress: string): Prom
   return streak;
 }
 
+export async function getHabitStats(habitId: string, userAddress: string): Promise<{
+  totalCompletions: number;
+  bestStreak: number;
+  completionRate: number;
+}> {
+  if (!supabase) return { totalCompletions: 0, bestStreak: 0, completionRate: 0 };
+
+  const { data } = await supabase
+    .from('habit_completions')
+    .select('completed_at')
+    .eq('habit_id', habitId)
+    .eq('user_address', userAddress.toLowerCase())
+    .order('completed_at', { ascending: true });
+
+  if (!data || data.length === 0) return { totalCompletions: 0, bestStreak: 0, completionRate: 0 };
+
+  const dates = Array.from(new Set(data.map((c: any) => c.completed_at.split('T')[0]))).sort();
+  const totalCompletions = dates.length;
+
+  let bestStreak = 1;
+  let current = 1;
+  for (let i = 1; i < dates.length; i++) {
+    const prev = new Date(dates[i - 1] + 'T12:00:00');
+    const curr = new Date(dates[i] + 'T12:00:00');
+    const diff = Math.round((curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
+    if (diff === 1) {
+      current++;
+      if (current > bestStreak) bestStreak = current;
+    } else {
+      current = 1;
+    }
+  }
+
+  const firstDate = new Date(dates[0] + 'T12:00:00');
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  const totalDays = Math.max(1, Math.round((today.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+  const completionRate = Math.round((totalCompletions / totalDays) * 100);
+
+  return { totalCompletions, bestStreak, completionRate };
+}
+
 // ── NUDGES ─────────────────────────────────────────────────────────────────────
 
 /**
