@@ -19,6 +19,7 @@ import {
   saveHabit,
   type Habit, type TimerSession,
 } from '@/lib/supabase';
+import { playAmbient, stopAmbient, AMBIENT_OPTIONS, type SoundType } from '@/lib/ambientSounds';
 
 type TimerView = 'pick' | 'setup' | 'running' | 'done';
 
@@ -77,6 +78,7 @@ function GrindTimerPageContent() {
   const [convertEmoji, setConvertEmoji] = useState('⏱');
   const [convertDuration, setConvertDuration] = useState(25);
   const [convertSaving, setConvertSaving] = useState(false);
+  const [ambientSound, setAmbientSound] = useState<SoundType>('silence');
 
   useEffect(() => {
     const addr = localStorage.getItem('proov_address') || '';
@@ -257,6 +259,7 @@ function GrindTimerPageContent() {
       if (remaining <= 1) {
         clearInterval(intervalRef.current!);
         localStorage.removeItem('proov_active_timer');
+        stopAmbient();
         justCompletedRef.current = true;
         setSecondsLeft(0);
         setView('done');
@@ -356,6 +359,8 @@ function GrindTimerPageContent() {
     await getAllSessionHistory(address).then(setSessionHistory).catch(() => {});
 
     setTxPending(null);
+    stopAmbient();
+    setAmbientSound('silence');
     setView('pick');
     setSelectedHabit(null);
     setIsCustom(false);
@@ -370,6 +375,8 @@ function GrindTimerPageContent() {
   const cancelTimer = () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     localStorage.removeItem('proov_active_timer');
+    stopAmbient();
+    setAmbientSound('silence');
 
     const elapsed = totalSeconds - secondsLeft;
 
@@ -491,7 +498,19 @@ function GrindTimerPageContent() {
           justifyContent: 'center', minHeight: 'calc(100vh - 130px)',
           padding: 24, position: 'relative',
         }}>
-          <style>{`@keyframes tpulse{0%,100%{opacity:.4;transform:translate(-50%,-50%) scale(1)}50%{opacity:.9;transform:translate(-50%,-50%) scale(1.08)}}`}</style>
+          <style>{`@keyframes tpulse{0%,100%{opacity:.4;transform:translate(-50%,-50%) scale(1)}50%{opacity:.9;transform:translate(-50%,-50%) scale(1.08)}}@keyframes atmo-breathe{0%,100%{opacity:.12}50%{opacity:.22}}`}</style>
+          {/* Atmosphere tint overlay */}
+          {ambientSound !== 'silence' && (
+            <div style={{
+              position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none',
+              background: ambientSound === 'rain' ? 'radial-gradient(ellipse at center, rgba(100,150,220,0.18), transparent 70%)'
+                : ambientSound === 'forest' ? 'radial-gradient(ellipse at center, rgba(60,160,80,0.15), transparent 70%)'
+                : ambientSound === 'waves' ? 'radial-gradient(ellipse at center, rgba(60,140,200,0.16), transparent 70%)'
+                : 'radial-gradient(ellipse at center, rgba(180,140,80,0.14), transparent 70%)',
+              animation: 'atmo-breathe 4s ease-in-out infinite',
+              transition: 'background 0.6s ease',
+            }} />
+          )}
           <div style={{
             position: 'absolute', top: '50%', left: '50%',
             width: 340, height: 340, borderRadius: '50%',
@@ -518,6 +537,25 @@ function GrindTimerPageContent() {
               </div>
               <div style={{ fontSize: 10, color: 'var(--text3)' }}>Target: {fmtDur(sessionDuration)}</div>
             </div>
+          </div>
+          {/* Ambient sound selector */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 18, position: 'relative', zIndex: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
+            {AMBIENT_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => { setAmbientSound(opt.value); playAmbient(opt.value); }}
+                style={{
+                  padding: '5px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                  border: ambientSound === opt.value ? '1.5px solid var(--accent-border)' : '1.5px solid var(--border)',
+                  background: ambientSound === opt.value ? 'var(--accent-bg)' : 'transparent',
+                  color: ambientSound === opt.value ? 'var(--accent-text)' : 'var(--text3)',
+                  cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4,
+                  transition: 'all .15s',
+                }}
+              >
+                <span style={{ fontSize: 13 }}>{opt.emoji}</span> {opt.label}
+              </button>
+            ))}
           </div>
           <div style={{ position: 'relative', width: 220, height: 220, marginBottom: 26, zIndex: 1 }}>
             <svg viewBox="0 0 220 220" width="220" height="220" style={{ transform: 'rotate(-90deg)', position: 'relative', zIndex: 1 }}>
@@ -548,23 +586,38 @@ function GrindTimerPageContent() {
       )}
 
       {/* ── DONE — full-page completion screen ── */}
-      {isDone && (
+      {isDone && (() => {
+        const msgs = [
+          `${fmtDur(sessionDuration)} of pure focus. That’s commitment.`,
+          'You showed up and did the work. That’s what matters.',
+          'Another session in the books. Keep building.',
+          'Discipline is a muscle. You just made it stronger.',
+          `${fmtDur(sessionDuration)} well spent. Your future self thanks you.`,
+          'Consistency beats intensity. You’re proving it.',
+        ];
+        const msg = msgs[Math.floor(Math.random() * msgs.length)];
+        return (
         <div style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center',
           justifyContent: 'center', minHeight: 'calc(100vh - 130px)',
           padding: 24,
         }}>
-          <style>{`@keyframes pop{0%{transform:scale(.5);opacity:0}80%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}`}</style>
-          <div style={{ marginBottom: 12, animation: 'pop .4s ease', color: 'var(--accent-text)' }}>
-            <IconCircleCheck size={56} stroke={1.5} />
+          <style>{`@keyframes pop{0%{transform:scale(.5);opacity:0}80%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}@keyframes done-glow{0%,100%{box-shadow:0 0 20px var(--accent),0 0 40px transparent}50%{box-shadow:0 0 30px var(--accent),0 0 60px var(--accent-bg)}}`}</style>
+          <div style={{
+            width: 80, height: 80, borderRadius: '50%',
+            background: 'var(--accent-bg)', border: '2px solid var(--accent)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            marginBottom: 16, animation: 'pop .4s ease, done-glow 2s ease-in-out infinite',
+          }}>
+            <IconCircleCheck size={40} stroke={1.5} color="var(--accent-text)" />
           </div>
           <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', textAlign: 'center', letterSpacing: '-.5px', margin: '0 0 6px' }}>
             {sessionHabitName
               ? `${sessionHabitName} · ${fmtDur(sessionDuration)} done`
               : `Custom session · ${fmtDur(sessionDuration)} done`}
           </h2>
-          <p style={{ fontSize: 13, color: 'var(--text2)', textAlign: 'center', lineHeight: 1.6, marginBottom: 28 }}>
-            &quot;Keep showing up. That&apos;s the whole game.&quot;
+          <p style={{ fontSize: 13, color: 'var(--text2)', textAlign: 'center', lineHeight: 1.6, marginBottom: 28, maxWidth: 280, fontStyle: 'italic' }}>
+            {msg}
           </p>
           <button
             onClick={confirmDone}
@@ -583,22 +636,39 @@ function GrindTimerPageContent() {
             {txPending === 'ending' ? 'Saving…' : 'Mark complete'}
           </button>
         </div>
-      )}
+        );
+      })()}
 
       <div style={{ maxWidth: 560, margin: '0 auto', padding: '1.25rem 1.25rem 100px', position: 'relative', zIndex: 1 }}>
 
         {/* Header — only on pick/setup */}
-        {(view === 'pick' || view === 'setup') && (
+        {(view === 'pick' || view === 'setup') && (() => {
+          const todayStr = new Date().toISOString().split('T')[0];
+          const todayMins = sessionHistory
+            .filter(s => s.completed && s.started_at.startsWith(todayStr))
+            .reduce((sum, s) => sum + s.duration_minutes, 0);
+          return (
           <div style={{ marginBottom: 20, paddingTop: 4 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 3 }}>
               <IconClock size={22} stroke={1.8} color="var(--accent-text)" />
               <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.5 }}>Grind Timer</span>
+              {todayMins > 0 && (
+                <span style={{
+                  marginLeft: 'auto', fontSize: 11, fontWeight: 700,
+                  color: 'var(--accent-text)', background: 'var(--accent-bg)',
+                  border: '1px solid var(--accent-border)',
+                  borderRadius: 20, padding: '3px 10px',
+                }}>
+                  {fmtDur(todayMins)} today
+                </span>
+              )}
             </div>
             <div style={{ fontSize: 12, color: 'var(--text3)', paddingLeft: 31 }}>
               Pick a habit or start a custom session
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {/* PICK HABIT */}
         {view === 'pick' && (
