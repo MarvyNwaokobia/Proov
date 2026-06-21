@@ -125,6 +125,7 @@ type SaveData = {
   name: string; catId: string; emoji: string;
   hasTimer: boolean; duration: number;
   frequency: number;
+  frequencyTarget: number;
   privacy: 'private' | 'public';
   viewers: string[];
   reminderTime: string | null;
@@ -144,6 +145,7 @@ function CreateForm({ onSave, isSaving, onCancel, prefill }: {
   const [hasTimer, setHasTimer] = useState(true);
   const [duration, setDuration] = useState(prefill?.duration ?? 25);
   const [frequency, setFrequency] = useState<number>(Frequency.DAILY);
+  const [frequencyTarget, setFrequencyTarget] = useState(7);
   const [privacy, setPrivacy] = useState<'private' | 'public'>('private');
   const [viewers, setViewers] = useState<string[]>([]);
   const [viewerInput, setViewerInput] = useState("");
@@ -170,6 +172,7 @@ function CreateForm({ onSave, isSaving, onCancel, prefill }: {
       hasTimer,
       duration,
       frequency,
+      frequencyTarget,
       privacy,
       viewers,
       reminderTime,
@@ -225,16 +228,57 @@ function CreateForm({ onSave, isSaving, onCancel, prefill }: {
       {step === 3 && (
         <div>
           <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 12 }}>How often?</p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            {[{ val: Frequency.DAILY, label: "Daily", Icon: IconCalendar, desc: "Every day" }, { val: Frequency.WEEKLY, label: "Weekly", Icon: IconCalendarWeek, desc: "Once a week" }].map(f => (
-              <button key={f.val} onClick={() => setFrequency(f.val)} style={{ padding: "1rem", borderRadius: 14, cursor: "pointer", fontFamily: "inherit", textAlign: "center", border: `1px solid ${frequency === f.val ? "var(--accent)" : "var(--border)"}`, background: frequency === f.val ? "var(--accent-bg)" : "transparent" }}>
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
-                  <f.Icon size={24} stroke={1.5} color={frequency === f.val ? "var(--accent-text)" : "var(--text3)"} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {([
+              { val: Frequency.DAILY, label: "Every day", desc: "Daily commitment", target: 7 },
+              { val: Frequency.WEEKLY, label: "X times per week", desc: "Flexible weekly goal", target: frequencyTarget },
+              { val: Frequency.WEEKLY, label: "Once a week", desc: "Weekly check-in", target: 1 },
+            ] as const).map((f, i) => {
+              const isXPerWeek = i === 1;
+              const isSelected = isXPerWeek
+                ? frequency === Frequency.WEEKLY && frequencyTarget > 1 && frequencyTarget < 7
+                : i === 0
+                  ? frequency === Frequency.DAILY || (frequency === Frequency.WEEKLY && frequencyTarget === 7)
+                  : frequency === Frequency.WEEKLY && frequencyTarget === 1;
+              return (
+                <div key={i}>
+                  <button
+                    onClick={() => {
+                      if (i === 0) { setFrequency(Frequency.DAILY); setFrequencyTarget(7); }
+                      else if (isXPerWeek) { setFrequency(Frequency.WEEKLY); if (frequencyTarget <= 1 || frequencyTarget >= 7) setFrequencyTarget(3); }
+                      else { setFrequency(Frequency.WEEKLY); setFrequencyTarget(1); }
+                    }}
+                    style={{
+                      width: "100%", padding: "11px 14px", borderRadius: 12, cursor: "pointer", fontFamily: "inherit",
+                      display: "flex", alignItems: "center", gap: 12, textAlign: "left",
+                      border: `1px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
+                      background: isSelected ? "var(--accent-bg)" : "transparent",
+                    }}
+                  >
+                    {i === 0 ? <IconCalendar size={20} stroke={1.6} color={isSelected ? "var(--accent-text)" : "var(--text3)"} />
+                      : <IconCalendarWeek size={20} stroke={1.6} color={isSelected ? "var(--accent-text)" : "var(--text3)"} />}
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 12, fontWeight: 600, color: isSelected ? "var(--accent-text)" : "var(--text)", margin: 0 }}>
+                        {isXPerWeek && isSelected ? `${frequencyTarget}× per week` : f.label}
+                      </p>
+                      <p style={{ fontSize: 10, color: "var(--text3)", margin: 0 }}>{f.desc}</p>
+                    </div>
+                  </button>
+                  {isXPerWeek && isSelected && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 14px", marginTop: 4 }}>
+                      <input
+                        type="range" min={2} max={6} step={1} value={frequencyTarget}
+                        onChange={e => setFrequencyTarget(parseInt(e.target.value))}
+                        style={{ flex: 1, accentColor: "var(--accent)" }}
+                      />
+                      <span style={{ fontSize: 14, fontWeight: 800, color: "var(--accent-text)", minWidth: 24, textAlign: "center" }}>
+                        {frequencyTarget}×
+                      </span>
+                    </div>
+                  )}
                 </div>
-                <p style={{ fontSize: 13, fontWeight: 600, color: frequency === f.val ? "var(--accent-text)" : "var(--text)" }}>{f.label}</p>
-                <p style={{ fontSize: 10, color: "var(--text3)" }}>{f.desc}</p>
-              </button>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -283,7 +327,7 @@ function CreateForm({ onSave, isSaving, onCancel, prefill }: {
             </div>
             {[
               ["Type", hasTimer ? `Timer · ${fmtDur(duration)}` : "Tap to complete"],
-              ["Schedule", frequency === Frequency.DAILY ? "Daily" : "Weekly"],
+              ["Schedule", frequency === Frequency.DAILY || frequencyTarget === 7 ? "Daily" : frequencyTarget === 1 ? "Weekly" : `${frequencyTarget}× per week`],
               ["Visible to", privacy === 'private' ? "Private" : "Circle"],
             ].map(([label, val]) => (
               <div key={label} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, borderTop: "1px solid var(--border)", paddingTop: 6, marginTop: 6 }}>
@@ -489,7 +533,9 @@ export default function HabitsPage() {
       category: data.catId,
       type: data.hasTimer ? 'timed' : 'checkbox',
       duration_minutes: data.hasTimer ? data.duration : 0,
-      schedule: data.frequency === Frequency.WEEKLY ? 'weekly' : 'daily',
+      schedule: data.frequency === Frequency.DAILY || data.frequencyTarget === 7 ? 'daily'
+        : data.frequencyTarget === 1 ? 'weekly'
+        : `${data.frequencyTarget}x_week`,
       visibility: data.privacy,
       visible_to: data.viewers,
       active: true,

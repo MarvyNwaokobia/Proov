@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDisconnect } from 'wagmi';
 import Link from 'next/link';
+import { isCompletionSoundEnabled, setCompletionSoundEnabled } from '@/lib/completionSound';
 import { isMiniPay } from '@/lib/minipay';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
 import { validateUsername, isUsernameTaken, registerUsername } from '@/lib/username';
@@ -64,6 +65,7 @@ export default function SettingsPage() {
   const [notifTime, setNotifTime] = useState('09:00');
   const [notifStreak, setNotifStreak] = useState(true);
   const [notifCircle, setNotifCircle] = useState(true);
+  const [soundOn, setSoundOn] = useState(true);
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
 
   useEffect(() => {
@@ -101,6 +103,7 @@ export default function SettingsPage() {
     if (streak !== null) setNotifStreak(streak !== 'false');
     const circle = localStorage.getItem('proov_notif_circle');
     if (circle !== null) setNotifCircle(circle !== 'false');
+    setSoundOn(isCompletionSoundEnabled());
 
     // Check notification permission
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -749,6 +752,17 @@ export default function SettingsPage() {
             className={`notif-toggle${notifCircle ? ' is-on' : ''}`}
           >
             <span className="notif-toggle-thumb" style={{ left: notifCircle ? 21 : 3 }} />
+          </button>
+        </div>
+
+        {/* Completion sound toggle */}
+        <div style={{ ...listRow, borderBottom: 'none' }}>
+          <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>Completion sound</span>
+          <button
+            onClick={() => { const next = !soundOn; setSoundOn(next); setCompletionSoundEnabled(next); }}
+            className={`notif-toggle${soundOn ? ' is-on' : ''}`}
+          >
+            <span className="notif-toggle-thumb" style={{ left: soundOn ? 21 : 3 }} />
           </button>
         </div>
 

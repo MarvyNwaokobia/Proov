@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import {
   IconArrowLeft, IconPencil, IconArchive,
   IconPlayerPlay, IconCheck, IconLock, IconUsers, IconWorld, IconFlame, IconShieldCheck,
-  IconChevronLeft, IconChevronRight, IconNotes, IconBell, IconBellOff,
+  IconChevronLeft, IconChevronRight, IconNotes, IconBell, IconBellOff, IconBulb,
 } from '@tabler/icons-react';
 import {
   getUserHabits,
@@ -512,6 +512,49 @@ export default function HabitDetailPage() {
           ))}
         </div>
       )}
+
+      {/* Habit insights */}
+      {completionDates.size >= 3 && (() => {
+        const DOW = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dates = Array.from(completionDates).sort();
+        const dowCounts: Record<number, number> = {};
+        dates.forEach(d => {
+          const dow = new Date(d + 'T12:00:00').getDay();
+          dowCounts[dow] = (dowCounts[dow] || 0) + 1;
+        });
+        const bestDow = Object.entries(dowCounts).sort(([, a], [, b]) => b - a)[0];
+        const bestDayName = bestDow ? DOW[Number(bestDow[0])] : null;
+
+        const recent7 = dates.slice(-7);
+        const older7 = dates.slice(-14, -7);
+        const trend = recent7.length > older7.length ? 'improving' : recent7.length < older7.length ? 'declining' : 'steady';
+        const trendEmoji = trend === 'improving' ? '📈' : trend === 'declining' ? '📉' : '➡️';
+        const trendLabel = trend === 'improving' ? 'Getting stronger' : trend === 'declining' ? 'Needs a push' : 'Holding steady';
+
+        return (
+          <div style={{
+            background: 'var(--accent-bg)', border: '1px solid var(--accent-border)',
+            borderRadius: 12, padding: '12px 14px', marginBottom: 14,
+          }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--accent-text)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+              <IconBulb size={12} stroke={2} /> Insights
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {bestDayName && (
+                <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.5 }}>
+                  📅 Best day: <strong style={{ color: 'var(--accent-text)' }}>{bestDayName}</strong> ({bestDow[1]} completions)
+                </div>
+              )}
+              <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.5 }}>
+                {trendEmoji} Trend: <strong style={{ color: 'var(--accent-text)' }}>{trendLabel}</strong>
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.5 }}>
+                🎯 Total: <strong style={{ color: 'var(--accent-text)' }}>{dates.length} days</strong> completed
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Divider */}
       <div style={{ height: 1, background: 'var(--border)', marginBottom: 12 }} />
