@@ -18,6 +18,8 @@ import type { TankStatus } from '@/lib/fuel';
 import { Walkthrough } from '@/components/shared/Walkthrough';
 import { ProofSheet } from '@/components/shared/ProofSheet';
 import { ConfettiBurst } from '@/components/shared/ConfettiBurst';
+import { StreakMilestoneModal } from '@/components/shared/StreakMilestoneModal';
+import { isMilestone } from '@/lib/shareCard';
 import {
   IconFlame,
   IconUsers,
@@ -100,6 +102,7 @@ export default function DashboardPage() {
   const [justCompleted, setJustCompleted] = useState<Set<string>>(new Set());
   const [quote, setQuote] = useState(getDailyQuote);
   const [todayMood, setTodayMood] = useState<MoodValue | null>(null);
+  const [milestoneStreak, setMilestoneStreak] = useState<number | null>(null);
   const proovTx = useProovTx();
 
   useEffect(() => {
@@ -366,7 +369,11 @@ export default function DashboardPage() {
       setLongestStreak(prev => Math.max(prev, newStreak));
       setLastCompletionDate(todayStr);
       proovTx.recordStreakIncrement(newStreak);
-      showToast(`${newStreak} day streak! 🔥`);
+      if (isMilestone(newStreak)) {
+        setMilestoneStreak(newStreak);
+      } else {
+        showToast(`${newStreak} day streak! 🔥`);
+      }
     }
   };
 
@@ -975,6 +982,15 @@ export default function DashboardPage() {
           }}
           onSelfReport={() => handleToggleHabit(proofSheet.habitId)}
           onClose={() => setProofSheet(null)}
+        />
+      )}
+
+      {milestoneStreak !== null && (
+        <StreakMilestoneModal
+          streak={milestoneStreak}
+          username={username || displayName}
+          categories={habits.map(h => h.category)}
+          onClose={() => setMilestoneStreak(null)}
         />
       )}
     </>
