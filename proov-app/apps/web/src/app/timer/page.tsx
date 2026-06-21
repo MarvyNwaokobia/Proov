@@ -642,17 +642,33 @@ function GrindTimerPageContent() {
       <div style={{ maxWidth: 560, margin: '0 auto', padding: '1.25rem 1.25rem 100px', position: 'relative', zIndex: 1 }}>
 
         {/* Header — only on pick/setup */}
-        {(view === 'pick' || view === 'setup') && (
+        {(view === 'pick' || view === 'setup') && (() => {
+          const todayStr = new Date().toISOString().split('T')[0];
+          const todayMins = sessionHistory
+            .filter(s => s.completed && s.started_at.startsWith(todayStr))
+            .reduce((sum, s) => sum + s.duration_minutes, 0);
+          return (
           <div style={{ marginBottom: 20, paddingTop: 4 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 3 }}>
               <IconClock size={22} stroke={1.8} color="var(--accent-text)" />
               <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.5 }}>Grind Timer</span>
+              {todayMins > 0 && (
+                <span style={{
+                  marginLeft: 'auto', fontSize: 11, fontWeight: 700,
+                  color: 'var(--accent-text)', background: 'var(--accent-bg)',
+                  border: '1px solid var(--accent-border)',
+                  borderRadius: 20, padding: '3px 10px',
+                }}>
+                  {fmtDur(todayMins)} today
+                </span>
+              )}
             </div>
             <div style={{ fontSize: 12, color: 'var(--text3)', paddingLeft: 31 }}>
               Pick a habit or start a custom session
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {/* PICK HABIT */}
         {view === 'pick' && (
