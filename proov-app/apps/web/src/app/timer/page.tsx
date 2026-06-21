@@ -498,7 +498,19 @@ function GrindTimerPageContent() {
           justifyContent: 'center', minHeight: 'calc(100vh - 130px)',
           padding: 24, position: 'relative',
         }}>
-          <style>{`@keyframes tpulse{0%,100%{opacity:.4;transform:translate(-50%,-50%) scale(1)}50%{opacity:.9;transform:translate(-50%,-50%) scale(1.08)}}`}</style>
+          <style>{`@keyframes tpulse{0%,100%{opacity:.4;transform:translate(-50%,-50%) scale(1)}50%{opacity:.9;transform:translate(-50%,-50%) scale(1.08)}}@keyframes atmo-breathe{0%,100%{opacity:.12}50%{opacity:.22}}`}</style>
+          {/* Atmosphere tint overlay */}
+          {ambientSound !== 'silence' && (
+            <div style={{
+              position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none',
+              background: ambientSound === 'rain' ? 'radial-gradient(ellipse at center, rgba(100,150,220,0.18), transparent 70%)'
+                : ambientSound === 'forest' ? 'radial-gradient(ellipse at center, rgba(60,160,80,0.15), transparent 70%)'
+                : ambientSound === 'waves' ? 'radial-gradient(ellipse at center, rgba(60,140,200,0.16), transparent 70%)'
+                : 'radial-gradient(ellipse at center, rgba(180,140,80,0.14), transparent 70%)',
+              animation: 'atmo-breathe 4s ease-in-out infinite',
+              transition: 'background 0.6s ease',
+            }} />
+          )}
           <div style={{
             position: 'absolute', top: '50%', left: '50%',
             width: 340, height: 340, borderRadius: '50%',
