@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import {
   IconArrowLeft, IconPencil, IconArchive,
   IconPlayerPlay, IconCheck, IconLock, IconUsers, IconWorld, IconFlame, IconShieldCheck,
-  IconChevronLeft, IconChevronRight,
+  IconChevronLeft, IconChevronRight, IconNotes,
 } from '@tabler/icons-react';
 import {
   getUserHabits,
@@ -19,6 +19,8 @@ import {
   getVerifiedHabitsToday,
   getHabitCompletionDates,
   getHabitStats,
+  saveCompletionNote,
+  getHabitNotes,
   type Habit,
 } from '@/lib/supabase';
 import { ProofSheet } from '@/components/shared/ProofSheet';
@@ -52,6 +54,9 @@ export default function HabitDetailPage() {
   const [bestStreak, setBestStreak] = useState(0);
   const [totalCompletions, setTotalCompletions] = useState(0);
   const [completionRate, setCompletionRate] = useState(0);
+  const [noteText, setNoteText] = useState('');
+  const [noteSaved, setNoteSaved] = useState(false);
+  const [notes, setNotes] = useState<{ date: string; note: string }[]>([]);
   const [calMonth, setCalMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
 
   useEffect(() => {
@@ -93,6 +98,7 @@ export default function HabitDetailPage() {
         setTotalCompletions(stats.totalCompletions);
         setCompletionRate(stats.completionRate);
       }).catch(() => {});
+      getHabitNotes(id, address).then(setNotes).catch(() => {});
     });
   }, [id, router]);
 
@@ -383,6 +389,80 @@ export default function HabitDetailPage() {
           fontSize: 13, fontWeight: 700, color: '#059669',
         }}>
           <IconShieldCheck size={15} stroke={2} /> Verified today
+        </div>
+      )}
+
+      {/* Note input — shown after completion */}
+      {isDoneToday && !noteSaved && (
+        <div style={{
+          background: 'var(--card-bg)', border: '1px solid var(--card-border)',
+          borderRadius: 12, padding: 12, marginBottom: 12,
+        }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', marginBottom: 6 }}>
+            How did it go?
+          </div>
+          <textarea
+            value={noteText}
+            onChange={e => setNoteText(e.target.value)}
+            placeholder="Quick reflection (optional)..."
+            rows={2}
+            style={{
+              width: '100%', padding: '8px 10px', borderRadius: 8,
+              border: '1px solid var(--border2)', background: 'var(--bg2)',
+              color: 'var(--text)', fontSize: 12, fontFamily: 'inherit',
+              resize: 'none', outline: 'none', boxSizing: 'border-box' as const,
+            }}
+          />
+          {noteText.trim() && (
+            <button
+              onClick={async () => {
+                const addr = localStorage.getItem('proov_address') || '';
+                const ok = await saveCompletionNote(habit.id, addr, noteText);
+                if (ok) {
+                  setNoteSaved(true);
+                  setNotes(prev => [{ date: new Date().toISOString().split('T')[0], note: noteText.trim() }, ...prev]);
+                  showToast('Note saved ✓');
+                }
+              }}
+              style={{
+                marginTop: 6, padding: '6px 14px', borderRadius: 8,
+                background: 'var(--accent)', color: '#fff',
+                fontSize: 11, fontWeight: 700, border: 'none',
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Save note
+            </button>
+          )}
+        </div>
+      )}
+      {isDoneToday && noteSaved && (
+        <div style={{
+          fontSize: 11, color: 'var(--accent-text)', fontWeight: 600,
+          marginBottom: 12, display: 'flex', alignItems: 'center', gap: 4,
+        }}>
+          <IconCheck size={12} stroke={2.5} /> Note saved
+        </div>
+      )}
+
+      {/* Notes timeline */}
+      {notes.length > 0 && (
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text3)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+            <IconNotes size={12} stroke={2} /> Journal
+          </div>
+          {notes.slice(0, 10).map((n, i) => (
+            <div key={i} style={{
+              padding: '8px 12px', marginBottom: 6,
+              background: 'var(--bg2)', border: '1px solid var(--border)',
+              borderRadius: 10,
+            }}>
+              <div style={{ fontSize: 9, color: 'var(--text3)', marginBottom: 3, fontWeight: 600 }}>
+                {new Date(n.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text)', lineHeight: 1.5 }}>{n.note}</div>
+            </div>
+          ))}
         </div>
       )}
 

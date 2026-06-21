@@ -175,6 +175,50 @@ export async function saveHabitCompletion(
   });
 }
 
+export async function saveCompletionNote(
+  habitId: string,
+  userAddress: string,
+  note: string
+): Promise<boolean> {
+  if (!supabase || !note.trim()) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const { data } = await supabase
+    .from('habit_completions')
+    .select('id')
+    .eq('habit_id', habitId)
+    .eq('user_address', userAddress.toLowerCase())
+    .gte('completed_at', today.toISOString())
+    .order('completed_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return false;
+  const { error } = await supabase
+    .from('habit_completions')
+    .update({ note: note.trim() })
+    .eq('id', data.id);
+  return !error;
+}
+
+export async function getHabitNotes(
+  habitId: string,
+  userAddress: string,
+  limit = 20
+): Promise<{ date: string; note: string }[]> {
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from('habit_completions')
+    .select('completed_at, note')
+    .eq('habit_id', habitId)
+    .eq('user_address', userAddress.toLowerCase())
+    .not('note', 'is', null)
+    .order('completed_at', { ascending: false })
+    .limit(limit);
+  return (data || [])
+    .filter((r: any) => r.note && r.note.trim())
+    .map((r: any) => ({ date: r.completed_at.split('T')[0], note: r.note }));
+}
+
 export async function getTodayCompletions(userAddress: string): Promise<string[]> {
   if (!supabase || !userAddress) return [];
   const today = new Date();
