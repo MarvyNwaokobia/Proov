@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   getUserHabits, getUsernameForAddress, getStreakData, getTodayCompletions,
   getGlobalLeaderboard, getAllHabitStreaks, getTotalCompletions,
@@ -223,6 +224,19 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+
+        {/* Monthly report link — own profile only */}
+        {isOwn && (
+          <Link href="/report" style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            background: 'var(--accent-bg)', border: '1px solid var(--accent-border)',
+            borderRadius: 12, padding: '10px 16px', marginBottom: 14,
+            fontSize: 12, fontWeight: 700, color: 'var(--accent-text)',
+            textDecoration: 'none',
+          }}>
+            📊 View monthly report →
+          </Link>
+        )}
 
         {/* Habits section */}
         <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.2px', color: 'var(--text3)', marginBottom: 8 }}>

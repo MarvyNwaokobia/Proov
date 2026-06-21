@@ -827,6 +827,9 @@ export default function DashboardPage() {
               <div style={{ fontSize: 9, color: 'var(--text3)', marginTop: 8, textAlign: 'center' }}>
                 {weekTotal} of {weekTarget} habits this week
               </div>
+              <Link href="/report" style={{ display: 'block', fontSize: 11, color: 'var(--accent-text)', fontWeight: 600, textDecoration: 'none', textAlign: 'center', marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+                View monthly report →
+              </Link>
             </div>
           );
         })()}
