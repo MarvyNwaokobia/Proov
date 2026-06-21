@@ -586,23 +586,38 @@ function GrindTimerPageContent() {
       )}
 
       {/* ── DONE — full-page completion screen ── */}
-      {isDone && (
+      {isDone && (() => {
+        const msgs = [
+          `${fmtDur(sessionDuration)} of pure focus. That’s commitment.`,
+          'You showed up and did the work. That’s what matters.',
+          'Another session in the books. Keep building.',
+          'Discipline is a muscle. You just made it stronger.',
+          `${fmtDur(sessionDuration)} well spent. Your future self thanks you.`,
+          'Consistency beats intensity. You’re proving it.',
+        ];
+        const msg = msgs[Math.floor(Math.random() * msgs.length)];
+        return (
         <div style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center',
           justifyContent: 'center', minHeight: 'calc(100vh - 130px)',
           padding: 24,
         }}>
-          <style>{`@keyframes pop{0%{transform:scale(.5);opacity:0}80%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}`}</style>
-          <div style={{ marginBottom: 12, animation: 'pop .4s ease', color: 'var(--accent-text)' }}>
-            <IconCircleCheck size={56} stroke={1.5} />
+          <style>{`@keyframes pop{0%{transform:scale(.5);opacity:0}80%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}@keyframes done-glow{0%,100%{box-shadow:0 0 20px var(--accent),0 0 40px transparent}50%{box-shadow:0 0 30px var(--accent),0 0 60px var(--accent-bg)}}`}</style>
+          <div style={{
+            width: 80, height: 80, borderRadius: '50%',
+            background: 'var(--accent-bg)', border: '2px solid var(--accent)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            marginBottom: 16, animation: 'pop .4s ease, done-glow 2s ease-in-out infinite',
+          }}>
+            <IconCircleCheck size={40} stroke={1.5} color="var(--accent-text)" />
           </div>
           <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', textAlign: 'center', letterSpacing: '-.5px', margin: '0 0 6px' }}>
             {sessionHabitName
               ? `${sessionHabitName} · ${fmtDur(sessionDuration)} done`
               : `Custom session · ${fmtDur(sessionDuration)} done`}
           </h2>
-          <p style={{ fontSize: 13, color: 'var(--text2)', textAlign: 'center', lineHeight: 1.6, marginBottom: 28 }}>
-            &quot;Keep showing up. That&apos;s the whole game.&quot;
+          <p style={{ fontSize: 13, color: 'var(--text2)', textAlign: 'center', lineHeight: 1.6, marginBottom: 28, maxWidth: 280, fontStyle: 'italic' }}>
+            {msg}
           </p>
           <button
             onClick={confirmDone}
@@ -621,7 +636,8 @@ function GrindTimerPageContent() {
             {txPending === 'ending' ? 'Saving…' : 'Mark complete'}
           </button>
         </div>
-      )}
+        );
+      })()}
 
       <div style={{ maxWidth: 560, margin: '0 auto', padding: '1.25rem 1.25rem 100px', position: 'relative', zIndex: 1 }}>
 
