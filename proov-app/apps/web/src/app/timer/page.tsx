@@ -19,6 +19,7 @@ import {
   saveHabit,
   type Habit, type TimerSession,
 } from '@/lib/supabase';
+import { playAmbient, stopAmbient, AMBIENT_OPTIONS, type SoundType } from '@/lib/ambientSounds';
 
 type TimerView = 'pick' | 'setup' | 'running' | 'done';
 
@@ -77,6 +78,7 @@ function GrindTimerPageContent() {
   const [convertEmoji, setConvertEmoji] = useState('⏱');
   const [convertDuration, setConvertDuration] = useState(25);
   const [convertSaving, setConvertSaving] = useState(false);
+  const [ambientSound, setAmbientSound] = useState<SoundType>('silence');
 
   useEffect(() => {
     const addr = localStorage.getItem('proov_address') || '';
@@ -257,6 +259,7 @@ function GrindTimerPageContent() {
       if (remaining <= 1) {
         clearInterval(intervalRef.current!);
         localStorage.removeItem('proov_active_timer');
+        stopAmbient();
         justCompletedRef.current = true;
         setSecondsLeft(0);
         setView('done');
@@ -356,6 +359,8 @@ function GrindTimerPageContent() {
     await getAllSessionHistory(address).then(setSessionHistory).catch(() => {});
 
     setTxPending(null);
+    stopAmbient();
+    setAmbientSound('silence');
     setView('pick');
     setSelectedHabit(null);
     setIsCustom(false);
@@ -370,6 +375,8 @@ function GrindTimerPageContent() {
   const cancelTimer = () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     localStorage.removeItem('proov_active_timer');
+    stopAmbient();
+    setAmbientSound('silence');
 
     const elapsed = totalSeconds - secondsLeft;
 
@@ -518,6 +525,25 @@ function GrindTimerPageContent() {
               </div>
               <div style={{ fontSize: 10, color: 'var(--text3)' }}>Target: {fmtDur(sessionDuration)}</div>
             </div>
+          </div>
+          {/* Ambient sound selector */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 18, position: 'relative', zIndex: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
+            {AMBIENT_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => { setAmbientSound(opt.value); playAmbient(opt.value); }}
+                style={{
+                  padding: '5px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                  border: ambientSound === opt.value ? '1.5px solid var(--accent-border)' : '1.5px solid var(--border)',
+                  background: ambientSound === opt.value ? 'var(--accent-bg)' : 'transparent',
+                  color: ambientSound === opt.value ? 'var(--accent-text)' : 'var(--text3)',
+                  cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4,
+                  transition: 'all .15s',
+                }}
+              >
+                <span style={{ fontSize: 13 }}>{opt.emoji}</span> {opt.label}
+              </button>
+            ))}
           </div>
           <div style={{ position: 'relative', width: 220, height: 220, marginBottom: 26, zIndex: 1 }}>
             <svg viewBox="0 0 220 220" width="220" height="220" style={{ transform: 'rotate(-90deg)', position: 'relative', zIndex: 1 }}>
