@@ -35,6 +35,7 @@ import {
   IconQuote,
 } from '@tabler/icons-react';
 import { getDailyQuote, getRandomQuote } from '@/lib/quotes';
+import { playCompletionSound } from '@/lib/completionSound';
 
 const STREAK_MILESTONES = [7, 14, 21, 30, 60, 90];
 function getNextGoal(s: number) {
@@ -357,6 +358,7 @@ export default function DashboardPage() {
     setHabitStreaks(prev => ({ ...prev, [habitId]: (prev[habitId] || 0) + 1 }));
     setJustCompleted(prev => new Set(prev).add(habitId));
     setTimeout(() => setJustCompleted(prev => { const s = new Set(prev); s.delete(habitId); return s; }), 800);
+    playCompletionSound();
     showToast('Habit done ✓');
     await saveHabitCompletion(habitId, addr, currentStreak).catch(() => {});
 
