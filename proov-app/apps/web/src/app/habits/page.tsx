@@ -4,9 +4,10 @@ import { useRouter } from "next/navigation";
 import {
   IconBrain, IconRun, IconYoga, IconBook, IconSalad, IconPalette,
   IconArrowLeft, IconFlame, IconClock, IconCheck, IconArchive, IconPlayerPlay, IconPlus,
-  IconUsers, IconStar, IconCalendar, IconCalendarWeek, IconLock, IconTrash,
+  IconUsers, IconStar, IconCalendar, IconCalendarWeek, IconLock, IconTrash, IconBell,
   type Icon as TablerIcon,
 } from '@tabler/icons-react';
+import { setHabitReminder } from '@/lib/habitReminders';
 
 const CAT_ICONS: Record<string, TablerIcon> = {
   focus: IconBrain,
@@ -126,6 +127,7 @@ type SaveData = {
   frequency: number;
   privacy: 'private' | 'public';
   viewers: string[];
+  reminderTime: string | null;
 };
 
 type Step = 1 | 2 | 3 | 4 | 5;
@@ -146,6 +148,7 @@ function CreateForm({ onSave, isSaving, onCancel, prefill }: {
   const [viewers, setViewers] = useState<string[]>([]);
   const [viewerInput, setViewerInput] = useState("");
   const [formError, setFormError] = useState("");
+  const [reminderTime, setReminderTime] = useState<string | null>(null);
 
   const cat = getCategoryById(catId);
   const steps = ["Name", "Type", "Schedule", "Privacy", "Confirm"];
@@ -169,6 +172,7 @@ function CreateForm({ onSave, isSaving, onCancel, prefill }: {
       frequency,
       privacy,
       viewers,
+      reminderTime,
     });
   };
 
@@ -287,6 +291,33 @@ function CreateForm({ onSave, isSaving, onCancel, prefill }: {
                 <span style={{ color: "var(--text)", fontWeight: 500 }}>{val}</span>
               </div>
             ))}
+          </div>
+          {/* Reminder toggle */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            background: 'var(--bg2)', border: '1px solid var(--border)',
+            borderRadius: 10, padding: '8px 12px', marginBottom: 12,
+          }}>
+            <IconBell size={14} stroke={2} color={reminderTime ? 'var(--accent-text)' : 'var(--text3)'} />
+            <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: reminderTime ? 'var(--text2)' : 'var(--text3)' }}>
+              {reminderTime ? `Reminder at ${reminderTime}` : 'Set a daily reminder?'}
+            </span>
+            {reminderTime ? (
+              <button onClick={() => setReminderTime(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 11, fontFamily: 'inherit' }}>
+                Remove
+              </button>
+            ) : (
+              <input
+                type="time"
+                onChange={e => { if (e.target.value) setReminderTime(e.target.value); }}
+                style={{
+                  border: '1px solid var(--accent-border)', borderRadius: 8,
+                  background: 'var(--accent-bg)', color: 'var(--accent-text)',
+                  fontSize: 11, fontWeight: 700, padding: '3px 8px',
+                  fontFamily: 'inherit', outline: 'none', cursor: 'pointer',
+                }}
+              />
+            )}
           </div>
           {formError && <p style={{ color: "#f43f5e", fontSize: 11, marginBottom: 8 }}>{formError}</p>}
         </div>
@@ -465,6 +496,7 @@ export default function HabitsPage() {
       on_chain_id: onChainId,
     });
     if (saved) {
+      if (data.reminderTime) setHabitReminder(saved.id, data.reminderTime);
       setHabits(prev => [...prev, saved]);
       const cached = JSON.parse(localStorage.getItem('proov_habits_cache') || '[]');
       localStorage.setItem('proov_habits_cache', JSON.stringify([...cached, saved]));
