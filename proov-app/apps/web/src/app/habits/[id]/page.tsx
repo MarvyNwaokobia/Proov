@@ -18,6 +18,7 @@ import {
   getUsernamesForAddresses,
   getVerifiedHabitsToday,
   getHabitCompletionDates,
+  getHabitStats,
   type Habit,
 } from '@/lib/supabase';
 import { ProofSheet } from '@/components/shared/ProofSheet';
@@ -48,6 +49,9 @@ export default function HabitDetailPage() {
   const [circleMembers, setCircleMembers] = useState<{ address: string; username: string }[]>([]);
   const [saving, setSaving] = useState(false);
   const [completionDates, setCompletionDates] = useState<Set<string>>(new Set());
+  const [bestStreak, setBestStreak] = useState(0);
+  const [totalCompletions, setTotalCompletions] = useState(0);
+  const [completionRate, setCompletionRate] = useState(0);
   const [calMonth, setCalMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
 
   useEffect(() => {
@@ -84,6 +88,11 @@ export default function HabitDetailPage() {
       }
 
       getHabitCompletionDates(id, address).then(dates => setCompletionDates(new Set(dates))).catch(() => {});
+      getHabitStats(id, address).then(stats => {
+        setBestStreak(stats.bestStreak);
+        setTotalCompletions(stats.totalCompletions);
+        setCompletionRate(stats.completionRate);
+      }).catch(() => {});
     });
   }, [id, router]);
 
@@ -195,18 +204,19 @@ export default function HabitDetailPage() {
       </div>
 
       {/* Stats row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6, marginBottom: 16 }}>
         {[
-          { value: habitStreak, label: 'Streak' },
-          { value: habitStreak, label: 'Best' },
-          { value: 0, label: 'Total' },
+          { value: habitStreak, label: 'Streak', icon: '🔥' },
+          { value: bestStreak, label: 'Best', icon: '⭐' },
+          { value: totalCompletions, label: 'Total', icon: '✓' },
+          { value: `${completionRate}%`, label: 'Rate', icon: '📊' },
         ].map(s => (
           <div key={s.label} style={{
             background: 'var(--bg2)', border: '1px solid var(--border)',
-            borderRadius: 12, padding: 10, textAlign: 'center',
+            borderRadius: 12, padding: '8px 6px', textAlign: 'center',
           }}>
-            <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>{s.value}</div>
-            <div style={{ fontSize: 9, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginTop: 2, fontWeight: 600 }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', lineHeight: 1.2 }}>{s.value}</div>
+            <div style={{ fontSize: 8, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginTop: 3, fontWeight: 600 }}>
               {s.label}
             </div>
           </div>
